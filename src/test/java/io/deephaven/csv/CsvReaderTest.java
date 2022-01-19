@@ -18,6 +18,11 @@ import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.Renderer;
+import org.apache.commons.io.input.ReaderInputStream;
+import org.assertj.core.api.Assertions;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Test;
+
 import java.io.InputStream;
 import java.io.StringReader;
 import java.lang.reflect.Array;
@@ -28,10 +33,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
-import org.apache.commons.io.input.ReaderInputStream;
-import org.assertj.core.api.Assertions;
-import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
 
 public class CsvReaderTest {
     private static class Sentinels {

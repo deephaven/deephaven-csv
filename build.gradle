@@ -1,0 +1,41 @@
+plugins {
+    id 'java-library'
+    id 'com.diffplug.spotless' version '6.2.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+group = 'io.deephaven'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+dependencies {
+    implementation 'ch.randelshofer:fastdoubleparser:0.3.0'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    compileOnly 'org.jetbrains:annotations:23.0.0'
+
+    testImplementation 'net.sf.trove4j:trove4j:3.0.3'
+    testImplementation 'commons-io:commons-io:2.11.0'
+    testCompileOnly 'org.jetbrains:annotations:23.0.0'
+
+    testImplementation 'org.assertj:assertj-core:3.22.0'
+    testImplementation(platform('org.junit:junit-bom:5.8.2'))
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+spotless {
+    java {
+        eclipse().configFile("${rootDir}/style/eclipse-java-google-style.xml")
+    }
+}
