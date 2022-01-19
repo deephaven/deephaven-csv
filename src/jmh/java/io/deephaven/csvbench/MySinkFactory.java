@@ -7,6 +7,7 @@ import java.util.function.Function;
 
 public class MySinkFactory {
     public static io.deephaven.csv.sinks.SinkFactory create() {
+        // TODO: we should pool the underlying TXList buffers
         return io.deephaven.csv.sinks.SinkFactory.of(
                 MyByteSink::new, null,
                 MyShortSink::new, null,
