@@ -3,7 +3,7 @@ package io.deephaven.csv.parsers;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
-import org.apache.commons.lang3.mutable.MutableDouble;
+import io.deephaven.csv.util.MutableDouble;
 import org.jetbrains.annotations.NotNull;
 
 /** The parser for the double type. */

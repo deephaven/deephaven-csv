@@ -9,6 +9,8 @@ import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.MutableBoolean;
+import io.deephaven.csv.util.MutableObject;
 import io.deephaven.csv.util.Renderer;
 import java.io.InputStream;
 import java.io.Reader;
@@ -16,8 +18,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.mutable.MutableObject;
 
 /**
  * A class for reading CSV data. Typical usage is:

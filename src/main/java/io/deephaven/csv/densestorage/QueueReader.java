@@ -1,7 +1,7 @@
 package io.deephaven.csv.densestorage;
 
 import io.deephaven.csv.containers.ByteSlice;
-import org.apache.commons.lang3.mutable.MutableInt;
+import io.deephaven.csv.util.MutableInt;
 
 /** Companion to the {@link QueueWriter}. See the documentation there for details. */
 public class QueueReader<TARRAY> {

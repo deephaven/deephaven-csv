@@ -4,8 +4,9 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
 import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.MutableBoolean;
+
 import java.nio.charset.StandardCharsets;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 
 /**
  * The job of this class is to take the input text, parse the CSV format (dealing with quoting, escaping, field

@@ -1,7 +1,8 @@
 package io.deephaven.csv.sinks;
 
+import io.deephaven.csv.util.MutableObject;
+
 import java.util.function.Supplier;
-import org.apache.commons.lang3.mutable.MutableObject;
 
 /**
  * An interface which allows the CsvReader to write to column data structures whose details it is unaware of. Using this

@@ -2,8 +2,9 @@ package io.deephaven.csv.tokenization;
 
 import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.util.*;
+
 import java.time.*;
-import org.apache.commons.lang3.mutable.*;
 
 /**
  * This class provides a variety of methods to efficiently parse various low-level types like booleans, longs, doubles,
@@ -423,7 +424,7 @@ public class Tokenizer {
                 return false;
             }
             final ZoneId zoneIdToUse = tempZoneId.getValue();
-            final long secondsOffsetToUse = temp0.getValue();
+            final long secondsOffsetToUse = temp0.longValue();
 
             final ZonedDateTime zdt =
                     ZonedDateTime.of(year, month, day, hour, minute, second, 0, zoneIdToUse);
@@ -569,7 +570,7 @@ public class Tokenizer {
             // Pad to the right with zeroes (that is, in "blah.12", the .12 is 120,000,000 nanos.
             final int length = bs.begin() - beginBeforeNs;
             for (int ii = length; ii < 9; ++ii) {
-                nanos.setValue(10 * nanos.getValue());
+                nanos.setValue(10 * nanos.longValue());
             }
             return true;
         }
