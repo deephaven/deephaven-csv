@@ -97,7 +97,8 @@ public class QueueReader<TARRAY> {
         try {
             o.wait();
         } catch (InterruptedException ie) {
-            throw new RuntimeException("Logic error: thread interrupted: can't happen");
+            throw new RuntimeException(
+                    "Thread interrupted: probably cancelled in the CsvReader class due to some other exception.");
         }
     }
 

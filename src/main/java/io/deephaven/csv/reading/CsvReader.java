@@ -172,43 +172,47 @@ public final class CsvReader {
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
 
-        final Future<Long> numRowsFuture =
-                exec.submit(
-                        () -> ParseInputToDenseStorage.doit(firstDataRow, nullValueLiteral, grabber, dsws));
-
         final ArrayList<Future<Sink<?>>> sinkFutures = new ArrayList<>();
-
-        for (int ii = 0; ii < numOutputCols; ++ii) {
-            final List<Parser<?>> parsersToUse = calcParsersToUse(headersToUse[ii], ii + 1);
-            final String nullValueLiteralToUse = calcNullValueLiteralToUse(headersToUse[ii], ii + 1);
-
-            final int iiCopy = ii;
-            final Future<Sink<?>> fcb =
-                    exec.submit(
-                            () -> ParseDenseStorageToColumn.doit(
-                                    dsr0s[iiCopy],
-                                    dsr1s[iiCopy],
-                                    parsersToUse,
-                                    nullParser,
-                                    customTimeZoneParser,
-                                    nullValueLiteralToUse,
-                                    sinkFactory));
-            sinkFutures.add(fcb);
-        }
-
-        final long numRows;
-        final Sink<?>[] sinks = new Sink<?>[numOutputCols];
         try {
+            final Future<Long> numRowsFuture =
+                    exec.submit(
+                            () -> ParseInputToDenseStorage.doit(firstDataRow, nullValueLiteral, grabber, dsws));
+
+            for (int ii = 0; ii < numOutputCols; ++ii) {
+                final List<Parser<?>> parsersToUse = calcParsersToUse(headersToUse[ii], ii + 1);
+                final String nullValueLiteralToUse = calcNullValueLiteralToUse(headersToUse[ii], ii + 1);
+
+                final int iiCopy = ii;
+                final Future<Sink<?>> fcb =
+                        exec.submit(
+                                () -> ParseDenseStorageToColumn.doit(
+                                        dsr0s[iiCopy],
+                                        dsr1s[iiCopy],
+                                        parsersToUse,
+                                        nullParser,
+                                        customTimeZoneParser,
+                                        nullValueLiteralToUse,
+                                        sinkFactory));
+                sinkFutures.add(fcb);
+            }
+
+            final long numRows;
+            final Sink<?>[] sinks = new Sink<?>[numOutputCols];
             numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 sinks[ii] = sinkFutures.get(ii).get();
             }
+            return new Result(numRows, headersToUse, sinks);
         } catch (Exception inner) {
             throw new CsvReaderException("Caught exception", inner);
+        } finally {
+            // Cancel the sinks (interrupting them if necessary). It is harmless to do this if the sinks
+            // have already exited normally.
+            for (Future<Sink<?>> sf : sinkFutures) {
+                sf.cancel(true); // Result ignored.
+            }
+            exec.shutdown();
         }
-
-        exec.shutdown();
-        return new Result(numRows, headersToUse, sinks);
     }
 
     /**
