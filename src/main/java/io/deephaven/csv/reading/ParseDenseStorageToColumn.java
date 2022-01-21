@@ -25,8 +25,9 @@ public final class ParseDenseStorageToColumn {
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
      * @param nullValueLiteral If a cell text is equal to this value, it will be interpreted as the null value.
      *        Typically set to the empty string.
-     * @param nullParser The Parser to use if parsers.size() > 1 but the column contains all null values. This is needed
-     *        as a backstop because otherwise type inference would have no way to choose among the multiple parsers.
+     * @param nullParser The Parser to use if {@code parsers.size() > 1} but the column contains all null values. This
+     *        is needed as a backstop because otherwise type inference would have no way to choose among the multiple
+     *        parsers.
      * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
      *         data.

@@ -65,6 +65,7 @@ import io.deephaven.csv.containers.ByteSlice;
  * </ul>
  *
  * These dimensions are broken out in the following way:
+ * <ul>
  * <li>Small byte "strings" are packed into a byte block, and we maintain a linked list of these byte blocks.
  * <li>"Large" byte "strings" are stored directly, meaning a byte[] array is allocated for their data, then a reference
  * to that array is added to a byte-array block. (And again, we maintain a linked list of these byte-array blocks). It

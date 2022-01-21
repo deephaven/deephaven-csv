@@ -36,28 +36,28 @@ public class QueueReader<TARRAY> {
      * CharReader:
      *
      * <pre>
-     * <code>
+     * {@code
      * if (current + size > end) {
      *     if (!tryRefill(size)) {
      *         return false;
      *     }
      *     typedBlock = genericBlock;
      * }
-     * </code>
+     * }
      * </pre>
      *
      * The "if" in the caller is actually checking for multiple cases in a single comparison. One is a normal "buffer
      * empty, needs to be refilled" case. The other is a bad "something went terribly wrong" case.
      *
      * <ul>
-     * <li>Case 1, The "buffer empty" case. Then current == end, and therefore current + size > end (assuming size > 0,
-     * which it always is). Therefore, the 'if' inside the tryGetXXX code would evaluate to true, so the tryGetXXX code
-     * would call this method. Then this method refills the buffer.
+     * <li>Case 1, The "buffer empty" case. Then {@code current == end}, and therefore {@code current + size > end}
+     * (assuming {@code size > 0}, which it always is). Therefore, the 'if' inside the tryGetXXX code would evaluate to
+     * true, so the tryGetXXX code would call this method. Then this method refills the buffer.
      * <li>Case 2: The buffer is not empty, but A logic error (which can't happen if the code is correct) has caused the
-     * requested slice to go past the end of the block. Then current < end but current + size > end. Again, the 'if'
-     * inside the tryGetXXX code would evaluate to true, so the tryGetXXX code would call this method. But then the
-     * first line of our method detects the past-the-end condition and throws an exception.
-     * <li>Case 3: The "buffer can satisfy the request" case. Then current + size &lt;= end, so the 'if' inside the
+     * requested slice to go past the end of the block. Then {@code current < end} but {@code current + size > end}.
+     * Again, the 'if' inside the tryGetXXX code would evaluate to true, so the tryGetXXX code would call this method.
+     * But then the first line of our method detects the past-the-end condition and throws an exception.
+     * <li>Case 3: The "buffer can satisfy the request" case. Then {@code current + size <= end}, so the 'if' inside the
      * tryGetXXX code would evaluate to false, and the tryGetXXX method doesn't call this method.
      * </ul>
      */

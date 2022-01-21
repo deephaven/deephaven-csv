@@ -11,18 +11,20 @@ package io.deephaven.csv.sinks;
  */
 public interface Source<TARRAY> {
     /**
-     * Read a chunk of data from the src data structure. Sample implementation: <code><pre>
-     *     int destIndex = 0;
-     *     for (long srcIndex = srcBegin; srcIndex != srcEnd; ++srcIndex) {
-     *         if (myColumn.hasNullAt(srcIndex)) {
-     *             isNull[destIndex] = true;
-     *         } else {
-     *             dest[destIndex] = myColumn.getValueAt(srcIndex);
-     *             isNull[destIndex] = false;
-     *         }
-     *         ++destIndex;
+     * Read a chunk of data from the src data structure. Sample implementation:
+     * 
+     * <pre>
+     * int destIndex = 0;
+     * for (long srcIndex = srcBegin; srcIndex != srcEnd; ++srcIndex) {
+     *     if (myColumn.hasNullAt(srcIndex)) {
+     *         isNull[destIndex] = true;
+     *     } else {
+     *         dest[destIndex] = myColumn.getValueAt(srcIndex);
+     *         isNull[destIndex] = false;
      *     }
-     *     </pre></code>
+     *     ++destIndex;
+     * }
+     * </pre>
      *
      * @param dest The chunk of data used to store values copied from the caller's column data structure.
      * @param isNull A boolean array, with the same range of valid elements. A "true" value at position {@code i} means

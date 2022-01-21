@@ -138,12 +138,14 @@ public class QueueWriter<TARRAY, TREADER> {
      * This method exists as a helper method for a subclass' addXXX method. A typical implementation is in CharWriter:
      *
      * <pre>
+     * {@code
      * final int sliceSize = cs.size();
      * final boolean flushHappened = current + sliceSize > end;
      * if (flushHappened) {
      *   typedBlock = flushAndAllocate(sliceSize);
      * }
      * ...
+     * }
      * </pre>
      *
      * The "flushHappened" variable (which at the point of its definition would be more precisely interpreted as "flush

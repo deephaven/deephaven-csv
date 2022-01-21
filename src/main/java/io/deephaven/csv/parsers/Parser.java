@@ -19,11 +19,13 @@ public interface Parser<TARRAY> {
     int CHUNK_SIZE = 65536 * 4;
 
     /**
-     * Make a context object for the parser. Sample implementation: <code><pre>
+     * Make a context object for the parser. Sample implementation:
+     * 
+     * <pre>
      * final MySink sink = new MySink();
-     * return new ParserContext<>(sink, null, new MyType[chunkSize]);
-     * </pre></code>
-     *
+     * return new ParserContext&lt;&gt;(sink, null, new MyType[chunkSize]);
+     * </pre>
+     * 
      * <p>
      * Note that parsers other than {Byte,Short,Int,Long}Parser can leave the source field null, as in the above
      * example.

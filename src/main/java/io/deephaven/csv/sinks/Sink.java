@@ -9,7 +9,10 @@ package io.deephaven.csv.sinks;
  */
 public interface Sink<TARRAY> {
     /**
-     * Write a chunk of data to the target data structure. Sample implementation: <code><pre>
+     * Write a chunk of data to the target data structure. Sample implementation:
+     * 
+     * <pre>
+     * {@code
      *     if (appending) {
      *         while (mycolumn.size() < destBegin) {
      *             myColumn.addNull();
@@ -36,7 +39,8 @@ public interface Sink<TARRAY> {
      *         }
      *
      *     }
-     *     </pre></code>
+     * }
+     * </pre>
      *
      * @param src The chunk of data, a typed array (short[], double[], etc) with valid elements in the half-open
      *        interval {@code [0..(destEnd - destBegin))}.
