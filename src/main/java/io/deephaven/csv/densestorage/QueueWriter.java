@@ -42,8 +42,8 @@ public class QueueWriter<TARRAY, TREADER> {
     private TARRAY genericBlock;
     /**
      * Start of the current block. This is typically 0, but not always. If the caller does an early flush (before the
-     * block is filled), you can have multiple linked list nodes sharing different segments of the same underlying block
-     * storage.
+     * block is filled), you can have multiple linked list nodes sharing different segments (slices) of the same
+     * underlying block storage.
      */
     protected int begin;
     /**
@@ -109,8 +109,8 @@ public class QueueWriter<TARRAY, TREADER> {
     private void flush(boolean isLast) {
         // Sometimes our users ask us to flush even if there is nothing to flush.
         // If the block is an "isLast" block, we need to flush it regardless of whether it contains
-        // data.
-        // Otherwise (if the block is not an "isLast" block), we only flush it if it contains data.
+        // data. Otherwise (if the block is not an "isLast" block), we only flush it if it
+        // contains data.
         if (!isLast && (current == begin)) {
             // No need to flush.
             return;
@@ -119,7 +119,7 @@ public class QueueWriter<TARRAY, TREADER> {
         // No more creating readers after the first flush.
         allowReaderCreation = false;
 
-        final QueueNode<TARRAY> newBlob = new QueueNode<>(genericBlock, begin, current, isLast);
+        final QueueNode<TARRAY> newNode = new QueueNode<>(genericBlock, begin, current, isLast);
         // If this is an early flush (before the block was filled), the next node may share
         // the same underlying storage array (but disjoint segments of that array) as the current node.
         // To accomplish this, we just advance "begin" to "current" here. At this point in the logic
@@ -128,8 +128,8 @@ public class QueueWriter<TARRAY, TREADER> {
         // calls flushAndAllocate.
         begin = current;
         synchronized (sync) {
-            tail.next = newBlob;
-            tail = newBlob;
+            tail.next = newNode;
+            tail = newNode;
             sync.notifyAll();
         }
     }

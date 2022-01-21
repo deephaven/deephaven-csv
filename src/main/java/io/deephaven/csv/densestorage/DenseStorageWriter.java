@@ -122,17 +122,13 @@ public final class DenseStorageWriter {
             fctrl = controlWriter.addInt(size);
         }
         // If the control queue flushed, then flush all the data queues, so the reader doesn't block for
-        // a long time
-        // waiting for some unflushed data queue. One might worry this this is inefficient, but (a) it
-        // doesn't happen
-        // very often and (b) in our queue code, partially-filled blocks can share non-overlapping parts
-        // of their
-        // large underlying data array, so it's not too wasteful. Put another way, flushing an empty
-        // queue does nothing;
-        // flushing a partially-filled queue allocates a new QueueNode but not a new underlying data
-        // array;
-        // flushing a full queue will allocates a new QueueNode and (at the next write) a new underlying
-        // data array.
+        // a long time waiting for some unflushed data queue. One might worry it s inefficient to flush
+        // a data queue that is not full, but (a) in practice it doesn't happen very often and (b) in
+        // our queue code, partially-filled blocks can share non-overlapping parts (slices) of their
+        // underlying storage array, so it's not particularly wasteful. Put another way, flushing an
+        // empty queue does nothing; flushing a partially-filled queue allocates a new QueueNode but
+        // not a new underlying data array; flushing a full queue will allocated a new QueueNode and
+        // (lazily deferred until the next write) a new underlying data array.
         if (fctrl) {
             byteWriter.flush();
             largeByteArrayWriter.flush();

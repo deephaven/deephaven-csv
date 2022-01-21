@@ -17,9 +17,9 @@ final class CellGrabber {
     private static final int BUFFER_SIZE = 65536;
     /** The {@link InputStream} for the input. */
     private final InputStream inputStream;
-    /** The configured CSV quote character (typically '"'). */
+    /** The configured CSV quote character (typically '"'). Must be 7-bit ASCII. */
     private final byte quoteChar;
-    /** The configured CVS field delimiter (typically ','). */
+    /** The configured CVS field delimiter (typically ','). Must be 7-bit ASCII. */
     private final byte fieldDelimiter;
     /** Whether to trim leading and trailing blanks from non-quoted values. */
     private final boolean ignoreSurroundingSpaces;
