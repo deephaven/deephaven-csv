@@ -49,6 +49,11 @@ public class CsvReaderTest {
     }
 
     @Test
+    public void broken() {
+        throw new RuntimeException("Sad");
+    }
+
+    @Test
     public void countsAreCorrect() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3\n";
         final CsvReader.Result result = parse(defaultCsvReader(), toInputStream(input));
