@@ -63,3 +63,5 @@ spotless {
 
 check.dependsOn(jmhClasses)
 assemble.dependsOn(jmhJar)
+
+apply plugin: 'io.deephaven.csv.java-publishing-conventions'
