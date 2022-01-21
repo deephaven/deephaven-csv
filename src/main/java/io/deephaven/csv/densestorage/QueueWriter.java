@@ -42,8 +42,8 @@ public class QueueWriter<TARRAY, TREADER> {
     private TARRAY genericBlock;
     /**
      * Start of the current block. This is typically 0, but not always. If the caller does an early flush (before the
-     * block is filled), you can have multiple linked list nodes sharing different segments (slices) of the same
-     * underlying block storage.
+     * block is filled), you can end up with multiple linked list nodes sharing different segments (slices) of the same
+     * underlying array.
      */
     protected int begin;
     /**
