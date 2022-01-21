@@ -4,9 +4,10 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.containers.GrowableByteBuffer;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.MutableBoolean;
+
 import java.io.IOException;
 import java.io.InputStream;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 
 /**
  * This class is used to traverse over text from a Reader, understanding both field and line delimiters, as well as the
@@ -17,9 +18,9 @@ final class CellGrabber {
     private static final int BUFFER_SIZE = 65536;
     /** The {@link InputStream} for the input. */
     private final InputStream inputStream;
-    /** The configured CSV quote character (typically '"'). */
+    /** The configured CSV quote character (typically '"'). Must be 7-bit ASCII. */
     private final byte quoteChar;
-    /** The configured CVS field delimiter (typically ','). */
+    /** The configured CVS field delimiter (typically ','). Must be 7-bit ASCII. */
     private final byte fieldDelimiter;
     /** Whether to trim leading and trailing blanks from non-quoted values. */
     private final boolean ignoreSurroundingSpaces;

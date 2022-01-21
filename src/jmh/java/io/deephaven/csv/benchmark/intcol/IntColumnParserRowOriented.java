@@ -2,9 +2,9 @@ package io.deephaven.csv.benchmark.intcol;
 
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
+import io.deephaven.csv.util.MutableObject;
 import io.deephaven.csvbench.MySinkFactory;
 import io.deephaven.csvbench.MySinkFactory.ResultProvider;
-import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.io.InputStream;
 import java.util.Objects;

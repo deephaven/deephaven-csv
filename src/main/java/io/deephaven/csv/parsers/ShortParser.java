@@ -5,8 +5,8 @@ import io.deephaven.csv.sinks.Source;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
-import org.apache.commons.lang3.mutable.MutableLong;
-import org.apache.commons.lang3.mutable.MutableObject;
+import io.deephaven.csv.util.MutableLong;
+import io.deephaven.csv.util.MutableObject;
 import org.jetbrains.annotations.NotNull;
 
 /** The parser for the short type. */

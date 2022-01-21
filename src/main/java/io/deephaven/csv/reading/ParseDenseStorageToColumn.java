@@ -7,9 +7,10 @@ import io.deephaven.csv.sinks.SinkFactory;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
 import java.util.*;
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.mutable.MutableDouble;
-import org.apache.commons.lang3.mutable.MutableLong;
+
+import io.deephaven.csv.util.MutableBoolean;
+import io.deephaven.csv.util.MutableDouble;
+import io.deephaven.csv.util.MutableLong;
 import org.jetbrains.annotations.NotNull;
 
 /**

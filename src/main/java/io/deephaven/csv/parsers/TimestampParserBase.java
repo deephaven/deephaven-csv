@@ -3,7 +3,7 @@ package io.deephaven.csv.parsers;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
-import org.apache.commons.lang3.mutable.MutableLong;
+import io.deephaven.csv.util.MutableLong;
 import org.jetbrains.annotations.NotNull;
 
 /**

@@ -2,7 +2,7 @@ package io.deephaven.csv.densestorage;
 
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.util.CsvReaderException;
-import org.apache.commons.lang3.mutable.MutableInt;
+import io.deephaven.csv.util.MutableInt;
 
 /** Companion to the {@link DenseStorageWriter}. See the documentation there for details. */
 public final class DenseStorageReader {
