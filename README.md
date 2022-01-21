@@ -14,7 +14,7 @@
 
 ## Code style
 
-`deephaven-csv` uses [Spotless](https://github.com/diffplug/spotless/tree/main/plugin-gradle) for code formatting.
+[Spotless](https://github.com/diffplug/spotless/tree/main/plugin-gradle) is used for code formatting.
 
 To auto-format your code, you can run:
 ```shell
@@ -23,7 +23,7 @@ To auto-format your code, you can run:
 
 ## Local development
 
-If you are doing local development and want to consume deephaven-csv changes in other components, you can publish to maven local:
+If you are doing local development and want to consume `deephaven-csv` changes in other components, you can publish to maven local:
 
 ```shell
 ./gradlew publishToMavenLocal -x signMavenJavaPublication
