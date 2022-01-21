@@ -56,9 +56,10 @@ public class BenchmarkInts implements KosakianBenchmark {
     }
 
     public void deephaven() throws io.deephaven.csv.util.CsvReaderException {
-        final io.deephaven.csv.reading.CsvReader reader = new io.deephaven.csv.reading.CsvReader();
+        final io.deephaven.csv.CsvSpecs specs = io.deephaven.csv.CsvSpecs.csv();
         final io.deephaven.csv.sinks.SinkFactory sf = MySinkFactory.create();
-        final io.deephaven.csv.reading.CsvReader.Result result = reader.read(tableTextStream, sf);
+        final io.deephaven.csv.reading.CsvReader.Result result =
+                io.deephaven.csv.reading.CsvReader.read(specs, tableTextStream, sf);
 
         actualResult = new int[NUM_COLS][];
         for (int ii = 0; ii < NUM_COLS; ++ii) {
