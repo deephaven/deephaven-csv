@@ -1,15 +1,18 @@
-package io.deephaven.csv.benchmark.intcol;
+package io.deephaven.csv.benchmark.doublecol;
 
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
+import io.deephaven.csv.benchmark.util.Util;
 import org.simpleflatmapper.lightningcsv.CsvParser;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.function.ToDoubleFunction;
 
-public final class IntColumnParserSimpleFlatMapper {
-    public static BenchmarkResult<int[]> read(final InputStream in, final int[][] storage) throws Exception {
+public final class DoubleColumnParserSimpleFlatMapper {
+    public static BenchmarkResult<double[]> read(final InputStream in, final double[][] storage,
+            ToDoubleFunction<String> doubleParser) throws Exception {
         Iterator<String[]> iterator = CsvParser.iterator(new InputStreamReader(in, StandardCharsets.UTF_8));
         // Skip header row
         if (iterator.hasNext()) {
@@ -19,7 +22,7 @@ public final class IntColumnParserSimpleFlatMapper {
         while (iterator.hasNext()) {
             final String[] next = iterator.next();
             for (int col = 0; col < next.length; ++col) {
-                storage[col][row] = Integer.parseInt(next[col]);
+                storage[col][row] = doubleParser.applyAsDouble(next[col]);
             }
             ++row;
         }

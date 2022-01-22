@@ -1,4 +1,4 @@
-package io.deephaven.csv.benchmark.intcol;
+package io.deephaven.csv.benchmark.stringcol;
 
 import de.siegmar.fastcsv.reader.CloseableIterator;
 import de.siegmar.fastcsv.reader.CsvReader;
@@ -9,8 +9,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-public final class IntColumnParserFastCsv {
-    public static BenchmarkResult<int[]> read(final InputStream in, final int[][] storage) throws Exception {
+public final class StringColumnParserFastCsv {
+    public static BenchmarkResult<String[]> read(final InputStream in, final String[][] storage) throws Exception {
         final CloseableIterator<CsvRow> iterator =
                 CsvReader.builder().build(new InputStreamReader(in, StandardCharsets.UTF_8)).iterator();
         // Skip header row
@@ -21,7 +21,7 @@ public final class IntColumnParserFastCsv {
         while (iterator.hasNext()) {
             final CsvRow next = iterator.next();
             for (int col = 0; col < next.getFieldCount(); ++col) {
-                storage[col][row] = Integer.parseInt(next.getField(col));
+                storage[col][row] = next.getField(col);
             }
             ++row;
         }
