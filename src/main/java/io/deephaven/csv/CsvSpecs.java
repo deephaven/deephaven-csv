@@ -20,6 +20,8 @@ import java.util.function.Predicate;
 public abstract class CsvSpecs {
 
     public interface Builder {
+        Builder from(CsvSpecs specs);
+
         Builder headers(Iterable<String> elements);
 
         Builder putHeaderForIndex(int index, String header);
