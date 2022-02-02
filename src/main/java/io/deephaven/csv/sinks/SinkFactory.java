@@ -25,9 +25,18 @@ import java.util.function.Supplier;
  * system might reserve the value ((byte)-128) to represent the null byte, yet allow ((short)-128) to be a permissible
  * short value. Likewise a system might reserve the value ((short)-32768) to represent the null short, but allow
  * ((int)-32768) to be a permissible int value.
+ *
+ * <p>
+ * Thread safety: Implementing classes are required to be threadsafe, because the methods in this interface are likely
+ * to be invoked concurrently.
  */
 public interface SinkFactory {
-    static <TBYTESINK extends Sink<byte[]> & Source<byte[]>, TSHORTSINK extends Sink<short[]> & Source<short[]>, TINTSINK extends Sink<int[]> & Source<int[]>, TLONGSINK extends Sink<long[]> & Source<long[]>> SinkFactory of(
+    /**
+     * Create a {@link SinkFactory} from the corresponding lambdas. As a service to the caller, we make the
+     * {@link SinkFactory} threadsafe by synchronizing all the forXXX methods. This is probably not necessary for most
+     * suppliers but we do it in order to provide an extra level of protection.
+     */
+    static <TBYTESINK extends Sink<byte[]> & Source<byte[]>, TSHORTSINK extends Sink<short[]> & Source<short[]>, TINTSINK extends Sink<int[]> & Source<int[]>, TLONGSINK extends Sink<long[]> & Source<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>> SinkFactory of(
             Supplier<TBYTESINK> byteSinkSupplier,
             Byte reservedByte,
             Supplier<TSHORTSINK> shortSinkSupplier,
@@ -36,22 +45,22 @@ public interface SinkFactory {
             Integer reservedInt,
             Supplier<TLONGSINK> longSinkSupplier,
             Long reservedLong,
-            Supplier<Sink<float[]>> floatSinkSupplier,
+            Supplier<TFLOATSINK> floatSinkSupplier,
             Float reservedFloat,
-            Supplier<Sink<double[]>> doubleSinkSupplier,
+            Supplier<TDOUBLESINK> doubleSinkSupplier,
             Double reservedDouble,
-            Supplier<Sink<byte[]>> booleanAsByteSinkSupplier, // no Byte reservedBooleanAsByte,
-            Supplier<Sink<char[]>> charSinkSupplier,
+            Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier, // no Byte reservedBooleanAsByte,
+            Supplier<TCHARSINK> charSinkSupplier,
             Character reservedChar,
-            Supplier<Sink<String[]>> stringSinkSupplier,
+            Supplier<TSTRINGSINK> stringSinkSupplier,
             String reservedString,
-            Supplier<Sink<long[]>> dateTimeAsLongSinkSupplier,
+            Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
             Long reservedDateTimeAsLong,
-            Supplier<Sink<long[]>> timestampAsLongSinkSupplier,
+            Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
             Long reservedTimestampAsLong) {
         return new SinkFactory() {
             @Override
-            public Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
+            public synchronized Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
                 final TBYTESINK result = byteSinkSupplier.get();
                 source.setValue(result);
                 return result;
@@ -63,7 +72,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
+            public synchronized Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
                 final TSHORTSINK result = shortSinkSupplier.get();
                 source.setValue(result);
                 return result;
@@ -75,7 +84,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
+            public synchronized Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
                 final TINTSINK result = intSinkSupplier.get();
                 source.setValue(result);
                 return result;
@@ -87,7 +96,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
+            public synchronized Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
                 final TLONGSINK result = longSinkSupplier.get();
                 source.setValue(result);
                 return result;
@@ -99,7 +108,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<float[]> forFloat() {
+            public synchronized Sink<float[]> forFloat() {
                 return floatSinkSupplier.get();
             }
 
@@ -109,7 +118,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<double[]> forDouble() {
+            public synchronized Sink<double[]> forDouble() {
                 return doubleSinkSupplier.get();
             }
 
@@ -119,12 +128,12 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<byte[]> forBooleanAsByte() {
+            public synchronized Sink<byte[]> forBooleanAsByte() {
                 return booleanAsByteSinkSupplier.get();
             }
 
             @Override
-            public Sink<char[]> forChar() {
+            public synchronized Sink<char[]> forChar() {
                 return charSinkSupplier.get();
             }
 
@@ -134,7 +143,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<String[]> forString() {
+            public synchronized Sink<String[]> forString() {
                 return stringSinkSupplier.get();
             }
 
@@ -144,7 +153,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<long[]> forDateTimeAsLong() {
+            public synchronized Sink<long[]> forDateTimeAsLong() {
                 return dateTimeAsLongSinkSupplier.get();
             }
 
@@ -154,7 +163,7 @@ public interface SinkFactory {
             }
 
             @Override
-            public Sink<long[]> forTimestampAsLong() {
+            public synchronized Sink<long[]> forTimestampAsLong() {
                 return timestampAsLongSinkSupplier.get();
             }
 
