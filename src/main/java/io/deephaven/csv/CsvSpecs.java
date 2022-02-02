@@ -20,37 +20,131 @@ import java.util.function.Predicate;
 public abstract class CsvSpecs {
 
     public interface Builder {
+        /**
+         * Client-specified headers that can be used to override the existing headers in the input (if
+         * {@link #hasHeaderRow()} is true), or to provide absent headers (if {@link #hasHeaderRow()} is false).
+         */
         Builder headers(Iterable<String> elements);
 
+        /**
+         * Override a specific column header by number. This is applied after {@link #headers()}. Column numbers start
+         * with 1.
+         */
         Builder putHeaderForIndex(int index, String header);
 
+        /**
+         * The parsers that the user wants to participate in type inference. Note that the order that the parsers in
+         * this list matters only for custom parsers. In particular:
+         * <ol>
+         * <li>Standard system parsers (singletons from the {@link Parsers} class) will run in their standard precedence
+         * order, regardless of the order they appear here.</li>
+         * <li>All specified system parsers will be run before any specified custom parsers.</li>
+         * <li>Custom parsers will be run in the order they are specified here.</li>
+         * </ol>
+         *
+         * @return the parsers
+         */
         Builder parsers(Iterable<? extends Parser<?>> elements);
 
+        /**
+         * Used to force a specific parser for a specific column, specified by column name. Specifying a parser forgoes
+         * column inference for that column.
+         */
         Builder putParserForName(String columnName, Parser<?> parser);
 
+        /**
+         * Used to force a specific parser for a specific column, specified by column number. Column numbers start with
+         * 1. Specifying a parser forgoes column inference for that column.
+         */
         Builder putParserForIndex(int index, Parser<?> parser);
 
+        /**
+         * The default string that means "null value" in the input. This default is used for a column if there is no
+         * corresponding {@link #nullValueLiteralForName()} or {@link #nullValueLiteralForName()} specified for that
+         * column.
+         */
         Builder nullValueLiteral(String nullValueLiteral);
 
+        /**
+         * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
+         * column overrides the value in {@link #nullValueLiteral()}.
+         */
         Builder putNullValueLiteralForName(String columnName, String nullValueLiteral);
 
+        /**
+         * The null value literal for specific columns, specified by 1-based column index. Specifying a null value
+         * literal for a column overrides the value in {@link #nullValueLiteral()}.
+         */
         Builder putNullValueLiteralForIndex(int index, String nullValueLiteral);
 
+        /**
+         * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
+         */
         Builder nullParser(Parser<?> parser);
 
+        /**
+         * An optional low-level parser that understands custom time zones.
+         */
+        Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
+
+        /**
+         * An optional legalizer for column headers. The legalizer is a function that takes column names (as a
+         * {@code String[]}) names and returns legal column names (as a {@code String[]}). The legalizer function is
+         * permitted to reuse its input data structure. Defaults to {@code Function#identity()}.
+         */
+        Builder headerLegalizer(Function<String[], String[]> headerLegalizer);
+
+        /**
+         * An optional validator for column headers. The validator is a {@link Predicate} function that takes a column
+         * name and returns a true if it is a legal column name, false otherwise. Defaults to {@code c -> true}.
+         */
+        Builder headerValidator(Predicate<String> headerValidator);
+
+        /**
+         * An optional low-level parser that understands custom time zones.
+         */
         Builder hasHeaderRow(boolean hasHeaderRow);
 
+        /**
+         * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
+         * Defaults to {code ','}.
+         */
         Builder delimiter(char delimiter);
 
+        /**
+         * The quote character (used when you want field or line delimiters to be interpreted as literal text. Must be
+         * 7-bit ASCII. Defaults to {@code '"'}. For example:
+         *
+         * <pre>
+         * 123,"hello, there",456,
+         * </pre>
+         *
+         * Would be read as the three fields:
+         *
+         * <ul>
+         * <li>123
+         * <li>hello, there
+         * <li>456
+         * </ul>
+         */
         Builder quote(char quote);
 
+        /**
+         * Whether to trim leading and trailing blanks from non-quoted values. Defaults to {@code true}.
+         */
         Builder ignoreSurroundingSpaces(boolean ignoreSurroundingSpaces);
 
+        /**
+         * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}.
+         */
         Builder trim(boolean trim);
 
+        /**
+         * Whether to run concurrently. In particular, the operation that reads the raw file, breaks it into columns,
+         * and stores that column text in memory can run in parallel with the column parsers, and the parsers can run in
+         * parallel with each other.
+         */
         Builder concurrent(boolean async);
-
-        Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
 
         CsvSpecs build();
     }
@@ -84,34 +178,17 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * Client-specified headers that can be used to override the existing headers in the input (if
-     * {@link #hasHeaderRow()} is true), or to provide absent headers (if {@link #hasHeaderRow()} is false).
+     * See {@link Builder#headers}.
      */
     public abstract List<String> headers();
 
     /**
-     * Override a specific column header by number. This is applied after {@link #headers()}. Column numbers start with
-     * 1.
+     * See {@link Builder#putHeaderForIndex}
      */
     public abstract Map<Integer, String> headerForIndex();
 
     /**
-     * Used to force a specific parser for a specific column, specified by column name. Specifying a parser forgoes
-     * column inference for that column.
-     */
-    public abstract Map<String, Parser<?>> parserForName();
-
-    /**
-     * The parsers that the user wants to participate in type inference. Note that the order that the parsers in this
-     * list matters only for custom parsers. In particular:
-     * <ol>
-     * <li>Standard system parsers (singletons from the {@link Parsers} class) will run in their standard precedence
-     * order, regardless of the order they appear here.</li>
-     * <li>All specified system parsers will be run before any specified custom parsers.</li>
-     * <li>Custom parsers will be run in the order they are specified here.</li>
-     * </ol>
-     *
-     * @return the parsers
+     * See {@link Builder#parsers}.
      */
     @Default
     public List<Parser<?>> parsers() {
@@ -119,14 +196,17 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * Used to force a specific parser for a specific column, specified by column number. Column numbers start with 1.
-     * Specifying a parser forgoes column inference for that column.
+     * See {@link Builder#putParserForName}.
+     */
+    public abstract Map<String, Parser<?>> parserForName();
+
+    /**
+     * See {@link Builder#putParserForIndex}.
      */
     public abstract Map<Integer, Parser<?>> parserForIndex();
 
     /**
-     * The default string that means "null value" in the input. This default is used for a column if there is no
-     * corresponding {@link #nullValueLiteralForName()} or {@link #nullValueLiteralForName()} specified for that column.
+     * See {@link Builder#nullValueLiteral}.
      */
     @Default
     public String nullValueLiteral() {
@@ -134,19 +214,17 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
-     * column overrides the value in {@link #nullValueLiteral()}.
+     * See {@link Builder#nullValueLiteral}.
      */
     public abstract Map<String, String> nullValueLiteralForName();
 
     /**
-     * The null value literal for specific columns, specified by 1-based column index. Specifying a null value literal
-     * for a column overrides the value in {@link #nullValueLiteral()}.
+     * See {@link Builder#putNullValueLiteralForIndex}.
      */
     public abstract Map<Integer, String> nullValueLiteralForIndex();
 
     /**
-     * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
+     * See {@link Builder#nullParser}.
      */
     @Default
     @Nullable
@@ -155,7 +233,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * An optional low-level parser that understands custom time zones.
+     * See {@link Builder#customTimeZoneParser}.
      */
     @Default
     @Nullable
@@ -164,9 +242,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * An optional legalizer for column headers. The legalizer is a function that takes column names (as a
-     * {@code String[]}) names and returns legal column names (as a {@code String[]}). The legalizer function is
-     * permitted to reuse its input data structure. Defaults to {@code Function#identity()}.
+     * See {@link Builder#headerLegalizer}.
      */
     @Default
     public Function<String[], String[]> headerLegalizer() {
@@ -174,8 +250,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * An optional validator for column headers. The validator is a {@link Predicate} function that takes a column name
-     * and returns a true if it is a legal column name, false otherwise. Defaults to {@code c -> true}.
+     * See {@link Builder#headerValidator}.
      */
     @Default
     public Predicate<String> headerValidator() {
@@ -183,9 +258,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * The header row flag. If {@code true}, the column names of the output table will be inferred from the first row of
-     * the table. If {@code false}, the column names will be numbered numerically in the format "Column%d" with a
-     * 1-based index. Defaults to {@code true}.
+     * See {@link Builder#hasHeaderRow}.
      */
     @Default
     public boolean hasHeaderRow() {
@@ -193,8 +266,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
-     * Defaults to {code ','}.
+     * See {@link Builder#delimiter}.
      */
     @Default
     public char delimiter() {
@@ -202,20 +274,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * The quote character (used when you want field or line delimiters to be interpreted as literal text. Must be 7-bit
-     * ASCII. Defaults to {@code '"'}. For example:
-     *
-     * <pre>
-     * 123,"hello, there",456,
-     * </pre>
-     *
-     * Would be read as the three fields:
-     *
-     * <ul>
-     * <li>123
-     * <li>hello, there
-     * <li>456
-     * </ul>
+     * See {@link Builder#quote}.
      */
     @Default
     public char quote() {
@@ -223,7 +282,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * Whether to trim leading and trailing blanks from non-quoted values. Defaults to {@code true}.
+     * See {@link Builder#ignoreSurroundingSpaces}.
      */
     @Default
     public boolean ignoreSurroundingSpaces() {
@@ -231,7 +290,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}.
+     * See {@link Builder#trim}.
      */
     @Default
     public boolean trim() {
@@ -239,9 +298,7 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * Whether to run concurrently. In particular, the operation that reads the raw file, breaks it into columns, and
-     * stores that column text in memory can run in parallel with the column parsers, and the parsers can run in
-     * parallel with each other.
+     * See {@link Builder#concurrent}.
      */
     @Default
     public boolean concurrent() {
