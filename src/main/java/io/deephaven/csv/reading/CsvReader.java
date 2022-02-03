@@ -51,10 +51,11 @@ public final class CsvReader {
      * @param specs A {@link CsvSpecs} object providing options for the parse.
      * @param stream The input data, encoded in UTF-8.
      * @param sinkFactory A factory that can provide Sink&lt;T&gt; of all appropriate types for the output data. Once
-     *        the CsvReader determines what the column type is, t will use the SinkFactory to create an appropriate
-     *        Sink&lt;T&gt; for the type. Note that the CsvReader might guess wrong, so it might create a Sink,
-     *        partially populate it, and then abandon it. The final set of fully-populated Sinks will be returned in in
-     *        the CsvReader.Result.
+     *        the CsvReader determines what the column type is, it will use the {@link SinkFactory} to create an
+     *        appropriate Sink&lt;T&gt; for the type. Note that the CsvReader might guess wrong, so it might create a
+     *        Sink, partially populate it, and then abandon it. The final set of fully-populated Sinks will be returned
+     *        in in the CsvReader.Result. Thread safety: The {@link SinkFactory} may be invoked concurrently, therefore
+     *        it must be thread safe.
      * @return A CsvReader.Result containing the column names, the number of columns, and the final set of
      *         fully-populated Sinks.
      */
