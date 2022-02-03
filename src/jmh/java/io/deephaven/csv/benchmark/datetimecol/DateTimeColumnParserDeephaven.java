@@ -1,4 +1,4 @@
-package io.deephaven.csv.benchmark.intcol;
+package io.deephaven.csv.benchmark.datetimecol;
 
 import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.benchmark.util.ArrayBacked;
@@ -12,16 +12,16 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
-public final class IntColumnParserDeephaven {
-    public static BenchmarkResult<int[]> read(final InputStream in, final int[][] storage) throws Exception {
-        final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, storage, null, null, null, null);
+public final class DateTimeColumnParserDeephaven {
+    public static BenchmarkResult<long[]> read(final InputStream in, final long[][] storage) throws Exception {
+        final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, null, null, null, null, storage);
         final CsvSpecs specs = CsvSpecs.builder()
-                .parsers(List.of(Parsers.INT))
+                .parsers(List.of(Parsers.DATETIME))
                 .hasHeaderRow(true)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
-        final int[][] data = Arrays.stream(result.columns())
-                .map(col -> ((ArrayBacked<int[]>) col).getUnderlyingArray()).toArray(int[][]::new);
+        final long[][] data = Arrays.stream(result.columns())
+                .map(col -> ((ArrayBacked<long[]>) col).getUnderlyingArray()).toArray(long[][]::new);
         return BenchmarkResult.of(result.numRows(), data);
     }
 }
