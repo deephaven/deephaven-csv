@@ -21,6 +21,11 @@ public abstract class CsvSpecs {
 
     public interface Builder {
         /**
+         * Copy all of the parameters from {@code specs} into {@code this} builder.
+         */
+        Builder from(CsvSpecs specs);
+
+        /**
          * Client-specified headers that can be used to override the existing headers in the input (if
          * {@link #hasHeaderRow()} is true), or to provide absent headers (if {@link #hasHeaderRow()} is false).
          */
