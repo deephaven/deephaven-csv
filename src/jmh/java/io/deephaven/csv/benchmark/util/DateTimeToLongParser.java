@@ -9,7 +9,9 @@ import java.time.ZonedDateTime;
 public interface DateTimeToLongParser {
     long parse(final String dateTimeText);
 
-    class Standard implements DateTimeToLongParser {
+    enum Standard implements DateTimeToLongParser {
+        INSTANCE;
+
         public long parse(final String s) {
             final ZonedDateTime zdt = ZonedDateTime.parse(s);
             final long zdtSeconds = zdt.toEpochSecond();
@@ -18,7 +20,9 @@ public interface DateTimeToLongParser {
         }
     }
 
-    class Deephaven implements DateTimeToLongParser {
+    enum Deephaven implements DateTimeToLongParser {
+        INSTANCE;
+
         private final Tokenizer tokenizer = new Tokenizer(null);
         private final ByteSlice bs = new ByteSlice();
         private final MutableLong result = new MutableLong();

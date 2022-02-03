@@ -17,6 +17,20 @@ java {
     }
 }
 
+sourceSets {
+    jmhTest {
+        compileClasspath += sourceSets.jmh.output
+        runtimeClasspath += sourceSets.jmh.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    // Ensure jmhTest picks up the same dependencies as testImplementation / jmh
+    jmhTestImplementation.extendsFrom testImplementation
+    jmhTestRuntimeOnly.extendsFrom jmh
+}
+
 dependencies {
     implementation 'ch.randelshofer:fastdoubleparser:0.3.0'
     compileOnly 'org.jetbrains:annotations:23.0.0'
@@ -57,12 +71,25 @@ jmh {
     }
 }
 
+def jmhTestTask = tasks.register('jmhTest', Test) {
+    description = 'Runs jmh tests.'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.jmhTest.output.classesDirs
+    classpath = sourceSets.jmhTest.runtimeClasspath
+
+    maxHeapSize = '2g'
+
+    useJUnitPlatform()
+}
+
 spotless {
     java {
         eclipse().configFile("${rootDir}/style/eclipse-java-google-style.xml")
     }
 }
 
+check.dependsOn(jmhTestTask)
 check.dependsOn(jmhClasses)
 assemble.dependsOn(jmhJar)
 

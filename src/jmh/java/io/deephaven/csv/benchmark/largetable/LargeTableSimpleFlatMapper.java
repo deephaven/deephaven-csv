@@ -2,6 +2,7 @@ package io.deephaven.csv.benchmark.largetable;
 
 import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 import org.simpleflatmapper.lightningcsv.CsvParser;
 
 import java.io.InputStream;
@@ -11,7 +12,7 @@ import java.util.Iterator;
 
 public class LargeTableSimpleFlatMapper {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
 
         Iterator<String[]> iterator = CsvParser.iterator(new InputStreamReader(in, StandardCharsets.UTF_8));
         // Skip header row

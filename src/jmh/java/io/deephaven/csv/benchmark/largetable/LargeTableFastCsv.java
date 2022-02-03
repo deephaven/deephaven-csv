@@ -5,6 +5,7 @@ import de.siegmar.fastcsv.reader.CloseableIterator;
 import de.siegmar.fastcsv.reader.CsvReader;
 import de.siegmar.fastcsv.reader.CsvRow;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableFastCsv {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
 
         final CloseableIterator<CsvRow> iterator =
                 CsvReader.builder().build(new InputStreamReader(in, StandardCharsets.UTF_8)).iterator();

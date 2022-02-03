@@ -4,10 +4,6 @@ import io.deephaven.csv.benchmark.util.BenchmarkResult;
 import io.deephaven.csv.benchmark.util.TableMaker;
 import org.openjdk.jmh.annotations.*;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -71,54 +67,52 @@ public class StringColumnBenchmark {
         }
     }
 
-    BenchmarkResult<String[]> result;
-
-    @TearDown(Level.Invocation)
-    public void check(final InputProvider input) {
-        input.tableMaker.check(result.columns());
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<String[]> deephaven(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void deephaven(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output());
+    public BenchmarkResult<String[]> apache(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return StringColumnParserApache.read(input.tableMaker.makeStream(), storage.output());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void apache(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserApache.read(input.tableMaker.makeStream(), storage.output());
+    public BenchmarkResult<String[]> fastCsv(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void fastCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void jackson(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
+    public BenchmarkResult<String[]> jackson(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
                 storage.output());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void openCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void simpleFlatMapper(final InputProvider input, final ReusableStorage storage)
+    public BenchmarkResult<String[]> openCsv(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        result = StringColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output());
+        return StringColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void superCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = StringColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output());
+    public BenchmarkResult<String[]> simpleFlatMapper(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output());
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<String[]> superCsv(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output());
     }
 }

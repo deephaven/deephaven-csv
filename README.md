@@ -2,8 +2,10 @@
 
 ## Testing
 
+To run the main tests:
+
 ```shell
-./gradlew check
+./gradlew test
 ```
 
 ## Building
@@ -63,3 +65,12 @@ The JMH jar is the preferred way to run official benchmarks, and provides a comm
 among multiple environments.
 
 [JMH Visualizer](https://github.com/jzillmann/jmh-visualizer) is a convenient tool for visualizing JMH results.
+
+## Benchmark Tests
+
+The benchmarks have tests to ensure that the benchmark implementations are producing the correct results.
+To run the benchmark tests, run:
+
+```shell
+./gradlew jmhTest
+```

@@ -2,6 +2,7 @@ package io.deephaven.csv.benchmark.largetable;
 
 import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 import org.supercsv.io.CsvListReader;
 import org.supercsv.prefs.CsvPreference;
 
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class LargeTableSuperCsv {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
 
         final CsvListReader csvReader =
                 new CsvListReader(new InputStreamReader(in, StandardCharsets.UTF_8), CsvPreference.STANDARD_PREFERENCE);
