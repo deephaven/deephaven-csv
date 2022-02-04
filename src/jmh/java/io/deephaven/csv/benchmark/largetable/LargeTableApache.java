@@ -2,6 +2,7 @@ package io.deephaven.csv.benchmark.largetable;
 
 import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -12,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableApache {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         final CSVFormat format = CSVFormat.DEFAULT
                 .builder()

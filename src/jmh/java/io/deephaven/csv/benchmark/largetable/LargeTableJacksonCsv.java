@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 
 import java.io.InputStream;
 
@@ -29,7 +30,7 @@ public class LargeTableJacksonCsv {
     }
 
     public static Results read(final InputStream in, final String[] headers, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         final CsvSchema.Builder builder = CsvSchema.builder();
         for (String header : headers) {

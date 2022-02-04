@@ -1,10 +1,7 @@
 package io.deephaven.csv.benchmark.util;
 
-import io.deephaven.csv.util.Renderer;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
@@ -53,6 +50,10 @@ public final class TableMaker<TARRAY> {
 
     private boolean equalsActual(final TARRAY[] actual) {
         return Arrays.deepEquals(expected, actual);
+    }
+
+    public TARRAY[] expected() {
+        return expected;
     }
 
     public InputStream makeStream() {

@@ -1,7 +1,8 @@
 package io.deephaven.csv.benchmark.datetimecol;
 
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
-import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Standard;
 import io.deephaven.csv.benchmark.util.TableMaker;
 import io.deephaven.csv.benchmark.util.Util;
 import org.openjdk.jmh.annotations.*;
@@ -9,7 +10,6 @@ import org.openjdk.jmh.annotations.*;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -56,102 +56,93 @@ public class DateTimeColumnBenchmark {
         public final long[][] output = Util.makeArray(ROWS, COLS, long[]::new, long[][]::new);
     }
 
-    BenchmarkResult<long[]> result;
-
-    @TearDown(Level.Invocation)
-    public void check(final InputProvider input) {
-        input.tableMaker.check(result.columns());
-    }
-
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void deephaven(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void apache(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Standard());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void apacheDhDtp(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Deephaven());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void fastCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Standard());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void fastCsvDhDtp(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Deephaven());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void jackson(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
-                storage.output, new DateTimeToLongParser.Standard());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void jacksonDhDtp(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
-                storage.output, new DateTimeToLongParser.Deephaven());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void openCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Standard());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void openCsvDhDtp(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Deephaven());
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public void simpleFlatMapper(final InputProvider input, final ReusableStorage storage)
+    public BenchmarkResult<long[]> deephaven(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        result = DateTimeColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Standard());
+        return DateTimeColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output);
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void simpleFlatMapperDhDtp(final InputProvider input, final ReusableStorage storage)
+    public BenchmarkResult<long[]> apache(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output, Standard.INSTANCE);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> apacheDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        result = DateTimeColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Deephaven());
+        return DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void superCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Standard());
+    public BenchmarkResult<long[]> fastCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output, Standard.INSTANCE);
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public void superCsvDhDtp(final InputProvider input, final ReusableStorage storage) throws Exception {
-        result = DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output,
-                new DateTimeToLongParser.Deephaven());
+    public BenchmarkResult<long[]> fastCsvDhDtp(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> jackson(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return DateTimeColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
+                storage.output, Standard.INSTANCE);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> jacksonDhDtp(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
+                storage.output, new Deephaven());
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> openCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output, Standard.INSTANCE);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> openCsvDhDtp(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> simpleFlatMapper(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
+                Standard.INSTANCE);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> simpleFlatMapperDhDtp(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
+                new Deephaven());
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> superCsv(final InputProvider input, final ReusableStorage storage) throws Exception {
+        return DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output, Standard.INSTANCE);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> superCsvDhDtp(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 }

@@ -3,6 +3,7 @@ package io.deephaven.csv.benchmark.largetable;
 import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import com.opencsv.CSVReader;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
+import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableOpenCsv {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = new DateTimeToLongParser.Deephaven();
+        final DateTimeToLongParser dtlp = new Deephaven();
         final CSVReader csvReader = new CSVReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         if (csvReader.readNext() == null) {
             throw new RuntimeException("Expected header row");
