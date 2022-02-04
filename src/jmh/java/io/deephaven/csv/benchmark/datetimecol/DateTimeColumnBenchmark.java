@@ -1,7 +1,6 @@
 package io.deephaven.csv.benchmark.datetimecol;
 
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
-import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Standard;
 import io.deephaven.csv.benchmark.util.TableMaker;
@@ -74,7 +73,7 @@ public class DateTimeColumnBenchmark {
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<long[]> apacheDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output, Deephaven.INSTANCE);
+        return DateTimeColumnParserApache.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 
     @Benchmark
@@ -87,7 +86,7 @@ public class DateTimeColumnBenchmark {
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<long[]> fastCsvDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output, Deephaven.INSTANCE);
+        return DateTimeColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 
     @Benchmark
@@ -102,7 +101,7 @@ public class DateTimeColumnBenchmark {
     public BenchmarkResult<long[]> jacksonDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
         return DateTimeColumnParserJacksonCsv.read(input.tableMaker.makeStream(), input.tableMaker.headers(),
-                storage.output, Deephaven.INSTANCE);
+                storage.output, new Deephaven());
     }
 
     @Benchmark
@@ -115,7 +114,7 @@ public class DateTimeColumnBenchmark {
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<long[]> openCsvDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output, Deephaven.INSTANCE);
+        return DateTimeColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 
     @Benchmark
@@ -131,7 +130,7 @@ public class DateTimeColumnBenchmark {
     public BenchmarkResult<long[]> simpleFlatMapperDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
         return DateTimeColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
-                Deephaven.INSTANCE);
+                new Deephaven());
     }
 
     @Benchmark
@@ -144,6 +143,6 @@ public class DateTimeColumnBenchmark {
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<long[]> superCsvDhDtp(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output, Deephaven.INSTANCE);
+        return DateTimeColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output, new Deephaven());
     }
 }

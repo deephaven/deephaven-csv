@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableFastCsv {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         final CloseableIterator<CsvRow> iterator =
                 CsvReader.builder().build(new InputStreamReader(in, StandardCharsets.UTF_8)).iterator();

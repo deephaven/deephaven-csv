@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableOpenCsv {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
+        final DateTimeToLongParser dtlp = new Deephaven();
         final CSVReader csvReader = new CSVReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         if (csvReader.readNext() == null) {
             throw new RuntimeException("Expected header row");

@@ -12,7 +12,7 @@ import java.util.Iterator;
 
 public class LargeTableSimpleFlatMapper {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         Iterator<String[]> iterator = CsvParser.iterator(new InputStreamReader(in, StandardCharsets.UTF_8));
         // Skip header row

@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LargeTableApache {
     public static Results read(final InputStream in, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         final CSVFormat format = CSVFormat.DEFAULT
                 .builder()

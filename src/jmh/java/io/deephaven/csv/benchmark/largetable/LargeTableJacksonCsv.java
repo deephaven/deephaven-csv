@@ -30,7 +30,7 @@ public class LargeTableJacksonCsv {
     }
 
     public static Results read(final InputStream in, final String[] headers, final Results results) throws Exception {
-        final DateTimeToLongParser dtlp = Deephaven.INSTANCE;
+        final DateTimeToLongParser dtlp = new Deephaven();
 
         final CsvSchema.Builder builder = CsvSchema.builder();
         for (String header : headers) {
