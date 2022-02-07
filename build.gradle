@@ -9,7 +9,9 @@ repositories {
 }
 
 group = 'io.deephaven'
-version = '0.0.1-SNAPSHOT'
+version = '0.1.0'
+
+description = 'The Deephaven High-Performance CSV Parser'
 
 java {
     toolchain {

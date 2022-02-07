@@ -1,4 +1,4 @@
-# Deephaven CSV
+# The Deephaven High-Performance CSV Parser
 
 ## Testing
 
