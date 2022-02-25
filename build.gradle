@@ -38,7 +38,7 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
 
     annotationProcessor 'org.immutables:value:2.8.8'
-    compileOnly 'org.immutables:value-annotations:2.8.8'
+    compileOnly 'org.immutables:value-annotations:2.9.0'
 
     testImplementation 'net.sf.trove4j:trove4j:3.0.3'
     testImplementation 'commons-io:commons-io:2.11.0'
