@@ -23,11 +23,16 @@ public final class ParseDenseStorageToColumn {
      * @param dsrAlt A second reader for the same input (used to perform the second pass over the data, if type
      *        inference deems a second pass to be necessary).
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
-     * @param nullValueLiteral If a cell text is equal to this value, it will be interpreted as the null value.
-     *        Typically set to the empty string.
      * @param nullParser The Parser to use if {@code parsers.size() > 1} but the column contains all null values. This
      *        is needed as a backstop because otherwise type inference would have no way to choose among the multiple
      *        parsers.
+     * @param customDoubleParser An optional (but encouraged) callback for parsing doubles faster than Java's builtin
+     *        {@link Double#parseDouble}. One such library is https://github.com/wrandelshofer/FastDoubleParser
+     * @param customTimeZoneParser An optional time zone parser, if your implementation has special time zone names. For
+     *        example Deephaven supports timezones like " NY" and " MN" as in "2020-03-01T12:34:56 NY" (including the
+     *        space).
+     * @param nullValueLiteral If a cell text is equal to this value, it will be interpreted as the null value.
+     *        Typically set to the empty string.
      * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
      *         data.
@@ -37,13 +42,14 @@ public final class ParseDenseStorageToColumn {
             final DenseStorageReader dsrAlt,
             List<Parser<?>> parsers,
             final Parser<?> nullParser,
+            final Tokenizer.CustomDoubleParser customDoubleParser,
             final Tokenizer.CustomTimeZoneParser customTimeZoneParser,
             final String nullValueLiteral,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
         Set<Parser<?>> parserSet = new HashSet<>(Objects.requireNonNullElse(parsers, Parsers.DEFAULT));
 
-        final Tokenizer tokenizer = new Tokenizer(customTimeZoneParser);
+        final Tokenizer tokenizer = new Tokenizer(customDoubleParser, customTimeZoneParser);
         final Parser.GlobalContext gctx =
                 new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteral);
 

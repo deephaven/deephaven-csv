@@ -1,6 +1,5 @@
 package io.deephaven.csv.tokenization;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.util.*;
 
@@ -12,8 +11,13 @@ import java.time.*;
  */
 public class Tokenizer {
     /**
+     * An optional (but strongly encouraged) custom double parser, such as
+     * https://github.com/wrandelshofer/FastDoubleParser
+     */
+    private final CustomDoubleParser customDoubleParser;
+    /**
      * An optional custom time zone parser. Used for clients (such as Deephaven itself) who support custom time zone
-     * formats.
+     * formats like " NY" or " MN" (including the space) as in "2020-03-01T12:34:56 NY".
      */
     private final CustomTimeZoneParser customTimeZoneParser;
     /** Storage for a temporary "out" variable owned by tryParseDateTime. */
@@ -27,7 +31,8 @@ public class Tokenizer {
     /** Storage for a temporary "out" variable owned by tryParseDateTime. */
     private final MutableBoolean dateTimeTempBoolean = new MutableBoolean();
 
-    public Tokenizer(CustomTimeZoneParser customTimeZoneParser) {
+    public Tokenizer(final CustomDoubleParser customDoubleParser, final CustomTimeZoneParser customTimeZoneParser) {
+        this.customDoubleParser = customDoubleParser;
         this.customTimeZoneParser = customTimeZoneParser;
     }
 
@@ -159,24 +164,28 @@ public class Tokenizer {
     }
 
     /**
-     * Try to parse the input as a double.
+     * Try to parse the input as a double. If there is a custom double parser installed, it will be invoked. Otherwise,
+     * the input will be parsed by Java's builtin {@link Double#parseDouble}. One such custom parser is
+     * https://github.com/wrandelshofer/FastDoubleParser.
      *
      * @param bs The input text. This slice is *NOT* modified, regardless of success or failure.
      * @param result Contains the parsed value if this method returns true. Otherwise, the contents are unspecified.
      * @return true if {@code bs} was successfully parsed as a double. Otherwise, false.
      */
     public boolean tryParseDouble(final ByteSlice bs, final MutableDouble result) {
-        // Our third-party double parser already checks for trailing garbage so we don't have to.
         try {
-            final double res =
-                    FastDoubleParserFromByteArray.parseDouble(bs.data(), bs.begin(), bs.size());
+            final double res;
+            if (customDoubleParser != null) {
+                res = customDoubleParser.parse(bs.data(), bs.begin(), bs.size());
+            } else {
+                res = Double.parseDouble(bs.toString());
+            }
             result.setValue(res);
             return true;
         } catch (NumberFormatException nfe) {
             // Normally we would be pretty sad about throwing exceptions in the inner loops of our CSV
-            // parsing
-            // framework, but the fact of the matter is that the first exception thrown will cause the
-            // calling parser to punt to the next parser anyway, so the overall impact is negligible.
+            // parsing framework, but the fact of the matter is that the first exception thrown will cause
+            // the calling parser to punt to the next parser anyway, so the overall impact is negligible.
             return false;
         }
     }
@@ -719,5 +728,21 @@ public class Tokenizer {
          */
         boolean tryParse(
                 final ByteSlice bs, final MutableObject<ZoneId> zoneId, final MutableLong offsetSeconds);
+    }
+
+    /**
+     * A pluggable interface for a user-supplied double parser. The interface is designed to match
+     * FastDoubleParserFromByteArray.parseDouble() from https://github.com/wrandelshofer/FastDoubleParser
+     */
+    public interface CustomDoubleParser {
+        /**
+         * Try to parse a double.
+         *
+         * @param data The input array.
+         * @param offset The start position of the input text.
+         * @param size The size of the input text.
+         * @return The parsed value if successful. Otherwise, throws NumberFormatException.
+         */
+        double parse(byte[] data, int offset, int size) throws NumberFormatException;
     }
 }

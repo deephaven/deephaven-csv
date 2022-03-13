@@ -18,7 +18,6 @@ import java.util.function.Predicate;
 @Immutable
 @BuildableStyle
 public abstract class CsvSpecs {
-
     public interface Builder {
         /**
          * Copy all of the parameters from {@code specs} into {@code this} builder.
@@ -88,7 +87,15 @@ public abstract class CsvSpecs {
         Builder nullParser(Parser<?> parser);
 
         /**
-         * An optional low-level parser that understands custom time zones.
+         * An optional (but strongly encouraged) double parser, such as
+         * https://github.com/wrandelshofer/FastDoubleParser that will improve the performance of double parsing.
+         */
+        Builder customDoubleParser(Tokenizer.CustomDoubleParser customDoubleParser);
+
+        /**
+         * An optional low-level "timezone parser" that understands custom time zone strings. For example the Deephaven
+         * system allows special timezones like " NY" and " MN" as in "2020-03-01T12:34:56 NY" (note also the explicit
+         * space). The timezone parser must be reentrant.
          */
         Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
 
@@ -235,6 +242,15 @@ public abstract class CsvSpecs {
     @Nullable
     public Parser<?> nullParser() {
         return Parsers.STRING;
+    }
+
+    /**
+     * See {@link Builder#customDoubleParser}.
+     */
+    @Default
+    @Nullable
+    public Tokenizer.CustomDoubleParser customDoubleParser() {
+        return null;
     }
 
     /**

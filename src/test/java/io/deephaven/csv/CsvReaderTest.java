@@ -1,5 +1,6 @@
 package io.deephaven.csv;
 
+import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import gnu.trove.list.array.TByteArrayList;
 import gnu.trove.list.array.TCharArrayList;
 import gnu.trove.list.array.TDoubleArrayList;
@@ -327,19 +328,20 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
+    private static final String DOUBLE_INPUT = ""
+            + "Values\n"
+            + "Infinity\n"
+            + "\n"
+            + "-Infinity\n"
+            + "NaN\n"
+            + "1.7976931348623157e+308\n"
+            + "2.2250738585072014E-308\n"
+            + "12.34\n"
+            + "-56.78\n"
+            + "4.9e-324\n";
+
     @Test
     public void doubleRange() throws CsvReaderException {
-        final String input =
-                ""
-                        + "Values\n"
-                        + "Infinity\n"
-                        + "\n"
-                        + "-Infinity\n"
-                        + "NaN\n"
-                        + "1.7976931348623157e+308\n"
-                        + "2.2250738585072014E-308\n"
-                        + "4.9e-324\n";
-
         final ColumnSet expected =
                 ColumnSet.of(
                         Column.ofValues(
@@ -350,9 +352,59 @@ public class CsvReaderTest {
                                 Double.NaN,
                                 Double.MAX_VALUE,
                                 Double.MIN_NORMAL,
+                                12.34,
+                                -56.78,
                                 Double.MIN_VALUE));
 
-        invokeTest(defaultCsvSpecs(), input, expected);
+        invokeTest(defaultCsvSpecs(), DOUBLE_INPUT, expected);
+    }
+
+    @Test
+    public void doubleRangeWithFastDoubleParser() throws CsvReaderException {
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues(
+                                "Values",
+                                Double.POSITIVE_INFINITY,
+                                Sentinels.NULL_DOUBLE,
+                                Double.NEGATIVE_INFINITY,
+                                Double.NaN,
+                                Double.MAX_VALUE,
+                                Double.MIN_NORMAL,
+                                12.34,
+                                -56.78,
+                                Double.MIN_VALUE));
+
+        invokeTest(defaultCsvBuilder()
+                .customDoubleParser(FastDoubleParserFromByteArray::parseDouble).build(), DOUBLE_INPUT, expected);
+    }
+
+    @Test
+    public void doubleRangeWithCustomPlugin() throws CsvReaderException {
+        // This test makes sure that the parse double callback is actually being invoked.
+        final String input = ""
+                + "Values\n"
+                + "1.1\n"
+                + "2.2\n"
+                + "3.3\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues(
+                                "Values",
+                                2.1,
+                                3.2,
+                                4.3));
+
+        // My "strange" parser adds 1.0 to the parsed value.
+        Tokenizer.CustomDoubleParser myStrangeParser = (bytes, offset, size) -> {
+            final String s = new String(bytes, offset, size);
+            final double result = Double.parseDouble(s);
+            return result + 1;
+        };
+
+        invokeTest(defaultCsvBuilder()
+                .customDoubleParser(myStrangeParser).build(), input, expected);
     }
 
     @Test

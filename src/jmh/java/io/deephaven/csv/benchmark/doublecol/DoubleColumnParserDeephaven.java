@@ -1,5 +1,6 @@
 package io.deephaven.csv.benchmark.doublecol;
 
+import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.benchmark.util.ArrayBacked;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
@@ -17,6 +18,7 @@ public final class DoubleColumnParserDeephaven {
         final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, null, null, storage, null, null);
         final CsvSpecs specs = CsvSpecs.builder()
                 .parsers(List.of(Parsers.DOUBLE))
+                .customDoubleParser(FastDoubleParserFromByteArray::parseDouble)
                 .hasHeaderRow(true)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);

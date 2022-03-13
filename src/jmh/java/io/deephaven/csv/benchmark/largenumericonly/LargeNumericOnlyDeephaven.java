@@ -1,5 +1,6 @@
 package io.deephaven.csv.benchmark.largenumericonly;
 
+import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.benchmark.util.ArrayBacked;
 import io.deephaven.csv.benchmark.util.SinkFactories;
@@ -22,6 +23,7 @@ public class LargeNumericOnlyDeephaven {
 
         final CsvSpecs specs = CsvSpecs.builder()
                 .hasHeaderRow(true)
+                .customDoubleParser(FastDoubleParserFromByteArray::parseDouble)
                 .putParserForIndex(1, Parsers.LONG)
                 .putParserForIndex(2, Parsers.LONG)
                 .putParserForIndex(3, Parsers.LONG)

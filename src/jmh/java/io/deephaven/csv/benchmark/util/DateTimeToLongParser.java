@@ -35,7 +35,7 @@ public interface DateTimeToLongParser {
         private byte[] bytes = new byte[0];
 
         public Deephaven() {
-            this(new Tokenizer(null));
+            this(new Tokenizer(null, null));
         }
 
         public Deephaven(Tokenizer tokenizer) {

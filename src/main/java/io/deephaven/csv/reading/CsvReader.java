@@ -123,6 +123,7 @@ public final class CsvReader {
                                         dsr1s[iiCopy],
                                         parsersToUse,
                                         specs.nullParser(),
+                                        specs.customDoubleParser(),
                                         specs.customTimeZoneParser(),
                                         nullValueLiteralToUse,
                                         sinkFactory));
