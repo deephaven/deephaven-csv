@@ -42,18 +42,8 @@ public class DoubleColumnBenchmarkTest {
     }
 
     @Test
-    void apacheFDP() throws Exception {
-        runTest(benchmark::apacheFDP);
-    }
-
-    @Test
     void fastCsv() throws Exception {
         runTest(benchmark::fastCsv);
-    }
-
-    @Test
-    void fastCsvFDP() throws Exception {
-        runTest(benchmark::fastCsvFDP);
     }
 
     @Test
@@ -62,18 +52,8 @@ public class DoubleColumnBenchmarkTest {
     }
 
     @Test
-    void jacksonFDP() throws Exception {
-        runTest(benchmark::jacksonFDP);
-    }
-
-    @Test
     void openCsv() throws Exception {
         runTest(benchmark::openCsv);
-    }
-
-    @Test
-    void openCsvFDP() throws Exception {
-        runTest(benchmark::openCsvFDP);
     }
 
     @Test
@@ -82,17 +62,7 @@ public class DoubleColumnBenchmarkTest {
     }
 
     @Test
-    void simpleFlatMapperFDP() throws Exception {
-        runTest(benchmark::simpleFlatMapperFDP);
-    }
-
-    @Test
     void superCsv() throws Exception {
         runTest(benchmark::superCsv);
-    }
-
-    @Test
-    void superCsvFDP() throws Exception {
-        runTest(benchmark::superCsvFDP);
     }
 }

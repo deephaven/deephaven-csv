@@ -4,6 +4,10 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.util.*;
 
 import java.time.*;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.ServiceLoader;
 
 /**
  * This class provides a variety of methods to efficiently parse various low-level types like booleans, longs, doubles,
@@ -11,8 +15,7 @@ import java.time.*;
  */
 public class Tokenizer {
     /**
-     * An optional (but strongly encouraged) custom double parser, such as
-     * https://github.com/wrandelshofer/FastDoubleParser
+     * The custom double parser.
      */
     private final CustomDoubleParser customDoubleParser;
     /**
@@ -32,7 +35,7 @@ public class Tokenizer {
     private final MutableBoolean dateTimeTempBoolean = new MutableBoolean();
 
     public Tokenizer(final CustomDoubleParser customDoubleParser, final CustomTimeZoneParser customTimeZoneParser) {
-        this.customDoubleParser = customDoubleParser;
+        this.customDoubleParser = Objects.requireNonNull(customDoubleParser);
         this.customTimeZoneParser = customTimeZoneParser;
     }
 
@@ -174,12 +177,7 @@ public class Tokenizer {
      */
     public boolean tryParseDouble(final ByteSlice bs, final MutableDouble result) {
         try {
-            final double res;
-            if (customDoubleParser != null) {
-                res = customDoubleParser.parse(bs.data(), bs.begin(), bs.size());
-            } else {
-                res = Double.parseDouble(bs.toString());
-            }
+            final double res = customDoubleParser.parse(bs);
             result.setValue(res);
             return true;
         } catch (NumberFormatException nfe) {
@@ -731,18 +729,41 @@ public class Tokenizer {
     }
 
     /**
-     * A pluggable interface for a user-supplied double parser. The interface is designed to match
-     * FastDoubleParserFromByteArray.parseDouble() from https://github.com/wrandelshofer/FastDoubleParser
+     * A pluggable interface for a user-supplied double parser.
      */
     public interface CustomDoubleParser {
+
+        static Optional<CustomDoubleParser> load() {
+            final Iterator<CustomDoubleParser> it = ServiceLoader.load(CustomDoubleParser.class).iterator();
+            if (!it.hasNext()) {
+                return Optional.empty();
+            }
+            final CustomDoubleParser first = it.next();
+            if (it.hasNext()) {
+                final CustomDoubleParser second = it.next();
+                throw new IllegalStateException(
+                        String.format("Found more than one service registered for '%s': '%s' and '%s'",
+                                CustomDoubleParser.class.getName(),
+                                first.getClass().getName(),
+                                second.getClass().getName()));
+            }
+            return Optional.of(first);
+        }
+
         /**
          * Try to parse a double.
          *
-         * @param data The input array.
-         * @param offset The start position of the input text.
-         * @param size The size of the input text.
+         * @param bs The byte slice.
          * @return The parsed value if successful. Otherwise, throws NumberFormatException.
          */
-        double parse(byte[] data, int offset, int size) throws NumberFormatException;
+        double parse(final ByteSlice bs) throws NumberFormatException;
+
+        /**
+         * Try to parse a double.
+         *
+         * @param cs the char sequence
+         * @return The parsed value if successful. Otherwise, throws NumberFormatException.
+         */
+        double parse(final CharSequence cs) throws NumberFormatException;
     }
 }

@@ -3,7 +3,10 @@ package io.deephaven.csv;
 import io.deephaven.csv.annotations.BuildableStyle;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
+import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
+import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
+import io.deephaven.csv.tokenization.Tokenizer.CustomTimeZoneParser;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
@@ -87,8 +90,8 @@ public abstract class CsvSpecs {
         Builder nullParser(Parser<?> parser);
 
         /**
-         * An optional (but strongly encouraged) double parser, such as
-         * https://github.com/wrandelshofer/FastDoubleParser that will improve the performance of double parsing.
+         * The custom double parser. If not explicitly set, it will default to {@link CustomDoubleParser#load()} if
+         * present, otherwise {@link JdkDoubleParser#INSTANCE}.
          */
         Builder customDoubleParser(Tokenizer.CustomDoubleParser customDoubleParser);
 
@@ -248,9 +251,8 @@ public abstract class CsvSpecs {
      * See {@link Builder#customDoubleParser}.
      */
     @Default
-    @Nullable
     public Tokenizer.CustomDoubleParser customDoubleParser() {
-        return null;
+        return CustomDoubleParser.load().orElse(JdkDoubleParser.INSTANCE);
     }
 
     /**

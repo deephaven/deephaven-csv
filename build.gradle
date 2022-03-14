@@ -9,14 +9,22 @@ repositories {
 }
 
 group = 'io.deephaven'
-version = '0.3.0-SNAPSHOT'
+version = '0.2.0-SNAPSHOT'
 
 description = 'The Deephaven High-Performance CSV Parser'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+// Java 11+ required for building
+if (!JavaVersion.current().isJava11Compatible()) {
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(11)
+        }
     }
+}
+
+// Java 8 compatible jar
+tasks.named('compileJava', JavaCompile) {compile ->
+    compile.options.release.set 8
 }
 
 sourceSets {
@@ -33,13 +41,26 @@ configurations {
     jmhTestRuntimeOnly.extendsFrom jmh
 }
 
+def customDoubleParser = project.findProperty('customDoubleParser') ?: '11-compatible'
+
 dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
 
     annotationProcessor 'org.immutables:value:2.9.0'
     compileOnly 'org.immutables:value-annotations:2.9.0'
 
-    testImplementation 'ch.randelshofer:fastdoubleparser:0.3.0'
+    if (customDoubleParser == '11-compatible') {
+        // By default, use our Java 11 fast double parser for tests and JMH
+        testRuntimeOnly project(':fast-double-parser')
+    } else if (customDoubleParser == '8-compatible') {
+        // Use the Java 8 compatible fast double parser for tests and JMH
+        testRuntimeOnly project(':fast-double-parser-8')
+    } else if (customDoubleParser == 'none') {
+        // Use the JDK Double parser for tests and JMH
+    } else {
+        throw new IllegalArgumentException('what')
+    }
+
     testImplementation 'net.sf.trove4j:trove4j:3.0.3'
     testImplementation 'commons-io:commons-io:2.11.0'
     testCompileOnly 'org.jetbrains:annotations:23.0.0'
@@ -57,8 +78,9 @@ dependencies {
     jmh 'org.simpleflatmapper:sfm-csv:8.2.3'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+tasks.named('test') { test ->
+    test.useJUnitPlatform()
+    test.inputs.property('customDoubleParser', customDoubleParser)
 }
 
 jmh {
@@ -73,16 +95,18 @@ jmh {
     }
 }
 
-def jmhTestTask = tasks.register('jmhTest', Test) {
-    description = 'Runs jmh tests.'
-    group = 'verification'
+def jmhTestTask = tasks.register('jmhTest', Test) {jmhTest ->
+    jmhTest.description = 'Runs jmh tests.'
+    jmhTest.group = 'verification'
 
-    testClassesDirs = sourceSets.jmhTest.output.classesDirs
-    classpath = sourceSets.jmhTest.runtimeClasspath
+    jmhTest.inputs.property('customDoubleParser', customDoubleParser)
 
-    maxHeapSize = '2g'
+    jmhTest.testClassesDirs = sourceSets.jmhTest.output.classesDirs
+    jmhTest.classpath = sourceSets.jmhTest.runtimeClasspath
 
-    useJUnitPlatform()
+    jmhTest.maxHeapSize = '2g'
+
+    jmhTest.useJUnitPlatform()
 }
 
 spotless {

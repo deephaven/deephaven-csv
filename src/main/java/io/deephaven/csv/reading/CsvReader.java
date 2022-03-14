@@ -157,11 +157,11 @@ public final class CsvReader {
             final String columnName, final int oneBasedColumnNumber) {
         Parser<?> specifiedParser = specs.parserForName().get(columnName);
         if (specifiedParser != null) {
-            return List.of(specifiedParser);
+            return Collections.singletonList(specifiedParser);
         }
         specifiedParser = specs.parserForIndex().get(oneBasedColumnNumber);
         if (specifiedParser != null) {
-            return List.of(specifiedParser);
+            return Collections.singletonList(specifiedParser);
         }
         return specs.parsers();
     }

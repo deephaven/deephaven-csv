@@ -1,9 +1,9 @@
 package io.deephaven.csv.benchmark.largetable;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import de.siegmar.fastcsv.reader.CloseableIterator;
 import de.siegmar.fastcsv.reader.CsvReader;
 import de.siegmar.fastcsv.reader.CsvRow;
+import io.deephaven.csv.benchmark.util.CustomDoubleParserLoadMemoized;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 
@@ -29,9 +29,9 @@ public class LargeTableFastCsv {
             results.boolsAsBytes[row] = Boolean.parseBoolean(next.getField(2)) ? (byte) 1 : (byte) 0;
             results.longs0[row] = Long.parseLong(next.getField(3));
             results.longs1[row] = Long.parseLong(next.getField(4));
-            results.doubles0[row] = FastDoubleParser.parseDouble(next.getField(5));
-            results.doubles1[row] = FastDoubleParser.parseDouble(next.getField(6));
-            results.doubles2[row] = FastDoubleParser.parseDouble(next.getField(7));
+            results.doubles0[row] = CustomDoubleParserLoadMemoized.parseDouble(next.getField(5));
+            results.doubles1[row] = CustomDoubleParserLoadMemoized.parseDouble(next.getField(6));
+            results.doubles2[row] = CustomDoubleParserLoadMemoized.parseDouble(next.getField(7));
             ++row;
             if ((row % 1_000_000) == 0) {
                 System.out.printf("FastCSV: processed %d rows\n", row);

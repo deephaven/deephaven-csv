@@ -1,6 +1,6 @@
 package io.deephaven.csv.benchmark.largetable;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
+import io.deephaven.csv.benchmark.util.CustomDoubleParserLoadMemoized;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser;
 import io.deephaven.csv.benchmark.util.DateTimeToLongParser.Deephaven;
 import org.supercsv.io.CsvListReader;
@@ -32,9 +32,9 @@ public class LargeTableSuperCsv {
             results.boolsAsBytes[row] = Boolean.parseBoolean(next.get(2)) ? (byte) 1 : (byte) 0;
             results.longs0[row] = Long.parseLong(next.get(3));
             results.longs1[row] = Long.parseLong(next.get(4));
-            results.doubles0[row] = FastDoubleParser.parseDouble(next.get(5));
-            results.doubles1[row] = FastDoubleParser.parseDouble(next.get(6));
-            results.doubles2[row] = FastDoubleParser.parseDouble(next.get(7));
+            results.doubles0[row] = CustomDoubleParserLoadMemoized.parseDouble(next.get(5));
+            results.doubles1[row] = CustomDoubleParserLoadMemoized.parseDouble(next.get(6));
+            results.doubles2[row] = CustomDoubleParserLoadMemoized.parseDouble(next.get(7));
             ++row;
             if ((row % 1_000_000) == 0) {
                 System.out.printf("SuperCsv: processed %d rows\n", row);

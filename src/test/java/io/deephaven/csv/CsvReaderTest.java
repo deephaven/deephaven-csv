@@ -1,6 +1,5 @@
 package io.deephaven.csv;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
 import gnu.trove.list.array.TByteArrayList;
 import gnu.trove.list.array.TCharArrayList;
 import gnu.trove.list.array.TDoubleArrayList;
@@ -15,6 +14,7 @@ import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
+import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
@@ -355,28 +355,7 @@ public class CsvReaderTest {
                                 12.34,
                                 -56.78,
                                 Double.MIN_VALUE));
-
         invokeTest(defaultCsvSpecs(), DOUBLE_INPUT, expected);
-    }
-
-    @Test
-    public void doubleRangeWithFastDoubleParser() throws CsvReaderException {
-        final ColumnSet expected =
-                ColumnSet.of(
-                        Column.ofValues(
-                                "Values",
-                                Double.POSITIVE_INFINITY,
-                                Sentinels.NULL_DOUBLE,
-                                Double.NEGATIVE_INFINITY,
-                                Double.NaN,
-                                Double.MAX_VALUE,
-                                Double.MIN_NORMAL,
-                                12.34,
-                                -56.78,
-                                Double.MIN_VALUE));
-
-        invokeTest(defaultCsvBuilder()
-                .customDoubleParser(FastDoubleParserFromByteArray::parseDouble).build(), DOUBLE_INPUT, expected);
     }
 
     @Test
@@ -397,10 +376,16 @@ public class CsvReaderTest {
                                 4.3));
 
         // My "strange" parser adds 1.0 to the parsed value.
-        Tokenizer.CustomDoubleParser myStrangeParser = (bytes, offset, size) -> {
-            final String s = new String(bytes, offset, size);
-            final double result = Double.parseDouble(s);
-            return result + 1;
+        Tokenizer.CustomDoubleParser myStrangeParser = new Tokenizer.CustomDoubleParser() {
+            @Override
+            public double parse(ByteSlice bs) throws NumberFormatException {
+                return parse(bs.toString());
+            }
+
+            @Override
+            public double parse(CharSequence cs) throws NumberFormatException {
+                return Double.parseDouble(cs.toString()) + 1;
+            }
         };
 
         invokeTest(defaultCsvBuilder()

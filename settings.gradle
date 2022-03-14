@@ -1,1 +1,3 @@
 rootProject.name = 'deephaven-csv'
+include('fast-double-parser')
+include('fast-double-parser-8')
