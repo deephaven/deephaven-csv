@@ -10,24 +10,23 @@ import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
  * @see <a href="https://github.com/wrandelshofer/FastDoubleParser">FastDoubleParser</a>
  */
 public final class FastCustomDoubleParser8 implements CustomDoubleParser {
-
     /**
-     * Equivalent to {@code FastDoubleParser.parseDouble(bs.toString())}.
+     * Wraps the {@link ByteSlice} in a reusable {@link CharSequence} so that it can be passed to
+     * {@link #parse(CharSequence)}
      *
      * @param bs The byte slice.
-     * @return the parsed double
+     * @return The parsed value if successful. Otherwise, throws NumberFormatException.
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
-        // Note: not as good of interface as ch.randelshofer:fastdoubleparser:0.3.0+
-        return FastDoubleParser.parseDouble(bs.toString());
+        return FastDoubleParser.parseDouble(bs);
     }
 
     /**
-     * Equivalent to {@code FastDoubleParser.parseDouble(cs)}.
+     * Equivalent to {@link FastDoubleParser#parseDouble}.
      *
      * @param cs the char sequence
-     * @return the parsed double
+     * @return The parsed value if successful. Otherwise, throws NumberFormatException.
      */
     @Override
     public double parse(CharSequence cs) throws NumberFormatException {

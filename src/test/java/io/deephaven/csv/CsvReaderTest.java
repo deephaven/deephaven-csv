@@ -14,7 +14,6 @@ import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
-import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
@@ -379,7 +378,7 @@ public class CsvReaderTest {
         Tokenizer.CustomDoubleParser myStrangeParser = new Tokenizer.CustomDoubleParser() {
             @Override
             public double parse(ByteSlice bs) throws NumberFormatException {
-                return parse(bs.toString());
+                return parse((CharSequence) bs);
             }
 
             @Override
