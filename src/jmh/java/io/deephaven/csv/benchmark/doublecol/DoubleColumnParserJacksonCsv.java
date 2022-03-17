@@ -1,14 +1,13 @@
 package io.deephaven.csv.benchmark.doublecol;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import io.deephaven.csv.benchmark.util.CustomDoubleParserLoadMemoized;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
 
 import java.io.InputStream;
-import java.util.List;
 
 public final class DoubleColumnParserJacksonCsv {
     public static class Row {
@@ -83,11 +82,11 @@ public final class DoubleColumnParserJacksonCsv {
         int rowNum = 0;
         while (it.hasNext()) {
             final FDPRow row = it.next();
-            storage[0][rowNum] = FastDoubleParser.parseDouble(row.Col1);
-            storage[1][rowNum] = FastDoubleParser.parseDouble(row.Col2);
-            storage[2][rowNum] = FastDoubleParser.parseDouble(row.Col3);
-            storage[3][rowNum] = FastDoubleParser.parseDouble(row.Col4);
-            storage[4][rowNum] = FastDoubleParser.parseDouble(row.Col5);
+            storage[0][rowNum] = CustomDoubleParserLoadMemoized.parseDouble(row.Col1);
+            storage[1][rowNum] = CustomDoubleParserLoadMemoized.parseDouble(row.Col2);
+            storage[2][rowNum] = CustomDoubleParserLoadMemoized.parseDouble(row.Col3);
+            storage[3][rowNum] = CustomDoubleParserLoadMemoized.parseDouble(row.Col4);
+            storage[4][rowNum] = CustomDoubleParserLoadMemoized.parseDouble(row.Col5);
             ++rowNum;
         }
         return BenchmarkResult.of(rowNum, storage);

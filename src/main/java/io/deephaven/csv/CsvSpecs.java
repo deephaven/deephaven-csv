@@ -3,7 +3,10 @@ package io.deephaven.csv;
 import io.deephaven.csv.annotations.BuildableStyle;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
+import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
+import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
+import io.deephaven.csv.tokenization.Tokenizer.CustomTimeZoneParser;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +21,6 @@ import java.util.function.Predicate;
 @Immutable
 @BuildableStyle
 public abstract class CsvSpecs {
-
     public interface Builder {
         /**
          * Copy all of the parameters from {@code specs} into {@code this} builder.
@@ -88,7 +90,15 @@ public abstract class CsvSpecs {
         Builder nullParser(Parser<?> parser);
 
         /**
-         * An optional low-level parser that understands custom time zones.
+         * The custom double parser. If not explicitly set, it will default to {@link CustomDoubleParser#load()} if
+         * present, otherwise {@link JdkDoubleParser#INSTANCE}.
+         */
+        Builder customDoubleParser(Tokenizer.CustomDoubleParser customDoubleParser);
+
+        /**
+         * An optional low-level "timezone parser" that understands custom time zone strings. For example the Deephaven
+         * system allows special timezones like " NY" and " MN" as in "2020-03-01T12:34:56 NY" (note also the explicit
+         * space). The timezone parser must be reentrant.
          */
         Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
 
@@ -235,6 +245,14 @@ public abstract class CsvSpecs {
     @Nullable
     public Parser<?> nullParser() {
         return Parsers.STRING;
+    }
+
+    /**
+     * See {@link Builder#customDoubleParser}.
+     */
+    @Default
+    public Tokenizer.CustomDoubleParser customDoubleParser() {
+        return CustomDoubleParser.load().orElse(JdkDoubleParser.INSTANCE);
     }
 
     /**

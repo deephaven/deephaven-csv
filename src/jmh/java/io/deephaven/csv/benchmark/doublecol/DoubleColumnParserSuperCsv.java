@@ -1,5 +1,6 @@
 package io.deephaven.csv.benchmark.doublecol;
 
+import io.deephaven.csv.benchmark.util.CustomDoubleParserLoadMemoized;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
 import org.supercsv.io.CsvListReader;
 import org.supercsv.prefs.CsvPreference;
@@ -8,11 +9,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.ToDoubleFunction;
 
 public final class DoubleColumnParserSuperCsv {
-    public static BenchmarkResult<double[]> read(final InputStream in, final double[][] storage,
-            ToDoubleFunction<String> doubleParser) throws Exception {
+    public static BenchmarkResult<double[]> read(final InputStream in, final double[][] storage) throws Exception {
         final CsvListReader csvReader =
                 new CsvListReader(new InputStreamReader(in, StandardCharsets.UTF_8), CsvPreference.STANDARD_PREFERENCE);
         if (csvReader.read() == null) {
@@ -26,7 +25,7 @@ public final class DoubleColumnParserSuperCsv {
             }
 
             for (int col = 0; col < next.size(); ++col) {
-                storage[col][row] = doubleParser.applyAsDouble(next.get(col));
+                storage[col][row] = CustomDoubleParserLoadMemoized.parseDouble(next.get(col));
             }
             ++row;
         }

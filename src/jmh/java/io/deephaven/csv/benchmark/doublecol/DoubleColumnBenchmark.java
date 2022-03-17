@@ -1,6 +1,5 @@
 package io.deephaven.csv.benchmark.doublecol;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
 import io.deephaven.csv.benchmark.util.TableMaker;
 import io.deephaven.csv.benchmark.util.Util;
@@ -55,30 +54,14 @@ public class DoubleColumnBenchmark {
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<double[]> apache(final InputProvider input, final ReusableStorage storage) throws Exception {
-        return DoubleColumnParserApache.read(input.tableMaker.makeStream(), storage.output, Double::parseDouble);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> apacheFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserApache.read(input.tableMaker.makeStream(), storage.output,
-                FastDoubleParser::parseDouble);
+        return DoubleColumnParserApache.read(input.tableMaker.makeStream(), storage.output);
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<double[]> fastCsv(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DoubleColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output, Double::parseDouble);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> fastCsvFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output,
-                FastDoubleParser::parseDouble);
+        return DoubleColumnParserFastCsv.read(input.tableMaker.makeStream(), storage.output);
     }
 
     @Benchmark
@@ -91,55 +74,22 @@ public class DoubleColumnBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> jacksonFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserJacksonCsv.readFDP(input.tableMaker.makeStream(), input.tableMaker.headers(),
-                storage.output);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<double[]> openCsv(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DoubleColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output, Double::parseDouble);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> openCsvFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output,
-                FastDoubleParser::parseDouble);
+        return DoubleColumnParserOpenCsv.read(input.tableMaker.makeStream(), storage.output);
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<double[]> simpleFlatMapper(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DoubleColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
-                Double::parseDouble);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> simpleFlatMapperFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output,
-                FastDoubleParser::parseDouble);
+        return DoubleColumnParserSimpleFlatMapper.read(input.tableMaker.makeStream(), storage.output);
     }
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<double[]> superCsv(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DoubleColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output, Double::parseDouble);
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(OPERATIONS)
-    public BenchmarkResult<double[]> superCsvFDP(final InputProvider input, final ReusableStorage storage)
-            throws Exception {
-        return DoubleColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output,
-                FastDoubleParser::parseDouble);
+        return DoubleColumnParserSuperCsv.read(input.tableMaker.makeStream(), storage.output);
     }
 }

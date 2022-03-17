@@ -1,5 +1,55 @@
 # The Deephaven High-Performance CSV Parser
 
+## Using
+
+This project produces three JARs:
+
+1. `deephaven-csv`: the primary dependency
+2. (optional, but recommended with Java 11+) `deephaven-csv-fast-double-parser`: a fast double parser, compatible with Java 11+
+3. (optional, but recommended with Java 8) `deephaven-csv-fast-double-parser-8`: a fast double parser, compatible with Java 8+
+
+### Gradle
+
+To depend on Deephaven CSV from Gradle, add the following dependency(s) to your build.gradle file:
+
+```groovy
+implementation 'io.deephaven:deephaven-csv:0.2.0-SNAPSHOT'
+
+// Optional dependency for faster double parsing (Java 11+ compatible)
+// runtimeOnly 'io.deephaven:deephaven-csv-fast-double-parser:0.2.0-SNAPSHOT'
+
+// Optional dependency for faster double parsing (Java 8+ compatible)
+// runtimeOnly 'io.deephaven:deephaven-csv-fast-double-parser-8:0.2.0-SNAPSHOT'
+```
+
+### Maven
+
+To depend on Deephaven CSV from Maven, add the following dependency(s) to your pom.xml file:
+
+```xml
+<dependency>
+    <groupId>io.deephaven</groupId>
+    <artifactId>deephaven-csv</artifactId>
+    <version>0.2.0-SNAPSHOT</version>
+</dependency>
+
+<!-- Optional dependency for faster double parsing (Java 11+ compatible) -->
+<!--<dependency>-->
+<!--    <groupId>io.deephaven</groupId>-->
+<!--    <artifactId>deephaven-csv-fast-double-parser</artifactId>-->
+<!--    <version>0.2.0-SNAPSHOT</version>-->
+<!--    <scope>runtime</scope>-->
+<!--</dependency>-->
+
+<!-- Optional dependency for faster double parsing (Java 8+ compatible) -->
+<!--<dependency>-->
+<!--    <groupId>io.deephaven</groupId>-->
+<!--    <artifactId>deephaven-csv-fast-double-parser-8</artifactId>-->
+<!--    <version>0.2.0-SNAPSHOT</version>-->
+<!--    <scope>runtime</scope>-->
+<!--</dependency>-->
+```
+
 ## Testing
 
 To run the main tests:
@@ -54,11 +104,11 @@ If you prefer, you can run the benchmarks directly via the JMH jar:
 ```
 
 ```shell
-java -jar build/libs/deephaven-csv-0.0.1-SNAPSHOT-jmh.jar -prof gc -rf JSON
+java -jar build/libs/deephaven-csv-0.2.0-SNAPSHOT-jmh.jar -prof gc -rf JSON
 ```
 
 ```shell
-java -jar build/libs/deephaven-csv-0.0.1-SNAPSHOT-jmh.jar -prof gc -rf JSON <regex>
+java -jar build/libs/deephaven-csv-0.2.0-SNAPSHOT-jmh.jar -prof gc -rf JSON <regex>
 ```
 
 The JMH jar is the preferred way to run official benchmarks, and provides a common bytecode for sharing the benchmarks

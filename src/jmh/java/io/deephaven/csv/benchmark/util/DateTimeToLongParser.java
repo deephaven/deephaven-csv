@@ -1,6 +1,7 @@
 package io.deephaven.csv.benchmark.util;
 
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.MutableLong;
 
@@ -35,7 +36,7 @@ public interface DateTimeToLongParser {
         private byte[] bytes = new byte[0];
 
         public Deephaven() {
-            this(new Tokenizer(null));
+            this(new Tokenizer(JdkDoubleParser.INSTANCE, null));
         }
 
         public Deephaven(Tokenizer tokenizer) {

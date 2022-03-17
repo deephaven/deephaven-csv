@@ -7,6 +7,7 @@ import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -116,7 +117,7 @@ public interface Parser<TARRAY> {
             if (nullSentinelBytes.length == 0) {
                 return ih.bs().size() == 0;
             }
-            return Arrays.equals(
+            return equals(
                     ih.bs().data(),
                     ih.bs().begin(),
                     ih.bs().end(),
@@ -127,6 +128,21 @@ public interface Parser<TARRAY> {
 
         public boolean[] nullChunk() {
             return nullChunk;
+        }
+
+        // If bumping language level up to 11, can replace with Arrays.equals()
+        private static boolean equals(byte[] a, int aFromIndex, int aToIndex, byte[] b, int bFromIndex, int bToIndex) {
+            int aLength = aToIndex - aFromIndex;
+            int bLength = bToIndex - bFromIndex;
+            if (aLength != bLength) {
+                return false;
+            }
+            for (int i = 0; i < aLength; ++i) {
+                if (a[aFromIndex + i] != b[bFromIndex + i]) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 

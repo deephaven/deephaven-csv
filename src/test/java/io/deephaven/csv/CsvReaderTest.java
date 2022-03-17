@@ -327,19 +327,20 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
+    private static final String DOUBLE_INPUT = ""
+            + "Values\n"
+            + "Infinity\n"
+            + "\n"
+            + "-Infinity\n"
+            + "NaN\n"
+            + "1.7976931348623157e+308\n"
+            + "2.2250738585072014E-308\n"
+            + "12.34\n"
+            + "-56.78\n"
+            + "4.9e-324\n";
+
     @Test
     public void doubleRange() throws CsvReaderException {
-        final String input =
-                ""
-                        + "Values\n"
-                        + "Infinity\n"
-                        + "\n"
-                        + "-Infinity\n"
-                        + "NaN\n"
-                        + "1.7976931348623157e+308\n"
-                        + "2.2250738585072014E-308\n"
-                        + "4.9e-324\n";
-
         final ColumnSet expected =
                 ColumnSet.of(
                         Column.ofValues(
@@ -350,9 +351,44 @@ public class CsvReaderTest {
                                 Double.NaN,
                                 Double.MAX_VALUE,
                                 Double.MIN_NORMAL,
+                                12.34,
+                                -56.78,
                                 Double.MIN_VALUE));
+        invokeTest(defaultCsvSpecs(), DOUBLE_INPUT, expected);
+    }
 
-        invokeTest(defaultCsvSpecs(), input, expected);
+    @Test
+    public void doubleRangeWithCustomPlugin() throws CsvReaderException {
+        // This test makes sure that the parse double callback is actually being invoked.
+        final String input = ""
+                + "Values\n"
+                + "1.1\n"
+                + "2.2\n"
+                + "3.3\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues(
+                                "Values",
+                                2.1,
+                                3.2,
+                                4.3));
+
+        // My "strange" parser adds 1.0 to the parsed value.
+        Tokenizer.CustomDoubleParser myStrangeParser = new Tokenizer.CustomDoubleParser() {
+            @Override
+            public double parse(ByteSlice bs) throws NumberFormatException {
+                return parse((CharSequence) bs);
+            }
+
+            @Override
+            public double parse(CharSequence cs) throws NumberFormatException {
+                return Double.parseDouble(cs.toString()) + 1;
+            }
+        };
+
+        invokeTest(defaultCsvBuilder()
+                .customDoubleParser(myStrangeParser).build(), input, expected);
     }
 
     @Test

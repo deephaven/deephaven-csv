@@ -10,13 +10,14 @@ import io.deephaven.csv.sinks.SinkFactory;
 
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class StringColumnParserDeephaven {
     public static BenchmarkResult<String[]> read(final InputStream in, final String[][] storage) throws Exception {
         final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, null, null, null, storage, null);
         final CsvSpecs specs = CsvSpecs.builder()
-                .parsers(List.of(Parsers.STRING))
+                .parsers(Collections.singleton(Parsers.STRING))
                 .hasHeaderRow(true)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
