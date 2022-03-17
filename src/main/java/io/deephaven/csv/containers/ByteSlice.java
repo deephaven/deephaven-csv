@@ -89,7 +89,11 @@ public final class ByteSlice implements CharSequence {
     /** Gets the character at offset 'i' */
     @Override
     public char charAt(int i) {
-        return (char) data[begin + i];
+        final int index = begin + i;
+        if (index < begin || index >= end) {
+            throw new IndexOutOfBoundsException("Invalid index.");
+        }
+        return (char) data[index];
     }
 
     @NotNull
