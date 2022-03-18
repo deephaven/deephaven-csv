@@ -9,7 +9,9 @@ repositories {
 
 group = 'io.deephaven'
 archivesBaseName = 'deephaven-csv-fast-double-parser'
-version = '0.2.0-SNAPSHOT'
+version = '0.2.0'
+
+description = 'The Deephaven High-Performance CSV Parser - Fast Double extension (Java 11+)'
 
 // Java 11+ required for building
 if (!JavaVersion.current().isJava11Compatible()) {
