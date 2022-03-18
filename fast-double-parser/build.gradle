@@ -9,7 +9,7 @@ repositories {
 
 group = 'io.deephaven'
 archivesBaseName = 'deephaven-csv-fast-double-parser'
-version = '0.2.0'
+version = '0.3.0-SNAPSHOT'
 
 description = 'The Deephaven High-Performance CSV Parser - Fast Double extension (Java 11+)'
 
