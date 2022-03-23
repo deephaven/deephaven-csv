@@ -4,6 +4,7 @@ import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
+import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
@@ -105,7 +106,7 @@ public final class CsvReader {
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
 
-        final ArrayList<Future<Sink<?>>> sinkFutures = new ArrayList<>();
+        final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
         try {
             final Future<Long> numRowsFuture =
                     exec.submit(
@@ -116,7 +117,7 @@ public final class CsvReader {
                 final String nullValueLiteralToUse = calcNullValueLiteralToUse(specs, headersToUse[ii], ii + 1);
 
                 final int iiCopy = ii;
-                final Future<Sink<?>> fcb =
+                final Future<ParseDenseStorageToColumn.Result> fcb =
                         exec.submit(
                                 () -> ParseDenseStorageToColumn.doit(
                                         dsr0s[iiCopy],
@@ -131,18 +132,21 @@ public final class CsvReader {
             }
 
             final long numRows;
-            final Sink<?>[] sinks = new Sink<?>[numOutputCols];
+            final Object[] underlyingCols = new Object[numOutputCols];
+            final DataType[] dataTypes = new DataType[numOutputCols];
             numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                sinks[ii] = sinkFutures.get(ii).get();
+                final ParseDenseStorageToColumn.Result result = sinkFutures.get(ii).get();
+                underlyingCols[ii] = result.sink().getUnderlying();
+                dataTypes[ii] = result.dataType();
             }
-            return new Result(numRows, headersToUse, sinks);
+            return new Result(numRows, headersToUse, underlyingCols, dataTypes);
         } catch (Exception inner) {
             throw new CsvReaderException("Caught exception", inner);
         } finally {
             // Cancel the sinks (interrupting them if necessary). It is harmless to do this if the sinks
             // have already exited normally.
-            for (Future<Sink<?>> sf : sinkFutures) {
+            for (Future<ParseDenseStorageToColumn.Result> sf : sinkFutures) {
                 sf.cancel(true); // Result ignored.
             }
             exec.shutdown();
@@ -298,12 +302,15 @@ public final class CsvReader {
     public static final class Result {
         private final long numRows;
         private final String[] columnNames;
-        private final Sink<?>[] columns;
+        private final Object[] columns;
+        private final DataType[] dataTypes;
 
-        public Result(final long numRows, final String[] columnNames, final Sink<?>[] columns) {
+        public Result(final long numRows, final String[] columnNames, final Object[] columns,
+                final DataType[] dataTypes) {
             this.numRows = numRows;
             this.columnNames = columnNames;
             this.columns = columns;
+            this.dataTypes = dataTypes;
         }
 
         /** Number of rows in the input. */
@@ -316,12 +323,20 @@ public final class CsvReader {
             return columnNames;
         }
 
+
         /**
-         * Data for each column. Each Sink was constructed by some method in the SinkFactory that the caller passed to
-         * {@link #read}.
+         * Data for each column. Obtained by invoking {@link Sink#getUnderlying} on each {@link Sink} after all
+         * processing is done.
          */
-        public Sink<?>[] columns() {
+        public Object[] columns() {
             return columns;
+        }
+
+        /**
+         * The underlying data type of each column, represented as one of the {@link DataType} enum values.
+         */
+        public DataType[] dataTypes() {
+            return dataTypes;
         }
 
         /** The number of columns. */

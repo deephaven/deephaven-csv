@@ -62,4 +62,6 @@ public interface Sink<TARRAY> {
             final long destBegin,
             final long destEnd,
             boolean appending);
+
+    Object getUnderlying();
 }

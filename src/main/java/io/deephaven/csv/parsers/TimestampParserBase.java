@@ -32,7 +32,7 @@ public abstract class TimestampParserBase implements Parser<long[]> {
     public ParserContext<long[]> makeParserContext(
             final Parser.GlobalContext gctx, final int chunkSize) {
         final Sink<long[]> sink = gctx.sinkFactory.forTimestampAsLong();
-        return new ParserContext<>(sink, null, new long[chunkSize]);
+        return new ParserContext<>(sink, null, DataType.TIMESTAMP_AS_LONG, new long[chunkSize]);
     }
 
     @Override

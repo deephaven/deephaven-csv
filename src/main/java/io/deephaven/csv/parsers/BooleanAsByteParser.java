@@ -1,5 +1,6 @@
 package io.deephaven.csv.parsers;
 
+import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
@@ -16,7 +17,7 @@ public final class BooleanAsByteParser implements Parser<byte[]> {
     @Override
     public ParserContext<byte[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final Sink<byte[]> sink = gctx.sinkFactory.forBooleanAsByte();
-        return new ParserContext<>(sink, null, new byte[chunkSize]);
+        return new ParserContext<>(sink, null, DataType.BOOLEAN_AS_BYTE, new byte[chunkSize]);
     }
 
     @Override

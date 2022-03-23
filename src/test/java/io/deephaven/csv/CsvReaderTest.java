@@ -3,11 +3,11 @@ package io.deephaven.csv;
 import gnu.trove.list.array.TByteArrayList;
 import gnu.trove.list.array.TCharArrayList;
 import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.list.array.TShortArrayList;
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.IteratorHolder;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
@@ -83,7 +83,7 @@ public class CsvReaderTest {
                         + "-5,baz,false,3.0\n";
         final CsvReader.Result result =
                 parse(defaultCsvBuilder().quote('|').build(), toInputStream(input));
-        final ColumnSet cs = toColumnSet(result);
+        final ColumnSet cs = toColumnSet(result, null);
         Assertions.assertThat(cs.columns[0].name).isEqualTo("Some\nInts");
         Assertions.assertThat(cs.columns[1].name).isEqualTo("Some\rStrings");
         Assertions.assertThat(cs.columns[2].name).isEqualTo("Some\r\nBools");
@@ -401,41 +401,37 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
+    private final String VARIETY_OF_NUMERICS_INPUT = ""
+            + "Values\n"
+            + "\n" // NULL
+            + "\n" // NULL
+            + "0\n" // byte
+            + "1\n" // byte
+            + "300\n" // short
+            + "400\n" // short
+            + "100000\n" // int
+            + "100001\n" // int
+            + "3000000000\n" // long
+            + "1234.5678\n"; // double
+
+
     @Test
     public void varietyOfNumerics() throws CsvReaderException {
-        final String input =
-                ""
-                        + "Values\n"
-                        + "\n"
-                        + // NULL
-                        "\n"
-                        + // NULL
-                        "0\n"
-                        + // byte
-                        "1\n"
-                        + // byte
-                        "300\n"
-                        + // short
-                        "400\n"; // short
-        // "100000\n" + // int
-        // "100001\n" + // int
-        // "3000000000\n" + // long
-        // "123.456\n" + // float
-        // "1234.5678\n"; // double
-
-        // NULL_DOUBLE can't be parsed as double; will be promoted to String
         final ColumnSet expected =
                 ColumnSet.of(
                         Column.ofValues(
                                 "Values",
-                                Sentinels.NULL_SHORT,
-                                Sentinels.NULL_SHORT,
-                                (short) 0,
-                                (short) 1,
-                                (short) 300,
-                                (short) 400));
-
-        invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
+                                Sentinels.NULL_DOUBLE,
+                                Sentinels.NULL_DOUBLE,
+                                0.0,
+                                1.0,
+                                300.0,
+                                400.0,
+                                100000.0,
+                                100001.0,
+                                3000000000.0,
+                                1234.5678));
+        invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), VARIETY_OF_NUMERICS_INPUT, expected);
     }
 
     @Test
@@ -509,7 +505,7 @@ public class CsvReaderTest {
                     final String input = "Values\n" + allInputs[ii] + allInputs[jj] + allInputs[kk];
                     final InputStream inputStream = toInputStream(input);
                     final CsvSpecs specs = defaultCsvBuilder().parsers(Parsers.COMPLETE).build();
-                    final ColumnSet columnSet = toColumnSet(parse(specs, inputStream));
+                    final ColumnSet columnSet = toColumnSet(parse(specs, inputStream), null);
                     final Class<?> actualType = columnSet.columns[0].reinterpretedType;
                     Assertions.assertThat(actualType)
                             .withFailMessage(
@@ -883,7 +879,7 @@ public class CsvReaderTest {
 
         final ColumnSet expected =
                 ColumnSet.of(
-                        Column.ofArray("Values1", new short[0]), Column.ofArray("Values2", new short[0]));
+                        Column.ofArray("Values1", new short[0], 0), Column.ofArray("Values2", new short[0], 0));
 
         invokeTest(defaultCsvBuilder().nullParser(Parsers.SHORT).build(), input, expected);
     }
@@ -1187,7 +1183,7 @@ public class CsvReaderTest {
     @Test
     public void emptyTableWithSpecifiedParser() throws CsvReaderException {
         final String input = "Values\n";
-        final ColumnSet expected = ColumnSet.of(Column.ofArray("Values", new long[0]));
+        final ColumnSet expected = ColumnSet.of(Column.ofArray("Values", new long[0], 0));
 
         invokeTest(defaultCsvBuilder().putParserForName("Values", Parsers.LONG).build(), input, expected);
     }
@@ -1375,16 +1371,17 @@ public class CsvReaderTest {
         final String input = sb.toString();
         final ColumnSet expected =
                 ColumnSet.of(
-                        Column.ofArray("SomeBooleans", booleans.toArray()).reinterpret(boolean.class),
-                        Column.ofArray("SomeBytes", bytes.toArray()),
-                        Column.ofArray("SomeShorts", shorts.toArray()),
-                        Column.ofArray("SomeInts", ints.toArray()),
-                        Column.ofArray("SomeLongs", longs.toArray()),
-                        Column.ofArray("SomeDoubles", doubles.toArray()),
-                        Column.ofArray("SomeStrings", strings.toArray(new String[0])),
-                        Column.ofArray("SomeChars", chars.toArray()),
-                        Column.ofArray("SomeDateTimes", dateTimesAsLongs.toArray()).reinterpret(Instant.class),
-                        Column.ofArray("SomeTimestamps", timestampsAsLongs.toArray())
+                        Column.ofArray("SomeBooleans", booleans.toArray(), booleans.size()).reinterpret(boolean.class),
+                        Column.ofArray("SomeBytes", bytes.toArray(), bytes.size()),
+                        Column.ofArray("SomeShorts", shorts.toArray(), shorts.size()),
+                        Column.ofArray("SomeInts", ints.toArray(), ints.size()),
+                        Column.ofArray("SomeLongs", longs.toArray(), longs.size()),
+                        Column.ofArray("SomeDoubles", doubles.toArray(), doubles.size()),
+                        Column.ofArray("SomeStrings", strings.toArray(new String[0]), strings.size()),
+                        Column.ofArray("SomeChars", chars.toArray(), chars.size()),
+                        Column.ofArray("SomeDateTimes", dateTimesAsLongs.toArray(), dateTimesAsLongs.size())
+                                .reinterpret(Instant.class),
+                        Column.ofArray("SomeTimestamps", timestampsAsLongs.toArray(), timestampsAsLongs.size())
                                 .reinterpret(Instant.class));
         invokeTest(
                 defaultCsvBuilder()
@@ -1409,7 +1406,12 @@ public class CsvReaderTest {
                         Column.ofValues("Index", 0, 1, 2),
                         Column.ofRefs("BigValues", new BigDecimal(bd1), null, new BigDecimal(bd2)));
 
-        invokeTest(defaultCsvBuilder().putParserForIndex(2, new MyBigDecimalParser()).build(), input, expected);
+        final MakeCustomColumn makeCustomColumn = (name, obj, size) -> {
+            final BigDecimal[] arr = ((List<BigDecimal>) obj).toArray(new BigDecimal[0]);
+            return Column.ofArray(name, arr, size);
+        };
+        invokeTest(defaultCsvBuilder().putParserForIndex(2, new MyBigDecimalParser()).build(), input, expected,
+                makeMySinkFactory(), makeCustomColumn);
     }
 
     private static class MyBigDecimalParser implements Parser<BigDecimal[]> {
@@ -1417,7 +1419,7 @@ public class CsvReaderTest {
         @Override
         public ParserContext<BigDecimal[]> makeParserContext(GlobalContext gctx, int chunkSize) {
             final MyBigDecimalSink sink = new MyBigDecimalSink();
-            return new ParserContext<>(sink, null, new BigDecimal[chunkSize]);
+            return new ParserContext<>(sink, null, DataType.CUSTOM, new BigDecimal[chunkSize]);
         }
 
         @Override
@@ -1479,8 +1481,7 @@ public class CsvReaderTest {
         }
     }
 
-    private static class MyBigDecimalSink
-            implements Sink<BigDecimal[]>, ColumnProvider<BigDecimal[]> {
+    private static class MyBigDecimalSink implements Sink<BigDecimal[]> {
         private final List<BigDecimal> dest = new ArrayList<>();
 
         @Override
@@ -1509,8 +1510,8 @@ public class CsvReaderTest {
         }
 
         @Override
-        public Column<BigDecimal[]> toColumn(final String columnName) {
-            return Column.ofArray(columnName, dest.toArray(new BigDecimal[0]));
+        public Object getUnderlying() {
+            return dest;
         }
     }
 
@@ -1561,7 +1562,7 @@ public class CsvReaderTest {
                     ",",
                     col -> String.format(
                             "%s(%s)",
-                            col.name(), renderType.apply(col.elementType(), col.reinterpretedType)));
+                            col.name(), renderType.apply(col.elementType(), col.reinterpretedType())));
             for (int jj = 0; jj < columnSize; ++jj) {
                 final int jjFinal = jj;
                 sb.append('\n');
@@ -1582,43 +1583,43 @@ public class CsvReaderTest {
         private final Class<?> reinterpretedType;
 
         public static Column<byte[]> ofValues(final String name, final byte... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<short[]> ofValues(final String name, final short... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<int[]> ofValues(final String name, final int... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<long[]> ofValues(final String name, final long... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<float[]> ofValues(final String name, final float... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<double[]> ofValues(final String name, final double... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static Column<char[]> ofValues(final String name, final char... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
         public static <T> Column<T[]> ofRefs(final String name, final T... values) {
-            return ofArray(name, values);
+            return ofArray(name, values, values.length);
         }
 
-        public static <TARRAY> Column<TARRAY> ofArray(final String name, final TARRAY values) {
-            return new Column<>(name, values);
+        public static <TARRAY> Column<TARRAY> ofArray(final String name, final TARRAY values, int size) {
+            return new Column<>(name, values, size);
         }
 
-        private Column(final String name, final TARRAY values) {
-            this(name, values, Array.getLength(values), values.getClass().getComponentType());
+        private Column(final String name, final TARRAY values, int size) {
+            this(name, values, size, values.getClass().getComponentType());
         }
 
         private Column(final String name, final TARRAY values, int size, Class<?> reinterpretedType) {
@@ -1663,9 +1664,15 @@ public class CsvReaderTest {
 
     private static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected)
             throws CsvReaderException {
+        invokeTest(specs, input, expected, makeMySinkFactory(), null);
+    }
+
+    private static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected,
+            final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
+            throws CsvReaderException {
         final InputStream inputStream = toInputStream(input);
-        final CsvReader.Result result = parse(specs, inputStream);
-        final ColumnSet actual = toColumnSet(result);
+        final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
+        final ColumnSet actual = toColumnSet(result, makeCustomColumn);
         final String expectedToString = expected.toString();
         final String actualToString = actual.toString();
         Assertions.assertThat(actualToString).isEqualTo(expectedToString);
@@ -1680,7 +1687,21 @@ public class CsvReaderTest {
      */
     private static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream)
             throws CsvReaderException {
-        return CsvReader.read(specs, inputStream, makeMySinkFactory());
+        return parse(specs, inputStream, makeMySinkFactory());
+    }
+
+    /**
+     * Parses {@code inputStream} according to the specifications of {@code csvReader}.
+     *
+     *
+     * @param inputStream the input stream.
+     * @return The parsed data
+     * @throws CsvReaderException If any sort of failure occurs.
+     */
+    private static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream,
+            final SinkFactory sinkFactory)
+            throws CsvReaderException {
+        return CsvReader.read(specs, inputStream, sinkFactory);
     }
 
     /** Convert String to InputStream */
@@ -1692,420 +1713,72 @@ public class CsvReaderTest {
     /***
      * Converts the {@link CsvReader.Result} to a {@link ColumnSet}.
      */
-    private static ColumnSet toColumnSet(final CsvReader.Result result) {
+    private static ColumnSet toColumnSet(final CsvReader.Result result, MakeCustomColumn makeCustomColumn) {
         final int numCols = result.numCols();
 
-        final String[] columnNames = result.columnNames();
-        final Sink<?>[] sinks = result.columns();
         final Column<?>[] columns = new Column[numCols];
+        final int sizeAsInt = Math.toIntExact(result.numRows());
         for (int ii = 0; ii < numCols; ++ii) {
-            final String columnName = columnNames[ii];
-            final ColumnProvider<?> sink = (ColumnProvider<?>) sinks[ii];
-            columns[ii] = sink.toColumn(columnName);
+            final String columnName = result.columnNames()[ii];
+            final DataType dataType = result.dataTypes()[ii];
+            final Object col = result.columns()[ii];
+            columns[ii] = makeColumn(columnName, dataType, col, sizeAsInt, makeCustomColumn);
         }
         return ColumnSet.of(columns);
     }
 
-    public interface ColumnProvider<TARRAY> {
-        Column<TARRAY> toColumn(final String columnName);
-    }
-
-    private abstract static class MySinkBase<TCOLLECTION, TARRAY>
-            implements Sink<TARRAY>, ColumnProvider<TARRAY> {
-        protected final TCOLLECTION collection;
-        protected int collectionSize;
-        protected final FillOperation<TCOLLECTION> fillOperation;
-        protected final SetOperation<TCOLLECTION, TARRAY> setOperation;
-        protected final AddOperation<TCOLLECTION, TARRAY> addOperation;
-        protected final BiFunction<TCOLLECTION, String, Column<TARRAY>> toColumnOperation;
-
-        protected MySinkBase(
-                TCOLLECTION collection,
-                FillOperation<TCOLLECTION> fillOperation,
-                SetOperation<TCOLLECTION, TARRAY> setOperation,
-                AddOperation<TCOLLECTION, TARRAY> addOperation,
-                BiFunction<TCOLLECTION, String, Column<TARRAY>> toColumnOperation) {
-            this.collection = collection;
-            this.fillOperation = fillOperation;
-            this.setOperation = setOperation;
-            this.addOperation = addOperation;
-            this.toColumnOperation = toColumnOperation;
-        }
-
-        @Override
-        public final void write(
-                final TARRAY src,
-                final boolean[] isNull,
-                final long destBegin,
-                final long destEnd,
-                boolean appending) {
-            if (destBegin == destEnd) {
-                return;
-            }
-            final int size = Math.toIntExact(destEnd - destBegin);
-            final int destBeginAsInt = Math.toIntExact(destBegin);
-            final int destEndAsInt = Math.toIntExact(destEnd);
-            nullFlagsToValues(isNull, src, size);
-
-            if (!appending) {
-                // Replacing.
-                setOperation.apply(collection, destBeginAsInt, src, 0, size);
-                return;
+    private static Column<?> makeColumn(final String name, final DataType dataType, final Object col,
+            final int size, MakeCustomColumn makeCustomColumn) {
+        switch (dataType) {
+            case BOOLEAN_AS_BYTE: {
+                return Column.ofArray(name, col, size).reinterpret(boolean.class);
             }
 
-            // Appending. First, if the new area starts beyond the end of the destination, pad the
-            // destination.
-            if (collectionSize < destBegin) {
-                fillOperation.apply(collection, collectionSize, destBeginAsInt);
-                collectionSize = destBeginAsInt;
+            case BYTE:
+            case SHORT:
+            case INT:
+            case LONG:
+            case FLOAT:
+            case DOUBLE:
+            case CHAR:
+            case STRING: {
+                return Column.ofArray(name, col, size);
             }
-            // Then do the append.
-            addOperation.apply(collection, src, 0, size);
-            collectionSize = destEndAsInt;
-        }
 
-        protected abstract void nullFlagsToValues(
-                final boolean[] isNull, final TARRAY values, final int size);
-
-        public final Column<TARRAY> toColumn(final String columnName) {
-            return toColumnOperation.apply(collection, columnName);
-        }
-
-        /** Meant to be paired with e.g. TDoubleArrayList.fill(int fromIndex, int toIndex, 0.0) */
-        protected interface FillOperation<TCOLLECTION> {
-            void apply(TCOLLECTION coll, int fromIndex, int toIndex);
-        }
-
-        /**
-         * Meant to be paired with e.g. TDoubleArrayList.set(int offset, double[] values, int valOffset, int length)
-         */
-        protected interface SetOperation<TCOLLECTION, TARRAY> {
-            void apply(TCOLLECTION coll, int offset, TARRAY values, int vallOffset, int length);
-        }
-
-        /**
-         * Meant to be paired with e.g. TDoubleArrayList.add(double[] values, int offset, int length)
-         */
-        protected interface AddOperation<TCOLLECTION, TARRAY> {
-            void apply(TCOLLECTION coll, TARRAY values, int offset, int length);
-        }
-    }
-
-    private abstract static class MySourceAndSinkBase<TCOLLECTION, TARRAY>
-            extends MySinkBase<TCOLLECTION, TARRAY>
-            implements io.deephaven.csv.sinks.Source<TARRAY>, Sink<TARRAY> {
-        private final ToArrayOperation<TCOLLECTION, TARRAY> toArrayOperation;
-
-        protected MySourceAndSinkBase(
-                TCOLLECTION collection,
-                FillOperation<TCOLLECTION> fillOperation,
-                SetOperation<TCOLLECTION, TARRAY> setOperation,
-                AddOperation<TCOLLECTION, TARRAY> addOperation,
-                BiFunction<TCOLLECTION, String, Column<TARRAY>> toColumnOperation,
-                ToArrayOperation<TCOLLECTION, TARRAY> toArrayOperation) {
-            super(collection, fillOperation, setOperation, addOperation, toColumnOperation);
-            this.toArrayOperation = toArrayOperation;
-        }
-
-        @Override
-        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
-            if (srcBegin == srcEnd) {
-                return;
+            case DATETIME_AS_LONG:
+            case TIMESTAMP_AS_LONG: {
+                return Column.ofArray(name, col, size).reinterpret(Instant.class);
             }
-            final int size = Math.toIntExact(srcEnd - srcBegin);
-            toArrayOperation.apply(collection, dest, Math.toIntExact(srcBegin), 0, size);
-            nullValuesToFlags(dest, isNull, size);
-        }
 
-        protected abstract void nullValuesToFlags(
-                final TARRAY values, final boolean[] isNull, final int size);
-
-        /**
-         * Meant to be paired with e.g. TDoubleArrayList.add(double[] dest, int source_pos, int dest_pos, int length)
-         */
-        private interface ToArrayOperation<TCOLLECTION, TARRAY> {
-            void apply(TCOLLECTION coll, TARRAY dest, int source_pos_, int dest_pos, int length);
-        }
-    }
-
-    private static class MyByteSinkBase extends MySourceAndSinkBase<TByteArrayList, byte[]> {
-        protected final byte nullSentinel;
-
-        public MyByteSinkBase(final byte nullSentinel, final Class<?> reinterpretedType) {
-            super(
-                    new TByteArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, (byte) 0),
-                    TByteArrayList::set,
-                    TByteArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()).reinterpret(reinterpretedType),
-                    TByteArrayList::toArray);
-            this.nullSentinel = nullSentinel;
-        }
-
-        @Override
-        protected final void nullFlagsToValues(boolean[] isNull, byte[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = nullSentinel;
+            case CUSTOM: {
+                if (makeCustomColumn == null) {
+                    throw new RuntimeException("Custom column not expected");
                 }
+                return makeCustomColumn.apply(name, col, size);
             }
-        }
 
-        @Override
-        protected final void nullValuesToFlags(byte[] values, boolean[] isNull, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                isNull[ii] = values[ii] == nullSentinel;
-            }
-        }
-    }
-
-    private static final class MyByteSink extends MyByteSinkBase {
-        public MyByteSink() {
-            super(Sentinels.NULL_BYTE, byte.class);
-        }
-    }
-
-    private static final class MyShortSink extends MySourceAndSinkBase<TShortArrayList, short[]> {
-        public MyShortSink() {
-            super(
-                    new TShortArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, (short) 0),
-                    TShortArrayList::set,
-                    TShortArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()),
-                    TShortArrayList::toArray);
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, short[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = Sentinels.NULL_SHORT;
-                }
-            }
-        }
-
-        @Override
-        protected void nullValuesToFlags(short[] values, boolean[] isNull, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                isNull[ii] = values[ii] == Sentinels.NULL_SHORT;
+            default: {
+                throw new RuntimeException("Unknown case " + dataType);
             }
         }
     }
 
-    private static final class MyIntSink extends MySourceAndSinkBase<TIntArrayList, int[]> {
-        public MyIntSink() {
-            super(
-                    new TIntArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, 0),
-                    TIntArrayList::set,
-                    TIntArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()),
-                    TIntArrayList::toArray);
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, int[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = Sentinels.NULL_INT;
-                }
-            }
-        }
-
-        @Override
-        protected void nullValuesToFlags(int[] values, boolean[] isNull, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                isNull[ii] = values[ii] == Sentinels.NULL_INT;
-            }
-        }
-    }
-
-    private static class MyLongSinkBase extends MySourceAndSinkBase<TLongArrayList, long[]> {
-        private final long nullSentinel;
-
-        public MyLongSinkBase(final long nullSentinel, final Class<?> reinterpretedType) {
-            super(
-                    new TLongArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, 0L),
-                    TLongArrayList::set,
-                    TLongArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()).reinterpret(reinterpretedType),
-                    TLongArrayList::toArray);
-            this.nullSentinel = nullSentinel;
-        }
-
-        @Override
-        protected final void nullFlagsToValues(boolean[] isNull, long[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = nullSentinel;
-                }
-            }
-        }
-
-        @Override
-        protected final void nullValuesToFlags(long[] values, boolean[] isNull, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                isNull[ii] = values[ii] == nullSentinel;
-            }
-        }
-    }
-
-    private static final class MyLongSink extends MyLongSinkBase {
-        public MyLongSink() {
-            super(Sentinels.NULL_LONG, long.class);
-        }
-    }
-
-    private static final class MyFloatSink extends MySinkBase<TFloatArrayList, float[]> {
-        public MyFloatSink() {
-            super(
-                    new TFloatArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, 0),
-                    TFloatArrayList::set,
-                    TFloatArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()));
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, float[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = Sentinels.NULL_FLOAT;
-                }
-            }
-        }
-    }
-
-    private static final class MyDoubleSink extends MySinkBase<TDoubleArrayList, double[]> {
-        public MyDoubleSink() {
-            super(
-                    new TDoubleArrayList(),
-                    (dest, from, to) -> dest.fill(from, to, 0),
-                    TDoubleArrayList::set,
-                    TDoubleArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()));
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, double[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = Sentinels.NULL_DOUBLE;
-                }
-            }
-        }
-    }
-
-    private static final class MyBooleanAsByteSink extends MyByteSinkBase {
-        public MyBooleanAsByteSink() {
-            super(Sentinels.NULL_BOOLEAN_AS_BYTE, boolean.class);
-        }
-    }
-
-    private static final class MyCharSink extends MySinkBase<TCharArrayList, char[]> {
-        public MyCharSink() {
-            super(
-                    new TCharArrayList(),
-                    (coll, from, to) -> coll.fill(from, to, (char) 0),
-                    TCharArrayList::set,
-                    TCharArrayList::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray()));
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, char[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = Sentinels.NULL_CHAR;
-                }
-            }
-        }
-    }
-
-    private static final class MyStringSink extends MySinkBase<ArrayList<String>, String[]> {
-        public MyStringSink() {
-            super(
-                    new ArrayList<>(),
-                    MyStringSink::fill,
-                    MyStringSink::set,
-                    MyStringSink::add,
-                    (dest, name) -> Column.ofArray(name, dest.toArray(new String[0])));
-        }
-
-        @Override
-        protected void nullFlagsToValues(boolean[] isNull, String[] values, int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                if (isNull[ii]) {
-                    values[ii] = null;
-                }
-            }
-        }
-
-        private static void fill(final ArrayList<String> dest, final int from, final int to) {
-            for (int current = from; current != to; ++current) {
-                if (current < dest.size()) {
-                    dest.set(current, null);
-                } else {
-                    dest.add(null);
-                }
-            }
-        }
-
-        private static void set(
-                final ArrayList<String> dest,
-                final int destOffset,
-                final String[] src,
-                final int srcOffset,
-                final int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                dest.set(destOffset + ii, src[srcOffset + ii]);
-            }
-        }
-
-        private static void add(
-                final ArrayList<String> dest, final String[] src, final int srcOffset, final int size) {
-            for (int ii = 0; ii < size; ++ii) {
-                dest.add(src[srcOffset + ii]);
-            }
-        }
-    }
-
-    private static final class MyDateTimeAsLongSink extends MyLongSinkBase {
-        public MyDateTimeAsLongSink() {
-            super(Sentinels.NULL_DATETIME_AS_LONG, Instant.class);
-        }
-    }
-
-    private static final class MyTimestampAsLongSink extends MyLongSinkBase {
-        public MyTimestampAsLongSink() {
-            super(Sentinels.NULL_TIMESTAMP_AS_LONG, Instant.class);
-        }
+    private interface MakeCustomColumn {
+        Column<?> apply(String name, Object column, int size);
     }
 
     private static SinkFactory makeMySinkFactory() {
-        return SinkFactory.of(
-                MyByteSink::new,
+        return SinkFactory.arrays(
                 Sentinels.NULL_BYTE,
-                MyShortSink::new,
                 Sentinels.NULL_SHORT,
-                MyIntSink::new,
                 Sentinels.NULL_INT,
-                MyLongSink::new,
                 Sentinels.NULL_LONG,
-                MyFloatSink::new,
                 Sentinels.NULL_FLOAT,
-                MyDoubleSink::new,
                 Sentinels.NULL_DOUBLE,
-                MyBooleanAsByteSink::new,
-                MyCharSink::new,
+                Sentinels.NULL_BOOLEAN_AS_BYTE,
                 Sentinels.NULL_CHAR,
-                MyStringSink::new,
                 null,
-                MyDateTimeAsLongSink::new,
-                Sentinels.NULL_LONG,
-                MyTimestampAsLongSink::new,
-                Sentinels.NULL_LONG);
+                Sentinels.NULL_DATETIME_AS_LONG,
+                Sentinels.NULL_TIMESTAMP_AS_LONG);
     }
 }

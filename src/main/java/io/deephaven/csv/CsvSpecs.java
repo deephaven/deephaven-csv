@@ -116,7 +116,7 @@ public abstract class CsvSpecs {
         Builder headerValidator(Predicate<String> headerValidator);
 
         /**
-         * An optional low-level parser that understands custom time zones.
+         * Whether the input file has a header row.
          */
         Builder hasHeaderRow(boolean hasHeaderRow);
 

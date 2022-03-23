@@ -27,16 +27,15 @@ public final class ParseDenseStorageToColumn {
      *        is needed as a backstop because otherwise type inference would have no way to choose among the multiple
      *        parsers.
      * @param customDoubleParser The callback for parsing doubles.
-     * @param customTimeZoneParser An optional time zone parser, if your implementation has special time zone names. For
-     *        example Deephaven supports timezones like " NY" and " MN" as in "2020-03-01T12:34:56 NY" (including the
-     *        space).
+     * @param customTimeZoneParser A plugin that permits the DateTime parser to understand custom user-supplied
+     *        timezones. For example Deephaven allows timezone strings like " MN" and " NY".
      * @param nullValueLiteral If a cell text is equal to this value, it will be interpreted as the null value.
      *        Typically set to the empty string.
      * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
      *         data.
      */
-    public static Sink<?> doit(
+    public static Result doit(
             final DenseStorageReader dsr,
             final DenseStorageReader dsrAlt,
             List<Parser<?>> parsers,
@@ -109,37 +108,57 @@ public final class ParseDenseStorageToColumn {
     }
 
     @NotNull
-    private static Sink<?> parseNumerics(
+    private static Result parseNumerics(
             CategorizedParsers cats,
             final Parser.GlobalContext gctx,
             final IteratorHolder ih,
             final DenseStorageReader dsrAlt)
             throws CsvReaderException {
-        final List<ParserResultWrapper> wrappers = new ArrayList<>();
+        final List<ParserResultWrapper<?>> wrappers = new ArrayList<>();
         for (Parser<?> parser : cats.numericParsers) {
-            final ParserResultWrapper prw = parseNumericsHelper(parser, gctx, ih);
+            final ParserResultWrapper<?> prw = parseNumericsHelper(parser, gctx, ih);
             wrappers.add(prw);
             if (ih.isExhausted()) {
-                // Parsed everything with numerics!
-                return unifyNumericResults(gctx, wrappers);
+                break;
             }
         }
 
-        return parseFromList(cats.charAndStringParsers, gctx, ih, dsrAlt);
+        if (!ih.isExhausted()) {
+            // Tried all numeric parsers but couldn't consume all input. Fall back to the char and string parsers.
+            return parseFromList(cats.charAndStringParsers, gctx, ih, dsrAlt);
+        }
+
+        // If all the wrappers implement the Source interface (except possibly the last, which doesn't need to),
+        // we can read the data back and cast it to the right numeric type.
+        if (canUnify(wrappers)) {
+            return unifyNumericResults(gctx, wrappers);
+        }
+        // Otherwise (if some wrappers do not implement the Source interface), we have to do a reparse.
+        final ParserResultWrapper<?> last = wrappers.get(wrappers.size() - 1);
+        return performSecondParsePhase(gctx, last, dsrAlt);
+    }
+
+    private static boolean canUnify(final List<ParserResultWrapper<?>> items) {
+        for (int i = 0; i < items.size() - 1; ++i) {
+            if (items.get(i).pctx.source() == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @NotNull
-    private static <TARRAY> ParserResultWrapper parseNumericsHelper(
+    private static <TARRAY> ParserResultWrapper<TARRAY> parseNumericsHelper(
             Parser<TARRAY> parser, final Parser.GlobalContext gctx, final IteratorHolder ih)
             throws CsvReaderException {
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
         final long begin = ih.numConsumed() - 1;
         final long end = parser.tryParse(gctx, pctx, ih, begin, Long.MAX_VALUE, true);
-        return new ParserResultWrapper(pctx, begin, end);
+        return new ParserResultWrapper<>(parser, pctx, begin, end);
     }
 
     @NotNull
-    private static Sink<?> parseFromList(
+    private static Result parseFromList(
             final List<Parser<?>> parsers,
             final Parser.GlobalContext gctx,
             final IteratorHolder ih,
@@ -150,7 +169,7 @@ public final class ParseDenseStorageToColumn {
         }
 
         for (int ii = 0; ii < parsers.size() - 1; ++ii) {
-            final Sink<?> result = tryTwoPhaseParse(parsers.get(ii), gctx, ih, dsrAlt);
+            final Result result = tryTwoPhaseParse(parsers.get(ii), gctx, ih, dsrAlt);
             if (result != null) {
                 return result;
             }
@@ -161,7 +180,7 @@ public final class ParseDenseStorageToColumn {
         return onePhaseParse(parsers.get(parsers.size() - 1), gctx, dsrAlt);
     }
 
-    private static <TARRAY> Sink<TARRAY> tryTwoPhaseParse(
+    private static <TARRAY> Result tryTwoPhaseParse(
             final Parser<TARRAY> parser,
             final Parser.GlobalContext gctx,
             final IteratorHolder ih,
@@ -169,7 +188,7 @@ public final class ParseDenseStorageToColumn {
             throws CsvReaderException {
         final long phaseOneStart = ih.numConsumed() - 1;
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
-        parser.tryParse(gctx, pctx, ih, phaseOneStart, Long.MAX_VALUE, true);
+        final long end = parser.tryParse(gctx, pctx, ih, phaseOneStart, Long.MAX_VALUE, true);
         if (!ih.isExhausted()) {
             // This parser couldn't make it to the end but there are others remaining to try. Signal a
             // failure to the
@@ -178,24 +197,31 @@ public final class ParseDenseStorageToColumn {
         }
         if (phaseOneStart == 0) {
             // Reached end, and started at zero so everything was parsed and we are done.
-            return pctx.sink();
+            return new Result(pctx.sink(), pctx.dataType());
         }
+        final ParserResultWrapper<TARRAY> wrapper = new ParserResultWrapper<>(parser, pctx, phaseOneStart, end);
+        return performSecondParsePhase(gctx, wrapper, dsrAlt);
+    }
 
+    private static <TARRAY> Result performSecondParsePhase(
+            final Parser.GlobalContext gctx,
+            final ParserResultWrapper<TARRAY> wrapper,
+            final DenseStorageReader dsrAlt) throws CsvReaderException {
         final IteratorHolder ihAlt = new IteratorHolder(dsrAlt);
         ihAlt.tryMoveNext(); // Input is not empty, so we know this will succeed.
-        final long end = parser.tryParse(gctx, pctx, ihAlt, 0, phaseOneStart, false);
+        final long end = wrapper.parser.tryParse(gctx, wrapper.pctx, ihAlt, 0, wrapper.begin, false);
 
-        if (end == phaseOneStart) {
-            return pctx.sink();
+        if (end == wrapper.begin) {
+            return new Result(wrapper.pctx.sink(), wrapper.pctx.dataType());
         }
         final String message =
                 "Logic error: second parser phase failed on input. Parser was: "
-                        + parser.getClass().getCanonicalName();
+                        + wrapper.parser.getClass().getCanonicalName();
         throw new RuntimeException(message);
     }
 
     @NotNull
-    private static <TARRAY> Sink<TARRAY> onePhaseParse(
+    private static <TARRAY> Result onePhaseParse(
             final Parser<TARRAY> parser, final Parser.GlobalContext gctx, final DenseStorageReader dsrAlt)
             throws CsvReaderException {
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
@@ -203,7 +229,7 @@ public final class ParseDenseStorageToColumn {
         ihAlt.tryMoveNext(); // Input is not empty, so we know this will succeed.
         parser.tryParse(gctx, pctx, ihAlt, 0, Long.MAX_VALUE, true);
         if (ihAlt.isExhausted()) {
-            return pctx.sink();
+            return new Result(pctx.sink(), pctx.dataType());
         }
         final String message =
                 "One phase parser failed on input. Parser was: " + parser.getClass().getCanonicalName();
@@ -211,35 +237,34 @@ public final class ParseDenseStorageToColumn {
     }
 
     @NotNull
-    private static <TARRAY> Sink<TARRAY> emptyParse(
+    private static <TARRAY> Result emptyParse(
             final Parser<TARRAY> parser, final Parser.GlobalContext gctx) throws CsvReaderException {
         // The parser won't do any "parsing" here, but it will create a Sink.
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
         parser.tryParse(gctx, pctx, null, 0, 0, true); // Result ignored.
-        return pctx.sink();
+        return new Result(pctx.sink(), pctx.dataType());
     }
 
     @NotNull
-    private static Sink<?> unifyNumericResults(
-            final Parser.GlobalContext gctx, final List<ParserResultWrapper> wrappers) {
+    private static Result unifyNumericResults(
+            final Parser.GlobalContext gctx, final List<ParserResultWrapper<?>> wrappers) {
         if (wrappers.isEmpty()) {
             throw new RuntimeException("Logic error: no parser results.");
         }
-        final ParserResultWrapper dest = wrappers.get(wrappers.size() - 1);
+        final ParserResultWrapper<?> dest = wrappers.get(wrappers.size() - 1);
 
-        // BTW, there's an edge case where there's only one parser in the list. In that case first ==
-        // dest,
-        // but this code still does the right thing.
-        final ParserResultWrapper first = wrappers.get(0);
+        // BTW, there's an edge case where there's only one parser in the list. In that case
+        // first == dest, but this code still does the right thing.
+        final ParserResultWrapper<?> first = wrappers.get(0);
         fillNulls(gctx, dest.pctx, 0, first.begin);
 
         long destBegin = first.begin;
         for (int ii = 0; ii < wrappers.size() - 1; ++ii) {
-            final ParserResultWrapper curr = wrappers.get(ii);
+            final ParserResultWrapper<?> curr = wrappers.get(ii);
             copy(gctx, curr.pctx, dest.pctx, curr.begin, curr.end, destBegin);
             destBegin += (curr.end - curr.begin);
         }
-        return dest.pctx.sink();
+        return new Result(dest.pctx.sink(), dest.pctx.dataType());
     }
 
     private static <TARRAY, UARRAY> void copy(
@@ -291,6 +316,24 @@ public final class ParseDenseStorageToColumn {
             }
         }
         return result;
+    }
+
+    public static class Result {
+        private final Sink<?> sink;
+        private final DataType dataType;
+
+        public Result(Sink<?> sink, DataType dataType) {
+            this.sink = sink;
+            this.dataType = dataType;
+        }
+
+        public Sink<?> sink() {
+            return sink;
+        }
+
+        public DataType dataType() {
+            return dataType;
+        }
     }
 
     private static class CategorizedParsers {
@@ -418,12 +461,14 @@ public final class ParseDenseStorageToColumn {
         }
     }
 
-    private static class ParserResultWrapper {
-        private final Parser.ParserContext<?> pctx;
+    private static class ParserResultWrapper<TARRAY> {
+        private final Parser<TARRAY> parser;
+        private final Parser.ParserContext<TARRAY> pctx;
         private final long begin;
         private final long end;
 
-        public ParserResultWrapper(Parser.ParserContext<?> pctx, long begin, long end) {
+        public ParserResultWrapper(Parser<TARRAY> parser, Parser.ParserContext<TARRAY> pctx, long begin, long end) {
+            this.parser = parser;
             this.pctx = pctx;
             this.begin = begin;
             this.end = end;

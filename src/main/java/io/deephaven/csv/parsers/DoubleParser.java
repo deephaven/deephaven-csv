@@ -16,7 +16,7 @@ public final class DoubleParser implements Parser<double[]> {
     @Override
     public ParserContext<double[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final Sink<double[]> sink = gctx.sinkFactory.forDouble();
-        return new ParserContext<>(sink, null, new double[chunkSize]);
+        return new ParserContext<>(sink, null, DataType.DOUBLE, new double[chunkSize]);
     }
 
     @Override
