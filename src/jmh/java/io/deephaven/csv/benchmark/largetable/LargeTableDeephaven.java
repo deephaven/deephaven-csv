@@ -1,7 +1,6 @@
 package io.deephaven.csv.benchmark.largetable;
 
 import io.deephaven.csv.CsvSpecs;
-import io.deephaven.csv.benchmark.util.ArrayBacked;
 import io.deephaven.csv.benchmark.util.SinkFactories;
 import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.reading.CsvReader;
@@ -31,15 +30,15 @@ public class LargeTableDeephaven {
                 .putParserForIndex(8, Parsers.DOUBLE)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
-        final Sink<?>[] sinks = result.columns();
+        final Object[] sinks = result.columns();
         return new Results(
-                ((ArrayBacked<long[]>) sinks[0]).getUnderlyingArray(),
-                ((ArrayBacked<String[]>) sinks[1]).getUnderlyingArray(),
-                ((ArrayBacked<byte[]>) sinks[2]).getUnderlyingArray(),
-                ((ArrayBacked<long[]>) sinks[3]).getUnderlyingArray(),
-                ((ArrayBacked<long[]>) sinks[4]).getUnderlyingArray(),
-                ((ArrayBacked<double[]>) sinks[5]).getUnderlyingArray(),
-                ((ArrayBacked<double[]>) sinks[6]).getUnderlyingArray(),
-                ((ArrayBacked<double[]>) sinks[7]).getUnderlyingArray());
+                (long[]) sinks[0],
+                (String[]) sinks[1],
+                (byte[]) sinks[2],
+                (long[]) sinks[3],
+                (long[]) sinks[4],
+                (double[]) sinks[5],
+                (double[]) sinks[6],
+                (double[]) sinks[7]);
     }
 }

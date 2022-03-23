@@ -49,7 +49,7 @@ public final class SinkFactories {
         }
     }
 
-    private static final class ArrayBackedSourceSink<TARRAY> implements SourceSink<TARRAY>, ArrayBacked<TARRAY> {
+    private static final class ArrayBackedSourceSink<TARRAY> implements SourceSink<TARRAY> {
         public static <TARRAY> ArrayBackedSourceSink<TARRAY> of(final TARRAY storage) {
             return new ArrayBackedSourceSink<>(storage);
         }
@@ -74,7 +74,7 @@ public final class SinkFactories {
         }
 
         @Override
-        public TARRAY getUnderlyingArray() {
+        public Object getUnderlying() {
             return storage;
         }
     }

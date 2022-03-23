@@ -1,7 +1,6 @@
 package io.deephaven.csv.benchmark.intcol;
 
 import io.deephaven.csv.CsvSpecs;
-import io.deephaven.csv.benchmark.util.ArrayBacked;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
 import io.deephaven.csv.benchmark.util.SinkFactories;
 import io.deephaven.csv.parsers.Parsers;
@@ -21,7 +20,7 @@ public final class IntColumnParserDeephaven {
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final int[][] data = Arrays.stream(result.columns())
-                .map(col -> ((ArrayBacked<int[]>) col).getUnderlyingArray()).toArray(int[][]::new);
+                .map(col -> ((int[]) col)).toArray(int[][]::new);
         return BenchmarkResult.of(result.numRows(), data);
     }
 }

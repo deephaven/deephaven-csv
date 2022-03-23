@@ -1,7 +1,6 @@
 package io.deephaven.csv.benchmark.datetimecol;
 
 import io.deephaven.csv.CsvSpecs;
-import io.deephaven.csv.benchmark.util.ArrayBacked;
 import io.deephaven.csv.benchmark.util.BenchmarkResult;
 import io.deephaven.csv.benchmark.util.SinkFactories;
 import io.deephaven.csv.parsers.Parsers;
@@ -21,7 +20,7 @@ public final class DateTimeColumnParserDeephaven {
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final long[][] data = Arrays.stream(result.columns())
-                .map(col -> ((ArrayBacked<long[]>) col).getUnderlyingArray()).toArray(long[][]::new);
+                .map(col -> ((long[]) col)).toArray(long[][]::new);
         return BenchmarkResult.of(result.numRows(), data);
     }
 }
