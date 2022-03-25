@@ -20,7 +20,7 @@ public final class DateTimeColumnParserDeephaven {
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final long[][] data = Arrays.stream(result.columns())
-                .map(col -> ((long[]) col)).toArray(long[][]::new);
+                .map(col -> ((long[]) col.data())).toArray(long[][]::new);
         return BenchmarkResult.of(result.numRows(), data);
     }
 }

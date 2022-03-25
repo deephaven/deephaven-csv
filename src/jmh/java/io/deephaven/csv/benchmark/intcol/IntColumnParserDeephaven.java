@@ -20,7 +20,7 @@ public final class IntColumnParserDeephaven {
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final int[][] data = Arrays.stream(result.columns())
-                .map(col -> ((int[]) col)).toArray(int[][]::new);
+                .map(col -> ((int[]) col.data())).toArray(int[][]::new);
         return BenchmarkResult.of(result.numRows(), data);
     }
 }
