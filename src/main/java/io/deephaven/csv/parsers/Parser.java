@@ -1,13 +1,11 @@
 package io.deephaven.csv.parsers;
 
-import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
 import io.deephaven.csv.sinks.Source;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import org.jetbrains.annotations.NotNull;
 

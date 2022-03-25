@@ -6,7 +6,6 @@ import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
-import io.deephaven.csv.tokenization.Tokenizer.CustomTimeZoneParser;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
@@ -116,7 +115,7 @@ public abstract class CsvSpecs {
         Builder headerValidator(Predicate<String> headerValidator);
 
         /**
-         * Whether the input file has a header row.
+         * Whether the input file has a header row. Defaults to true.
          */
         Builder hasHeaderRow(boolean hasHeaderRow);
 

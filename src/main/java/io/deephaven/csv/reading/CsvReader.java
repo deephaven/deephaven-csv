@@ -132,15 +132,15 @@ public final class CsvReader {
             }
 
             final long numRows;
-            final Object[] underlyingCols = new Object[numOutputCols];
-            final DataType[] dataTypes = new DataType[numOutputCols];
+            final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
             numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final ParseDenseStorageToColumn.Result result = sinkFutures.get(ii).get();
-                underlyingCols[ii] = result.sink().getUnderlying();
-                dataTypes[ii] = result.dataType();
+                final Object data = result.sink().getUnderlying();
+                final DataType dataType = result.dataType();
+                resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);
             }
-            return new Result(numRows, headersToUse, underlyingCols, dataTypes);
+            return new Result(numRows, resultColumns);
         } catch (Exception inner) {
             throw new CsvReaderException("Caught exception", inner);
         } finally {
@@ -298,19 +298,14 @@ public final class CsvReader {
         return (byte) c;
     }
 
-    /** Result of {@link #read}. */
+    /** Result of {@link #read}. Represents a set of columns. */
     public static final class Result {
         private final long numRows;
-        private final String[] columnNames;
-        private final Object[] columns;
-        private final DataType[] dataTypes;
+        private final ResultColumn[] columns;
 
-        public Result(final long numRows, final String[] columnNames, final Object[] columns,
-                final DataType[] dataTypes) {
+        public Result(long numRows, ResultColumn[] columns) {
             this.numRows = numRows;
-            this.columnNames = columnNames;
             this.columns = columns;
-            this.dataTypes = dataTypes;
         }
 
         /** Number of rows in the input. */
@@ -318,30 +313,49 @@ public final class CsvReader {
             return numRows;
         }
 
-        /** The column names. */
-        public String[] columnNames() {
-            return columnNames;
-        }
-
-
-        /**
-         * Data for each column. Obtained by invoking {@link Sink#getUnderlying} on each {@link Sink} after all
-         * processing is done.
-         */
-        public Object[] columns() {
-            return columns;
-        }
-
-        /**
-         * The underlying data type of each column, represented as one of the {@link DataType} enum values.
-         */
-        public DataType[] dataTypes() {
-            return dataTypes;
-        }
-
         /** The number of columns. */
         public int numCols() {
             return columns.length;
+        }
+
+        /** The columns. */
+        public ResultColumn[] columns() {
+            return columns;
+        }
+    }
+
+    /**
+     * Represents a column in the {@link Result}.
+     */
+    public static final class ResultColumn {
+        private final String name;
+        private final Object data;
+        private final DataType dataType;
+
+        public ResultColumn(String name, Object data, DataType dataType) {
+            this.name = name;
+            this.data = data;
+            this.dataType = dataType;
+        }
+
+        /** The column name. */
+        public String name() {
+            return name;
+        }
+
+        /**
+         * The data for the column. Obtained by invoking {@link Sink#getUnderlying} on the {@link Sink}
+         * that built the column, after all processing is done.
+         */
+        public Object data() {
+            return data;
+        }
+
+        /**
+         * The data type of the column.
+         */
+        public DataType dataType() {
+            return dataType;
         }
     }
 }

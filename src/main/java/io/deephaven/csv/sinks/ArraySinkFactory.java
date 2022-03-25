@@ -18,10 +18,7 @@ public class ArraySinkFactory implements SinkFactory {
     private final Long dateTimeAsLongSentinel;
     private final Long timestampAsLongSentinel;
 
-    public ArraySinkFactory(Byte byteSentinel, Short shortSentinel, Integer intSentinel, Long longSentinel,
-            Float floatSentinel, Double doubleSentinel,
-            Byte booleanAsByteSentinel,
-            Character charSentinel, String stringSentinel, Long dateTimeAsLongSentinel, Long timestampAsLongSentinel) {
+    public ArraySinkFactory(Byte byteSentinel, Short shortSentinel, Integer intSentinel, Long longSentinel, Float floatSentinel, Double doubleSentinel, Byte booleanAsByteSentinel, Character charSentinel, String stringSentinel, Long dateTimeAsLongSentinel, Long timestampAsLongSentinel) {
         this.byteSentinel = byteSentinel;
         this.shortSentinel = shortSentinel;
         this.intSentinel = intSentinel;
@@ -151,7 +148,7 @@ public class ArraySinkFactory implements SinkFactory {
 
 
 abstract class ArraySinkBase<TARRAY> implements Sink<TARRAY> {
-    private final int INITIAL_SIZE = 1024;
+    private static final int INITIAL_SIZE = 1024;
 
     private final IntFunction<TARRAY> arrayFactory;
     protected final boolean hasNullSentinel;
@@ -180,9 +177,9 @@ abstract class ArraySinkBase<TARRAY> implements Sink<TARRAY> {
         final int currentCapacity = Array.getLength(array);
 
         // Grow array if needed.
-        if (currentCapacity < destEnd) {
+        if (currentCapacity < destEndAsInt) {
             final int highBit = Integer.highestOneBit(destEndAsInt);
-            final int newCapacity = destEndAsInt == highBit ? destEndAsInt : destEndAsInt * 2;
+            final int newCapacity = destEndAsInt == highBit ? highBit : highBit * 2;
             final TARRAY newArray = arrayFactory.apply(newCapacity);
             System.arraycopy(array, 0, newArray, 0, currentCapacity);
             array = newArray;

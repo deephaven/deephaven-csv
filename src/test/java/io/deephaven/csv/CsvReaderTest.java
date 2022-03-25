@@ -1715,14 +1715,14 @@ public class CsvReaderTest {
      */
     private static ColumnSet toColumnSet(final CsvReader.Result result, MakeCustomColumn makeCustomColumn) {
         final int numCols = result.numCols();
+        final CsvReader.ResultColumn[] resultColumns = result.columns();
 
         final Column<?>[] columns = new Column[numCols];
         final int sizeAsInt = Math.toIntExact(result.numRows());
+
         for (int ii = 0; ii < numCols; ++ii) {
-            final String columnName = result.columnNames()[ii];
-            final DataType dataType = result.dataTypes()[ii];
-            final Object col = result.columns()[ii];
-            columns[ii] = makeColumn(columnName, dataType, col, sizeAsInt, makeCustomColumn);
+            final CsvReader.ResultColumn rc = resultColumns[ii];
+            columns[ii] = makeColumn(rc.name(), rc.dataType(), rc.data(), sizeAsInt, makeCustomColumn);
         }
         return ColumnSet.of(columns);
     }
