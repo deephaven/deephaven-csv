@@ -12,6 +12,8 @@ import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
 import io.deephaven.csv.util.MutableObject;
 import io.deephaven.csv.util.Renderer;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.*;
@@ -299,7 +301,7 @@ public final class CsvReader {
     }
 
     /** Result of {@link #read}. Represents a set of columns. */
-    public static final class Result {
+    public static final class Result implements Iterable<ResultColumn> {
         private final long numRows;
         private final ResultColumn[] columns;
 
@@ -321,6 +323,12 @@ public final class CsvReader {
         /** The columns. */
         public ResultColumn[] columns() {
             return columns;
+        }
+
+        @NotNull
+        @Override
+        public Iterator<ResultColumn> iterator() {
+            return Arrays.stream(columns).iterator();
         }
     }
 
