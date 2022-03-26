@@ -18,7 +18,9 @@ public class ArraySinkFactory implements SinkFactory {
     private final Long dateTimeAsLongSentinel;
     private final Long timestampAsLongSentinel;
 
-    public ArraySinkFactory(Byte byteSentinel, Short shortSentinel, Integer intSentinel, Long longSentinel, Float floatSentinel, Double doubleSentinel, Byte booleanAsByteSentinel, Character charSentinel, String stringSentinel, Long dateTimeAsLongSentinel, Long timestampAsLongSentinel) {
+    public ArraySinkFactory(Byte byteSentinel, Short shortSentinel, Integer intSentinel, Long longSentinel,
+            Float floatSentinel, Double doubleSentinel, Byte booleanAsByteSentinel, Character charSentinel,
+            String stringSentinel, Long dateTimeAsLongSentinel, Long timestampAsLongSentinel) {
         this.byteSentinel = byteSentinel;
         this.shortSentinel = shortSentinel;
         this.intSentinel = intSentinel;

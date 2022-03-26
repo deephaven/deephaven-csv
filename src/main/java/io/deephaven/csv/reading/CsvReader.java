@@ -352,8 +352,8 @@ public final class CsvReader {
         }
 
         /**
-         * The data for the column. Obtained by invoking {@link Sink#getUnderlying} on the {@link Sink}
-         * that built the column, after all processing is done.
+         * The data for the column. Obtained by invoking {@link Sink#getUnderlying} on the {@link Sink} that built the
+         * column, after all processing is done.
          */
         public Object data() {
             return data;
