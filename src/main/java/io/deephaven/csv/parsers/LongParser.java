@@ -19,7 +19,7 @@ public final class LongParser implements Parser<long[]> {
     public ParserContext<long[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<long[]>> sourceHolder = new MutableObject<>();
         final Sink<long[]> sink = gctx.sinkFactory.forLong(sourceHolder);
-        return new ParserContext<>(sink, sourceHolder.getValue(), new long[chunkSize]);
+        return new ParserContext<>(sink, sourceHolder.getValue(), DataType.LONG, new long[chunkSize]);
     }
 
     @Override

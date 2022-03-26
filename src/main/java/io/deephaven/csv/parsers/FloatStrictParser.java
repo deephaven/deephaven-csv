@@ -21,7 +21,7 @@ public final class FloatStrictParser implements Parser<float[]> {
     @Override
     public ParserContext<float[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final Sink<float[]> sink = gctx.sinkFactory.forFloat();
-        return new ParserContext<>(sink, null, new float[chunkSize]);
+        return new ParserContext<>(sink, null, DataType.FLOAT, new float[chunkSize]);
     }
 
     @Override

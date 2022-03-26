@@ -6,7 +6,6 @@ import io.deephaven.csv.sinks.Source;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -149,11 +148,14 @@ public interface Parser<TARRAY> {
     class ParserContext<TARRAY> {
         private final Sink<TARRAY> sink;
         private final Source<TARRAY> source;
+        private final DataType dataType;
         private final TARRAY valueChunk;
 
-        public ParserContext(Sink<TARRAY> sink, Source<TARRAY> source, TARRAY valueChunk) {
+        public ParserContext(final Sink<TARRAY> sink, final Source<TARRAY> source,
+                final DataType dataType, final TARRAY valueChunk) {
             this.sink = sink;
             this.source = source;
+            this.dataType = dataType;
             this.valueChunk = valueChunk;
         }
 
@@ -163,6 +165,10 @@ public interface Parser<TARRAY> {
 
         public Source<TARRAY> source() {
             return source;
+        }
+
+        public DataType dataType() {
+            return dataType;
         }
 
         public TARRAY valueChunk() {

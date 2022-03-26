@@ -32,9 +32,45 @@ import java.util.function.Supplier;
  */
 public interface SinkFactory {
     /**
-     * Create a {@link SinkFactory} from the corresponding lambdas. As a service to the caller, we make the
-     * {@link SinkFactory} threadsafe by synchronizing all the forXXX methods. This is probably not necessary for most
-     * suppliers but we do it in order to provide an extra level of protection.
+     * This factory method creates a {@link SinkFactory} from the corresponding lambdas. This version allows for more
+     * peformant type inference, because it allows wider numeric parsers (like double) to directly read back data
+     * written by narrower numeric parsers (like short) without having to reparse the ASCII text. Unfortunately this
+     * requires the factory implementor to do a little more work, because they have to implement the Source&lt;T&gt;
+     * interface for byte[], short[], int, and long[]. If the factory implementor does not want to do this work (or the
+     * target data structure does not support reading back), the caller can invoke {@link SinkFactory#ofSimple} instead.
+     *
+     * As a service to the caller, we also make the provided {@link SinkFactory} threadsafe by synchronizing all the
+     * forXXX methods. This is probably not necessary for most suppliers but we do it in order to provide an extra level
+     * of protection.
+     */
+    static <TBYTESINK extends Sink<byte[]> & Source<byte[]>, TSHORTSINK extends Sink<short[]> & Source<short[]>, TINTSINK extends Sink<int[]> & Source<int[]>, TLONGSINK extends Sink<long[]> & Source<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>> SinkFactory of(
+            Supplier<TBYTESINK> byteSinkSupplier,
+            Supplier<TSHORTSINK> shortSinkSupplier,
+            Supplier<TINTSINK> intSinkSupplier,
+            Supplier<TLONGSINK> longSinkSupplier,
+            Supplier<TFLOATSINK> floatSinkSupplier,
+            Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier, // no Byte reservedBooleanAsByte,
+            Supplier<TCHARSINK> charSinkSupplier,
+            Supplier<TSTRINGSINK> stringSinkSupplier,
+            Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier) {
+        return new SinkFactoryImpl<>(byteSinkSupplier, null,
+                shortSinkSupplier, null,
+                intSinkSupplier, null,
+                longSinkSupplier, null,
+                floatSinkSupplier, null,
+                doubleSinkSupplier, null,
+                booleanAsByteSinkSupplier,
+                charSinkSupplier, null,
+                stringSinkSupplier, null,
+                dateTimeAsLongSinkSupplier, null,
+                timestampAsLongSinkSupplier, null);
+    }
+
+    /**
+     * Variant of {@link SinkFactory#of} that allows you to specify reserved sentinel values that should be excluded
+     * from their corresponding type.
      */
     static <TBYTESINK extends Sink<byte[]> & Source<byte[]>, TSHORTSINK extends Sink<short[]> & Source<short[]>, TINTSINK extends Sink<int[]> & Source<int[]>, TLONGSINK extends Sink<long[]> & Source<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>> SinkFactory of(
             Supplier<TBYTESINK> byteSinkSupplier,
@@ -58,121 +94,127 @@ public interface SinkFactory {
             Long reservedDateTimeAsLong,
             Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
             Long reservedTimestampAsLong) {
-        return new SinkFactory() {
-            @Override
-            public synchronized Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
-                final TBYTESINK result = byteSinkSupplier.get();
-                source.setValue(result);
-                return result;
-            }
-
-            @Override
-            public Byte reservedByte() {
-                return reservedByte;
-            }
-
-            @Override
-            public synchronized Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
-                final TSHORTSINK result = shortSinkSupplier.get();
-                source.setValue(result);
-                return result;
-            }
-
-            @Override
-            public Short reservedShort() {
-                return reservedShort;
-            }
-
-            @Override
-            public synchronized Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
-                final TINTSINK result = intSinkSupplier.get();
-                source.setValue(result);
-                return result;
-            }
-
-            @Override
-            public Integer reservedInt() {
-                return reservedInt;
-            }
-
-            @Override
-            public synchronized Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
-                final TLONGSINK result = longSinkSupplier.get();
-                source.setValue(result);
-                return result;
-            }
-
-            @Override
-            public Long reservedLong() {
-                return reservedLong;
-            }
-
-            @Override
-            public synchronized Sink<float[]> forFloat() {
-                return floatSinkSupplier.get();
-            }
-
-            @Override
-            public Float reservedFloat() {
-                return reservedFloat;
-            }
-
-            @Override
-            public synchronized Sink<double[]> forDouble() {
-                return doubleSinkSupplier.get();
-            }
-
-            @Override
-            public Double reservedDouble() {
-                return reservedDouble;
-            }
-
-            @Override
-            public synchronized Sink<byte[]> forBooleanAsByte() {
-                return booleanAsByteSinkSupplier.get();
-            }
-
-            @Override
-            public synchronized Sink<char[]> forChar() {
-                return charSinkSupplier.get();
-            }
-
-            @Override
-            public Character reservedChar() {
-                return reservedChar;
-            }
-
-            @Override
-            public synchronized Sink<String[]> forString() {
-                return stringSinkSupplier.get();
-            }
-
-            @Override
-            public String reservedString() {
-                return reservedString;
-            }
-
-            @Override
-            public synchronized Sink<long[]> forDateTimeAsLong() {
-                return dateTimeAsLongSinkSupplier.get();
-            }
-
-            @Override
-            public Long reservedDateTimeAsLong() {
-                return reservedDateTimeAsLong;
-            }
-
-            @Override
-            public synchronized Sink<long[]> forTimestampAsLong() {
-                return timestampAsLongSinkSupplier.get();
-            }
-
-            @Override
-            public Long reservedTimestampAsLong() {
-                return reservedTimestampAsLong;
-            }
-        };
+        return new SinkFactoryImpl<>(byteSinkSupplier, reservedByte,
+                shortSinkSupplier, reservedShort,
+                intSinkSupplier, reservedInt,
+                longSinkSupplier, reservedLong,
+                floatSinkSupplier, reservedFloat,
+                doubleSinkSupplier, reservedDouble,
+                booleanAsByteSinkSupplier,
+                charSinkSupplier, reservedChar,
+                stringSinkSupplier, reservedString,
+                dateTimeAsLongSinkSupplier, reservedDateTimeAsLong,
+                timestampAsLongSinkSupplier, reservedTimestampAsLong);
     }
+
+    /**
+     * This factory method creates a {@link SinkFactory} from the corresponding lambdas. This version second version has
+     * somewhat less peformant type inference, because it does not allow wider numeric parsers (like double) to directly
+     * read back data written by narrower numeric parsers (like short). Instead the wider parser needs to reparse the
+     * ASCII text. If the factory implementor prefers the more performant version, the caller can invoke
+     * {@link SinkFactory#of} instead.
+     *
+     * As a service to the caller, we also make the provided {@link SinkFactory} threadsafe by synchronizing all the
+     * forXXX methods. This is probably not necessary for most suppliers but we do it in order to provide an extra level
+     * of protection.
+     */
+    static <TBYTESINK extends Sink<byte[]>, TSHORTSINK extends Sink<short[]>, TINTSINK extends Sink<int[]>, TLONGSINK extends Sink<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>> SinkFactory ofSimple(
+            Supplier<TBYTESINK> byteSinkSupplier,
+            Supplier<TSHORTSINK> shortSinkSupplier,
+            Supplier<TINTSINK> intSinkSupplier,
+            Supplier<TLONGSINK> longSinkSupplier,
+            Supplier<TFLOATSINK> floatSinkSupplier,
+            Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier, // no Byte reservedBooleanAsByte,
+            Supplier<TCHARSINK> charSinkSupplier,
+            Supplier<TSTRINGSINK> stringSinkSupplier,
+            Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier) {
+        return new SinkFactorySimpleImpl<>(byteSinkSupplier, null,
+                shortSinkSupplier, null,
+                intSinkSupplier, null,
+                longSinkSupplier, null,
+                floatSinkSupplier, null,
+                doubleSinkSupplier, null,
+                booleanAsByteSinkSupplier,
+                charSinkSupplier, null,
+                stringSinkSupplier, null,
+                dateTimeAsLongSinkSupplier, null,
+                timestampAsLongSinkSupplier, null);
+    }
+
+    /**
+     * Variant of {@link SinkFactory#of} that allows you to specify reserved sentinel values that should be excluded
+     * from their corresponding type.
+     */
+    static <TBYTESINK extends Sink<byte[]>, TSHORTSINK extends Sink<short[]>, TINTSINK extends Sink<int[]>, TLONGSINK extends Sink<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>> SinkFactory ofSimple(
+            Supplier<TBYTESINK> byteSinkSupplier,
+            Byte reservedByte,
+            Supplier<TSHORTSINK> shortSinkSupplier,
+            Short reservedShort,
+            Supplier<TINTSINK> intSinkSupplier,
+            Integer reservedInt,
+            Supplier<TLONGSINK> longSinkSupplier,
+            Long reservedLong,
+            Supplier<TFLOATSINK> floatSinkSupplier,
+            Float reservedFloat,
+            Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Double reservedDouble,
+            Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier, // no Byte reservedBooleanAsByte,
+            Supplier<TCHARSINK> charSinkSupplier,
+            Character reservedChar,
+            Supplier<TSTRINGSINK> stringSinkSupplier,
+            String reservedString,
+            Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Long reservedDateTimeAsLong,
+            Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
+            Long reservedTimestampAsLong) {
+        return new SinkFactorySimpleImpl<>(byteSinkSupplier, reservedByte,
+                shortSinkSupplier, reservedShort,
+                intSinkSupplier, reservedInt,
+                longSinkSupplier, reservedLong,
+                floatSinkSupplier, reservedFloat,
+                doubleSinkSupplier, reservedDouble,
+                booleanAsByteSinkSupplier,
+                charSinkSupplier, reservedChar,
+                stringSinkSupplier, reservedString,
+                dateTimeAsLongSinkSupplier, reservedDateTimeAsLong,
+                timestampAsLongSinkSupplier, reservedTimestampAsLong);
+    }
+
+    /**
+     * Factory method for simple array sinks. This is useful if you are coding up something quickly and just want a
+     * sensible data structure.
+     */
+    static SinkFactory arrays() {
+        return new ArraySinkFactory(null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * Variant of {@link SinkFactory#arrays} that allows you to specify null sentinel values.
+     */
+    static SinkFactory arrays(Byte byteSentinel, Short shortSentinel,
+            Integer intSentinel,
+            Long longSentinel,
+            Float floatSentinel,
+            Double doubleSentinel,
+            Byte booleanAsByteSentinel,
+            Character charSentinel,
+            String stringSentinel,
+            Long dateTimeAsLongSentinel,
+            Long timestampAsLongSentinel) {
+        return new ArraySinkFactory(byteSentinel, shortSentinel,
+                intSentinel,
+                longSentinel,
+                floatSentinel,
+                doubleSentinel,
+                booleanAsByteSentinel,
+                charSentinel,
+                stringSentinel,
+                dateTimeAsLongSentinel,
+                timestampAsLongSentinel);
+    }
+
 
     /** Provide a Sink and a Source for the byte representation. */
     Sink<byte[]> forByte(MutableObject<Source<byte[]>> source);
@@ -238,4 +280,259 @@ public interface SinkFactory {
 
     /** The optional reserved value for the Timestamp (as long) representation. */
     Long reservedTimestampAsLong();
+}
+
+
+abstract class SinkFactoryImplBase<TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>>
+        implements SinkFactory {
+    private final Byte reservedByte;
+    private final Short reservedShort;
+    private final Integer reservedInt;
+    private final Long reservedLong;
+    private final Supplier<TFLOATSINK> floatSinkSupplier;
+    private final Float reservedFloat;
+    private final Supplier<TDOUBLESINK> doubleSinkSupplier;
+    private final Double reservedDouble;
+    private final Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier; // no Byte reservedBooleanAsByte,
+    private final Supplier<TCHARSINK> charSinkSupplier;
+    private final Character reservedChar;
+    private final Supplier<TSTRINGSINK> stringSinkSupplier;
+    private final String reservedString;
+    private final Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier;
+    private final Long reservedDateTimeAsLong;
+    private final Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier;
+    private final Long reservedTimestampAsLong;
+
+    protected SinkFactoryImplBase(Byte reservedByte, Short reservedShort, Integer reservedInt, Long reservedLong,
+            Supplier<TFLOATSINK> floatSinkSupplier, Float reservedFloat, Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Double reservedDouble, Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier,
+            Supplier<TCHARSINK> charSinkSupplier, Character reservedChar, Supplier<TSTRINGSINK> stringSinkSupplier,
+            String reservedString, Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Long reservedDateTimeAsLong, Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
+            Long reservedTimestampAsLong) {
+        this.reservedByte = reservedByte;
+        this.reservedShort = reservedShort;
+        this.reservedInt = reservedInt;
+        this.reservedLong = reservedLong;
+        this.floatSinkSupplier = floatSinkSupplier;
+        this.reservedFloat = reservedFloat;
+        this.doubleSinkSupplier = doubleSinkSupplier;
+        this.reservedDouble = reservedDouble;
+        this.booleanAsByteSinkSupplier = booleanAsByteSinkSupplier;
+        this.charSinkSupplier = charSinkSupplier;
+        this.reservedChar = reservedChar;
+        this.stringSinkSupplier = stringSinkSupplier;
+        this.reservedString = reservedString;
+        this.dateTimeAsLongSinkSupplier = dateTimeAsLongSinkSupplier;
+        this.reservedDateTimeAsLong = reservedDateTimeAsLong;
+        this.timestampAsLongSinkSupplier = timestampAsLongSinkSupplier;
+        this.reservedTimestampAsLong = reservedTimestampAsLong;
+    }
+
+    @Override
+    public final Byte reservedByte() {
+        return reservedByte;
+    }
+
+    @Override
+    public final Short reservedShort() {
+        return reservedShort;
+    }
+
+    @Override
+    public final Integer reservedInt() {
+        return reservedInt;
+    }
+
+    @Override
+    public final Long reservedLong() {
+        return reservedLong;
+    }
+
+    @Override
+    public synchronized final Sink<float[]> forFloat() {
+        return floatSinkSupplier.get();
+    }
+
+    @Override
+    public final Float reservedFloat() {
+        return reservedFloat;
+    }
+
+    @Override
+    public synchronized final Sink<double[]> forDouble() {
+        return doubleSinkSupplier.get();
+    }
+
+    @Override
+    public final Double reservedDouble() {
+        return reservedDouble;
+    }
+
+    @Override
+    public synchronized final Sink<byte[]> forBooleanAsByte() {
+        return booleanAsByteSinkSupplier.get();
+    }
+
+    @Override
+    public synchronized final Sink<char[]> forChar() {
+        return charSinkSupplier.get();
+    }
+
+    @Override
+    public final Character reservedChar() {
+        return reservedChar;
+    }
+
+    @Override
+    public synchronized final Sink<String[]> forString() {
+        return stringSinkSupplier.get();
+    }
+
+    @Override
+    public final String reservedString() {
+        return reservedString;
+    }
+
+    @Override
+    public synchronized final Sink<long[]> forDateTimeAsLong() {
+        return dateTimeAsLongSinkSupplier.get();
+    }
+
+    @Override
+    public final Long reservedDateTimeAsLong() {
+        return reservedDateTimeAsLong;
+    }
+
+    @Override
+    public synchronized final Sink<long[]> forTimestampAsLong() {
+        return timestampAsLongSinkSupplier.get();
+    }
+
+    @Override
+    public final Long reservedTimestampAsLong() {
+        return reservedTimestampAsLong;
+    }
+}
+
+
+final class SinkFactoryImpl<TBYTESINK extends Sink<byte[]> & Source<byte[]>, TSHORTSINK extends Sink<short[]> & Source<short[]>, TINTSINK extends Sink<int[]> & Source<int[]>, TLONGSINK extends Sink<long[]> & Source<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>>
+        extends
+        SinkFactoryImplBase<TFLOATSINK, TDOUBLESINK, TBOOLASBYTESINK, TCHARSINK, TSTRINGSINK, TDATETIMEASLONGSINK, TTIMESTAMPASLONGSINK> {
+    private final Supplier<TBYTESINK> byteSinkSupplier;
+    private final Supplier<TSHORTSINK> shortSinkSupplier;
+    private final Supplier<TINTSINK> intSinkSupplier;
+    private final Supplier<TLONGSINK> longSinkSupplier;
+
+    public SinkFactoryImpl(
+            Supplier<TBYTESINK> byteSinkSupplier,
+            Byte reservedByte,
+            Supplier<TSHORTSINK> shortSinkSupplier,
+            Short reservedShort,
+            Supplier<TINTSINK> intSinkSupplier,
+            Integer reservedInt,
+            Supplier<TLONGSINK> longSinkSupplier,
+            Long reservedLong,
+            Supplier<TFLOATSINK> floatSinkSupplier, Float reservedFloat, Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Double reservedDouble, Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier,
+            Supplier<TCHARSINK> charSinkSupplier, Character reservedChar, Supplier<TSTRINGSINK> stringSinkSupplier,
+            String reservedString, Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Long reservedDateTimeAsLong, Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
+            Long reservedTimestampAsLong) {
+        super(reservedByte, reservedShort, reservedInt, reservedLong, floatSinkSupplier, reservedFloat,
+                doubleSinkSupplier, reservedDouble, booleanAsByteSinkSupplier, charSinkSupplier, reservedChar,
+                stringSinkSupplier, reservedString, dateTimeAsLongSinkSupplier, reservedDateTimeAsLong,
+                timestampAsLongSinkSupplier, reservedTimestampAsLong);
+        this.byteSinkSupplier = byteSinkSupplier;
+        this.shortSinkSupplier = shortSinkSupplier;
+        this.intSinkSupplier = intSinkSupplier;
+        this.longSinkSupplier = longSinkSupplier;
+    }
+
+    @Override
+    public synchronized Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
+        final TBYTESINK result = byteSinkSupplier.get();
+        source.setValue(result);
+        return result;
+    }
+
+    @Override
+    public synchronized Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
+        final TSHORTSINK result = shortSinkSupplier.get();
+        source.setValue(result);
+        return result;
+    }
+
+    @Override
+    public synchronized Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
+        final TINTSINK result = intSinkSupplier.get();
+        source.setValue(result);
+        return result;
+    }
+
+    @Override
+    public synchronized Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
+        final TLONGSINK result = longSinkSupplier.get();
+        source.setValue(result);
+        return result;
+    }
+}
+
+
+final class SinkFactorySimpleImpl<TBYTESINK extends Sink<byte[]>, TSHORTSINK extends Sink<short[]>, TINTSINK extends Sink<int[]>, TLONGSINK extends Sink<long[]>, TFLOATSINK extends Sink<float[]>, TDOUBLESINK extends Sink<double[]>, TBOOLASBYTESINK extends Sink<byte[]>, TCHARSINK extends Sink<char[]>, TSTRINGSINK extends Sink<String[]>, TDATETIMEASLONGSINK extends Sink<long[]>, TTIMESTAMPASLONGSINK extends Sink<long[]>>
+        extends
+        SinkFactoryImplBase<TFLOATSINK, TDOUBLESINK, TBOOLASBYTESINK, TCHARSINK, TSTRINGSINK, TDATETIMEASLONGSINK, TTIMESTAMPASLONGSINK> {
+    private final Supplier<TBYTESINK> byteSinkSupplier;
+    private final Supplier<TSHORTSINK> shortSinkSupplier;
+    private final Supplier<TINTSINK> intSinkSupplier;
+    private final Supplier<TLONGSINK> longSinkSupplier;
+
+    public SinkFactorySimpleImpl(
+            Supplier<TBYTESINK> byteSinkSupplier,
+            Byte reservedByte,
+            Supplier<TSHORTSINK> shortSinkSupplier,
+            Short reservedShort,
+            Supplier<TINTSINK> intSinkSupplier,
+            Integer reservedInt,
+            Supplier<TLONGSINK> longSinkSupplier,
+            Long reservedLong,
+            Supplier<TFLOATSINK> floatSinkSupplier, Float reservedFloat, Supplier<TDOUBLESINK> doubleSinkSupplier,
+            Double reservedDouble, Supplier<TBOOLASBYTESINK> booleanAsByteSinkSupplier,
+            Supplier<TCHARSINK> charSinkSupplier, Character reservedChar, Supplier<TSTRINGSINK> stringSinkSupplier,
+            String reservedString, Supplier<TDATETIMEASLONGSINK> dateTimeAsLongSinkSupplier,
+            Long reservedDateTimeAsLong, Supplier<TTIMESTAMPASLONGSINK> timestampAsLongSinkSupplier,
+            Long reservedTimestampAsLong) {
+        super(reservedByte, reservedShort, reservedInt, reservedLong, floatSinkSupplier, reservedFloat,
+                doubleSinkSupplier, reservedDouble, booleanAsByteSinkSupplier, charSinkSupplier, reservedChar,
+                stringSinkSupplier, reservedString, dateTimeAsLongSinkSupplier, reservedDateTimeAsLong,
+                timestampAsLongSinkSupplier, reservedTimestampAsLong);
+        this.byteSinkSupplier = byteSinkSupplier;
+        this.shortSinkSupplier = shortSinkSupplier;
+        this.intSinkSupplier = intSinkSupplier;
+        this.longSinkSupplier = longSinkSupplier;
+    }
+
+    @Override
+    public synchronized Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
+        source.setValue(null);
+        return byteSinkSupplier.get();
+    }
+
+    @Override
+    public synchronized Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
+        source.setValue(null);
+        return shortSinkSupplier.get();
+    }
+
+    @Override
+    public synchronized Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
+        source.setValue(null);
+        return intSinkSupplier.get();
+    }
+
+    @Override
+    public synchronized Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
+        source.setValue(null);
+        return longSinkSupplier.get();
+    }
 }

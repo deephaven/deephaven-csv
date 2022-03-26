@@ -20,7 +20,7 @@ public final class ShortParser implements Parser<short[]> {
     public ParserContext<short[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<short[]>> sourceHolder = new MutableObject<>();
         final Sink<short[]> sink = gctx.sinkFactory.forShort(sourceHolder);
-        return new ParserContext<>(sink, sourceHolder.getValue(), new short[chunkSize]);
+        return new ParserContext<>(sink, sourceHolder.getValue(), DataType.SHORT, new short[chunkSize]);
     }
 
     @Override

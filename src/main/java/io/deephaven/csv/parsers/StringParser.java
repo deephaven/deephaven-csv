@@ -14,7 +14,7 @@ public final class StringParser implements Parser<String[]> {
     @Override
     public ParserContext<String[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final Sink<String[]> sink = gctx.sinkFactory.forString();
-        return new ParserContext<>(sink, null, new String[chunkSize]);
+        return new ParserContext<>(sink, null, DataType.STRING, new String[chunkSize]);
     }
 
     @Override

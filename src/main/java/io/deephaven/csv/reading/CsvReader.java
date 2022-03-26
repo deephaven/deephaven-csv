@@ -4,6 +4,7 @@ import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
+import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
@@ -11,6 +12,8 @@ import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
 import io.deephaven.csv.util.MutableObject;
 import io.deephaven.csv.util.Renderer;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.*;
@@ -105,7 +108,7 @@ public final class CsvReader {
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
 
-        final ArrayList<Future<Sink<?>>> sinkFutures = new ArrayList<>();
+        final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
         try {
             final Future<Long> numRowsFuture =
                     exec.submit(
@@ -116,7 +119,7 @@ public final class CsvReader {
                 final String nullValueLiteralToUse = calcNullValueLiteralToUse(specs, headersToUse[ii], ii + 1);
 
                 final int iiCopy = ii;
-                final Future<Sink<?>> fcb =
+                final Future<ParseDenseStorageToColumn.Result> fcb =
                         exec.submit(
                                 () -> ParseDenseStorageToColumn.doit(
                                         dsr0s[iiCopy],
@@ -131,18 +134,21 @@ public final class CsvReader {
             }
 
             final long numRows;
-            final Sink<?>[] sinks = new Sink<?>[numOutputCols];
+            final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
             numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                sinks[ii] = sinkFutures.get(ii).get();
+                final ParseDenseStorageToColumn.Result result = sinkFutures.get(ii).get();
+                final Object data = result.sink().getUnderlying();
+                final DataType dataType = result.dataType();
+                resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);
             }
-            return new Result(numRows, headersToUse, sinks);
+            return new Result(numRows, resultColumns);
         } catch (Exception inner) {
             throw new CsvReaderException("Caught exception", inner);
         } finally {
             // Cancel the sinks (interrupting them if necessary). It is harmless to do this if the sinks
             // have already exited normally.
-            for (Future<Sink<?>> sf : sinkFutures) {
+            for (Future<ParseDenseStorageToColumn.Result> sf : sinkFutures) {
                 sf.cancel(true); // Result ignored.
             }
             exec.shutdown();
@@ -294,15 +300,13 @@ public final class CsvReader {
         return (byte) c;
     }
 
-    /** Result of {@link #read}. */
-    public static final class Result {
+    /** Result of {@link #read}. Represents a set of columns. */
+    public static final class Result implements Iterable<ResultColumn> {
         private final long numRows;
-        private final String[] columnNames;
-        private final Sink<?>[] columns;
+        private final ResultColumn[] columns;
 
-        public Result(final long numRows, final String[] columnNames, final Sink<?>[] columns) {
+        public Result(long numRows, ResultColumn[] columns) {
             this.numRows = numRows;
-            this.columnNames = columnNames;
             this.columns = columns;
         }
 
@@ -311,22 +315,55 @@ public final class CsvReader {
             return numRows;
         }
 
-        /** The column names. */
-        public String[] columnNames() {
-            return columnNames;
-        }
-
-        /**
-         * Data for each column. Each Sink was constructed by some method in the SinkFactory that the caller passed to
-         * {@link #read}.
-         */
-        public Sink<?>[] columns() {
-            return columns;
-        }
-
         /** The number of columns. */
         public int numCols() {
             return columns.length;
+        }
+
+        /** The columns. */
+        public ResultColumn[] columns() {
+            return columns;
+        }
+
+        @NotNull
+        @Override
+        public Iterator<ResultColumn> iterator() {
+            return Arrays.stream(columns).iterator();
+        }
+    }
+
+    /**
+     * Represents a column in the {@link Result}.
+     */
+    public static final class ResultColumn {
+        private final String name;
+        private final Object data;
+        private final DataType dataType;
+
+        public ResultColumn(String name, Object data, DataType dataType) {
+            this.name = name;
+            this.data = data;
+            this.dataType = dataType;
+        }
+
+        /** The column name. */
+        public String name() {
+            return name;
+        }
+
+        /**
+         * The data for the column. Obtained by invoking {@link Sink#getUnderlying} on the {@link Sink} that built the
+         * column, after all processing is done.
+         */
+        public Object data() {
+            return data;
+        }
+
+        /**
+         * The data type of the column.
+         */
+        public DataType dataType() {
+            return dataType;
         }
     }
 }

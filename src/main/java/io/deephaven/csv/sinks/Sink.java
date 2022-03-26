@@ -62,4 +62,13 @@ public interface Sink<TARRAY> {
             final long destBegin,
             final long destEnd,
             boolean appending);
+
+    /**
+     * Returns the underlying data structure where the data is being stored. The value to be returned is at the
+     * discretion of the Sink implementor. The library doesn't look at this value; just passes it through to the
+     * {@link io.deephaven.csv.reading.CsvReader.ResultColumn} data structure.
+     *
+     * @return The underlying data structure being built (implementation-defined).
+     */
+    Object getUnderlying();
 }
