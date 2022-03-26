@@ -37,106 +37,199 @@ public class ParseInputToDenseStorage {
     public static long doit(
             final byte[][] optionalFirstDataRow,
             final String nullValueLiteral,
+            long skipRows,
+            long numRows,
             final CellGrabber grabber,
-            final DenseStorageWriter[] dsws)
+            final DenseStorageWriter[] dsws,
+            final boolean ignoreEmptyLines,
+            final boolean allowMissingColumns,
+            final boolean ignoreExcessColumns)
             throws CsvReaderException {
-        final ByteSlice slice = new ByteSlice();
-        final int numCols = dsws.length;
-
-        // If a "short row" is encountered (one with a fewer-than-expected number of columns) we will
-        // treat
-        // it as if the missing cells contained the nullValueLiteral.
-        final byte[] nullValueBytes = nullValueLiteral.getBytes(StandardCharsets.UTF_8);
-        final ByteSlice nullSlice = new ByteSlice(nullValueBytes, 0, nullValueBytes.length);
+        if (skipRows < 0) {
+            throw new IllegalArgumentException("skipRows = " + skipRows);
+        }
+        if (numRows < 0) {
+            throw new IllegalArgumentException("numRows = " + numRows);
+        }
 
         // This is the number of data rows read.
-        long logicalRowNum = 0;
+        long numProcessedRows = 0;
 
-        // There is a case (namely when the file has no headers and the client hasn't specified
-        // them either) where the CsvReader was forced to read the first row of data from the file
-        // in order to determine the number of columns. If this happened, optionalFirstDataRow will
-        // be non-null and we can process it as data here. Then the rest of the processing can
-        // proceed as normal.
-        if (optionalFirstDataRow != null) {
-            if (optionalFirstDataRow.length != numCols) {
-                throw new CsvReaderException(
-                        String.format(
-                                "Expected %d columns but optionalFirstRow had %d",
-                                numCols, optionalFirstDataRow.length));
+        final RowAppender rowAppender = new RowAppender(grabber, optionalFirstDataRow, dsws,
+                ignoreEmptyLines, allowMissingColumns, ignoreExcessColumns, nullValueLiteral);
+        while (skipRows != 0) {
+            final RowResult result = rowAppender.processNextRow(false);
+            if (result == RowResult.END_OF_INPUT) {
+                break;
             }
-            for (int ii = 0; ii < optionalFirstDataRow.length; ++ii) {
-                final byte[] temp = optionalFirstDataRow[ii];
-                slice.reset(temp, 0, temp.length);
-                appendToDenseStorageWriter(dsws[ii], slice);
-            }
-            ++logicalRowNum;
+            --skipRows;
         }
 
-        // Grab the remaining lines and store them.
-        // The outer while is the "row" iteration.
-        final MutableBoolean lastInRow = new MutableBoolean();
-        OUTER: while (true) {
-            // As we start processing the next data row, grab the row number from the CellGrabber. This
-            // number refers
-            // to the (zero-based) "physical" row number of the file. Now is a logical time to grab that
-            // number, because
-            // a "logical" data row may span multiple "physical" rows, and if we have to report an error
-            // to the caller,
-            // it's clearest if we record the physical row number where the logical row started.
-            final long physicalRowNum = grabber.physicalRowNum();
-
-            // Zero-based column number.
-            int colNum = 0;
-
-            try {
-                // The inner while is the "column" iteration
-                while (true) {
-                    if (!grabber.grabNext(slice, lastInRow)) {
-                        if (colNum == 0) {
-                            break OUTER;
-                        }
-                        // Can't get here. If there is any data at all in the last row, and *then* the file
-                        // ends,
-                        // grabNext() will return true, with lastInRow set.
-                        throw new RuntimeException("Logic error: uncaught short last row");
-                    }
-                    appendToDenseStorageWriter(dsws[colNum], slice);
-                    ++colNum;
-                    if (colNum == numCols) {
-                        if (!lastInRow.booleanValue()) {
-                            throw new CsvReaderException(
-                                    String.format(
-                                            "Row %d has too many columns (expected %d)", physicalRowNum + 1, numCols));
-                        }
-                        break;
-                    }
-                    if (lastInRow.booleanValue()) {
-                        // Short rows are padded with null
-                        while (colNum != numCols) {
-                            appendToDenseStorageWriter(dsws[colNum], nullSlice);
-                            ++colNum;
-                        }
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                final String message =
-                        String.format("While processing row %d, column %d:", physicalRowNum + 1, colNum + 1);
-                throw new CsvReaderException(message, e);
+        while (numRows != 0) {
+            final RowResult result = rowAppender.processNextRow(true);
+            if (result == RowResult.END_OF_INPUT) {
+                break;
             }
-            ++logicalRowNum;
+            if (result == RowResult.PROCESSED_ROW) {
+                ++numProcessedRows;
+            }
+            // PROCESSED_ROW OR IGNORED_EMPTY_ROW
+            --numRows;
         }
+
         for (DenseStorageWriter dsw : dsws) {
             if (dsw != null) {
                 dsw.finish();
             }
         }
-
-        return logicalRowNum;
+        return numProcessedRows;
     }
 
-    private static void appendToDenseStorageWriter(final DenseStorageWriter dsw, final ByteSlice bs)
+    private enum RowResult {
+        END_OF_INPUT, IGNORED_EMPTY_ROW, PROCESSED_ROW
+    }
+
+    private static class RowAppender {
+        private final CellGrabber grabber;
+        private byte[][] optionalFirstDataRow;
+        private final DenseStorageWriter[] dsws;
+        private final boolean ignoreEmptyLines;
+        private final boolean allowMissingColumns;
+        private final boolean ignoreExcessColumns;
+        private final int numCols;
+        private final ByteSlice byteSlice;
+        private final MutableBoolean lastInRow;
+        private final ByteSlice nullSlice;
+
+        public RowAppender(final CellGrabber grabber, final byte[][] optionalFirstDataRow, DenseStorageWriter[] dsws,
+                final boolean ignoreEmptyLines, final boolean allowMissingColumns, final boolean ignoreExcessColumns,
+                final String nullValueLiteral) throws CsvReaderException {
+            this.grabber = grabber;
+            this.optionalFirstDataRow = optionalFirstDataRow;
+            this.dsws = dsws;
+            this.ignoreEmptyLines = ignoreEmptyLines;
+            this.allowMissingColumns = allowMissingColumns;
+            this.ignoreExcessColumns = ignoreExcessColumns;
+            numCols = dsws.length;
+            if (optionalFirstDataRow != null && optionalFirstDataRow.length != numCols) {
+                throw new CsvReaderException(
+                        String.format(
+                                "Expected %d columns but optionalFirstRow had %d",
+                                numCols, optionalFirstDataRow.length));
+            }
+            byteSlice = new ByteSlice();
+            lastInRow = new MutableBoolean();
+            if (nullValueLiteral != null) {
+                final byte[] nullValueBytes = nullValueLiteral.getBytes(StandardCharsets.UTF_8);
+                nullSlice = new ByteSlice(nullValueBytes, 0, nullValueBytes.length);
+            } else {
+                nullSlice = null;
+            }
+        }
+
+        /**
+         * @param writeToConsumer If true, write the data to the sink. If false, just consume the data but don't write
+         *        anything. This is used to implement the "skip rows" functionality.
+         * @return true if a row was consumed, false otherwise.
+         */
+        public RowResult processNextRow(final boolean writeToConsumer) throws CsvReaderException {
+            if (optionalFirstDataRow != null) {
+                for (int ii = 0; ii < numCols; ++ii) {
+                    final byte[] temp = optionalFirstDataRow[ii];
+                    byteSlice.reset(temp, 0, temp.length);
+                    appendToDenseStorageWriter(dsws[ii], byteSlice, writeToConsumer);
+                }
+                optionalFirstDataRow = null;
+                return RowResult.PROCESSED_ROW;
+            }
+
+            final int physicalRowNum = grabber.physicalRowNum();
+            int colNum = 0;
+            for (colNum = 0; colNum < numCols; ++colNum) {
+                try {
+                    if (!grabber.grabNext(byteSlice, lastInRow)) {
+                        if (colNum == 0) {
+                            // Input exhausted
+                            return RowResult.END_OF_INPUT;
+                        }
+                        // Can't get here. If there is any data at all in the last row, and *then* the file
+                        // ends, grabNext() will return true, with lastInRow set.
+                        throw new RuntimeException("Logic error: uncaught short last row");
+                    }
+                    if (lastInRow.booleanValue()) {
+                        if (byteSlice.size() == 0 && colNum == 0 && ignoreEmptyLines) {
+                            return RowResult.IGNORED_EMPTY_ROW;
+                        }
+                        appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
+                        ++colNum;
+                        break;
+                    }
+                    appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
+                } catch (Exception e) {
+                    final String message =
+                            String.format("While processing row %d, column %d:", physicalRowNum + 1, colNum + 1);
+                    throw new CsvReaderException(message, e);
+                }
+            }
+            if (!lastInRow.booleanValue()) {
+                // There are excess columns. Either complain about them or eat them.
+                if (!ignoreExcessColumns) {
+                    // Complain.
+                    final String message = String.format(
+                            "Row %d has too many columns (expected %d)", physicalRowNum + 1, numCols);
+                    throw new CsvReaderException(message);
+                }
+                // Eat.
+                while (!lastInRow.booleanValue()) {
+                    if (!grabber.grabNext(byteSlice, lastInRow)) {
+                        // Can't happen. Won't get end of input while finishing excess row.
+                        throw new RuntimeException("Logic error: end of input while finishing excess row");
+                    }
+                }
+            }
+
+            if (colNum >= numCols) {
+                return RowResult.PROCESSED_ROW;
+            }
+
+            // If "short rows" are not allowed, throw an exception.
+            if (!allowMissingColumns) {
+                final String message = String.format(
+                        "Row %d has too few columns (expected %d)", physicalRowNum + 1, numCols);
+                throw new CsvReaderException(message);
+            }
+
+            // If there is no null value literal configured, throw an exception.
+            if (nullSlice == null) {
+                final String message = String.format(
+                        "Row %d is short, but can't null-fill it because there is no configured null value literal.",
+                        physicalRowNum + 1);
+                throw new CsvReaderException(message);
+            }
+
+            // Pad the row with the null vlaue literal.
+            byteSlice.reset(nullSlice.data(), nullSlice.begin(), nullSlice.end());
+            while (colNum < numCols) {
+                appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
+                ++colNum;
+            }
+            return RowResult.PROCESSED_ROW;
+        }
+    }
+
+    /**
+     *
+     * @param dsw The DenseStorageWriter to write to.
+     * @param bs The ByteSlice containing the data.
+     * @param writeToConsumer If true, perform the operation. If false, do nothing. This flag makes it easy to
+     *        concentrate the "skip rows" logic in one place.
+     */
+    private static void appendToDenseStorageWriter(final DenseStorageWriter dsw, final ByteSlice bs,
+            boolean writeToConsumer)
             throws CsvReaderException {
+        if (!writeToConsumer) {
+            return;
+        }
         if (dsw != null) {
             dsw.append(bs);
             return;

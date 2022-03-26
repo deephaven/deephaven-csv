@@ -101,7 +101,7 @@ public interface Parser<TARRAY> {
             isNullOrWidthOneSoFar = true;
 
             // Process the nullValueLiteral into a byte array so the isNullCell test can run quickly.
-            nullSentinelBytes = nullValueLiteral.getBytes(StandardCharsets.UTF_8);
+            nullSentinelBytes = nullValueLiteral != null ? nullValueLiteral.getBytes(StandardCharsets.UTF_8) : null;
             nullChunk = new boolean[CHUNK_SIZE];
         }
 
@@ -112,9 +112,9 @@ public interface Parser<TARRAY> {
          * @return whether the iterator's current text contains the null cell.
          */
         public boolean isNullCell(final IteratorHolder ih) {
-            // A possibly-needless optimization.
-            if (nullSentinelBytes.length == 0) {
-                return ih.bs().size() == 0;
+            if (nullSentinelBytes == null) {
+                // There is no null sentinel.
+                return false;
             }
             return equals(
                     ih.bs().data(),

@@ -67,9 +67,10 @@ public abstract class CsvSpecs {
         /**
          * The default string that means "null value" in the input. This default is used for a column if there is no
          * corresponding {@link #nullValueLiteralForName()} or {@link #nullValueLiteralForName()} specified for that
-         * column.
+         * column. Default value is "", the empty string. If the configured sink data structures do not support nulls,
+         * the caller can set this to null so that nothing will be parsed as null.
          */
-        Builder nullValueLiteral(String nullValueLiteral);
+        Builder nullValueLiteral(@Nullable String nullValueLiteral);
 
         /**
          * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
@@ -113,6 +114,36 @@ public abstract class CsvSpecs {
          * name and returns a true if it is a legal column name, false otherwise. Defaults to {@code c -> true}.
          */
         Builder headerValidator(Predicate<String> headerValidator);
+
+        /**
+         * Number of data rows to skip before processing data. This is useful when you want to parse data in chunks.
+         * Typically used together with {@link Builder#numRows}. Defaults to 0.
+         */
+        Builder skipRows(long skipRows);
+
+        /**
+         * Max number of rows to process. This is useful when you want to parse data in chunks. Typically used together
+         * with {@link Builder#skipRows}. Defaults to {@link Long#MAX_VALUE}.
+         */
+        Builder numRows(long numRows);
+
+        /**
+         * Whether the library should skip over empty lines in the input. Defaults to false.
+         */
+        Builder ignoreEmptyLines(boolean ignoreEmptyLines);
+
+        /**
+         * Whether the library should allow missing columns in the input. If this flag is set, then rows that are too
+         * short (that have fewer columns than the header row) will be interpreted as if the missing columns contained
+         * the empty string. Defaults to false.
+         */
+        Builder allowMissingColumns(boolean allowMissingColumns);
+
+        /**
+         * Whether the library should allow excess columns in the input. If this flag is set, then rows that are too
+         * long (that have more columns than the header row) will have those excess columns dropped. Defaults to false.
+         */
+        Builder ignoreExcessColumns(boolean ignoreExcessColumns);
 
         /**
          * Whether the input file has a header row. Defaults to true.
@@ -223,6 +254,7 @@ public abstract class CsvSpecs {
      * See {@link Builder#nullValueLiteral}.
      */
     @Default
+    @Nullable
     public String nullValueLiteral() {
         return "";
     }
@@ -277,6 +309,46 @@ public abstract class CsvSpecs {
     @Default
     public Predicate<String> headerValidator() {
         return c -> true;
+    }
+
+    /**
+     * See {@link Builder#skipRows}.
+     */
+    @Default
+    public long skipRows() {
+        return 0;
+    }
+
+    /**
+     * See {@link Builder#numRows}.
+     */
+    @Default
+    public long numRows() {
+        return Long.MAX_VALUE;
+    }
+
+    /**
+     * See {@link Builder#ignoreEmptyLines}.
+     */
+    @Default
+    public boolean ignoreEmptyLines() {
+        return false;
+    }
+
+    /**
+     * See {@link Builder#allowMissingColumns}.
+     */
+    @Default
+    public boolean allowMissingColumns() {
+        return false;
+    }
+
+    /**
+     * See {@link Builder#ignoreExcessColumns}.
+     */
+    @Default
+    public boolean ignoreExcessColumns() {
+        return false;
     }
 
     /**

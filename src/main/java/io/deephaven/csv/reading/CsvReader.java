@@ -112,7 +112,10 @@ public final class CsvReader {
         try {
             final Future<Long> numRowsFuture =
                     exec.submit(
-                            () -> ParseInputToDenseStorage.doit(firstDataRow, specs.nullValueLiteral(), grabber, dsws));
+                            () -> ParseInputToDenseStorage.doit(firstDataRow, specs.nullValueLiteral(),
+                                    specs.skipRows(), specs.numRows(), grabber, dsws,
+                                    specs.ignoreEmptyLines(), specs.allowMissingColumns(),
+                                    specs.ignoreExcessColumns()));
 
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii + 1);
