@@ -1,5 +1,6 @@
 package io.deephaven.csv.reading;
 
+import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
@@ -25,38 +26,24 @@ public class ParseInputToDenseStorage {
      *
      * @param optionalFirstDataRow If not null, this is the first row of data from the file, which the caller had to
      *        peek at in order to know the number of columns in the file.
-     * @param nullValueLiteral The configured null value literal. This is used for providing the null value literal to
-     *        the downstream processing code (namely the {@link ParseDenseStorageToColumn} code).
      * @param grabber The {@link CellGrabber} which does all the CSV format handling (delimiters, quotes, etc).
      * @param dsws The array of {@link DenseStorageWriter}s, one for each column. As a special case, if a given
      *        {@link DenseStorageWriter} is null, then instead of passing data to it, we confirm that the data is the
      *        empty string and then just drop the data. This is used to handle input files that have a trailing empty
      *        column on the right.
+     * @param specs The {@link CsvSpecs} which control how the CSV file is interpreted.
      * @return The number of data rows in the input (i.e. not including headers or strings split across multiple lines).
      */
-    public static long doit(
-            final byte[][] optionalFirstDataRow,
-            final String nullValueLiteral,
-            long skipRows,
-            long numRows,
+    public static long doit(final byte[][] optionalFirstDataRow,
             final CellGrabber grabber,
-            final DenseStorageWriter[] dsws,
-            final boolean ignoreEmptyLines,
-            final boolean allowMissingColumns,
-            final boolean ignoreExcessColumns)
+            CsvSpecs specs,
+            final DenseStorageWriter[] dsws)
             throws CsvReaderException {
-        if (skipRows < 0) {
-            throw new IllegalArgumentException("skipRows = " + skipRows);
-        }
-        if (numRows < 0) {
-            throw new IllegalArgumentException("numRows = " + numRows);
-        }
-
         // This is the number of data rows read.
         long numProcessedRows = 0;
 
-        final RowAppender rowAppender = new RowAppender(grabber, optionalFirstDataRow, dsws,
-                ignoreEmptyLines, allowMissingColumns, ignoreExcessColumns, nullValueLiteral);
+        final RowAppender rowAppender = new RowAppender(optionalFirstDataRow, grabber, specs, dsws);
+        long skipRows = specs.skipRows();
         while (skipRows != 0) {
             final RowResult result = rowAppender.processNextRow(false);
             if (result == RowResult.END_OF_INPUT) {
@@ -65,6 +52,7 @@ public class ParseInputToDenseStorage {
             --skipRows;
         }
 
+        long numRows = specs.numRows();
         while (numRows != 0) {
             final RowResult result = rowAppender.processNextRow(true);
             if (result == RowResult.END_OF_INPUT) {
@@ -90,26 +78,21 @@ public class ParseInputToDenseStorage {
     }
 
     private static class RowAppender {
-        private final CellGrabber grabber;
         private byte[][] optionalFirstDataRow;
+        private final CellGrabber grabber;
         private final DenseStorageWriter[] dsws;
-        private final boolean ignoreEmptyLines;
-        private final boolean allowMissingColumns;
-        private final boolean ignoreExcessColumns;
+        private final CsvSpecs specs;
         private final int numCols;
         private final ByteSlice byteSlice;
         private final MutableBoolean lastInRow;
         private final ByteSlice nullSlice;
 
-        public RowAppender(final CellGrabber grabber, final byte[][] optionalFirstDataRow, DenseStorageWriter[] dsws,
-                final boolean ignoreEmptyLines, final boolean allowMissingColumns, final boolean ignoreExcessColumns,
-                final String nullValueLiteral) throws CsvReaderException {
-            this.grabber = grabber;
+        public RowAppender(final byte[][] optionalFirstDataRow, final CellGrabber grabber, final CsvSpecs specs,
+                DenseStorageWriter[] dsws) throws CsvReaderException {
             this.optionalFirstDataRow = optionalFirstDataRow;
+            this.grabber = grabber;
             this.dsws = dsws;
-            this.ignoreEmptyLines = ignoreEmptyLines;
-            this.allowMissingColumns = allowMissingColumns;
-            this.ignoreExcessColumns = ignoreExcessColumns;
+            this.specs = specs;
             numCols = dsws.length;
             if (optionalFirstDataRow != null && optionalFirstDataRow.length != numCols) {
                 throw new CsvReaderException(
@@ -119,8 +102,9 @@ public class ParseInputToDenseStorage {
             }
             byteSlice = new ByteSlice();
             lastInRow = new MutableBoolean();
-            if (nullValueLiteral != null) {
-                final byte[] nullValueBytes = nullValueLiteral.getBytes(StandardCharsets.UTF_8);
+            final String nvl = specs.nullValueLiteral();
+            if (nvl != null) {
+                final byte[] nullValueBytes = nvl.getBytes(StandardCharsets.UTF_8);
                 nullSlice = new ByteSlice(nullValueBytes, 0, nullValueBytes.length);
             } else {
                 nullSlice = null;
@@ -157,7 +141,7 @@ public class ParseInputToDenseStorage {
                         throw new RuntimeException("Logic error: uncaught short last row");
                     }
                     if (lastInRow.booleanValue()) {
-                        if (byteSlice.size() == 0 && colNum == 0 && ignoreEmptyLines) {
+                        if (byteSlice.size() == 0 && colNum == 0 && specs.ignoreEmptyLines()) {
                             return RowResult.IGNORED_EMPTY_ROW;
                         }
                         appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
@@ -173,7 +157,7 @@ public class ParseInputToDenseStorage {
             }
             if (!lastInRow.booleanValue()) {
                 // There are excess columns. Either complain about them or eat them.
-                if (!ignoreExcessColumns) {
+                if (!specs.ignoreExcessColumns()) {
                     // Complain.
                     final String message = String.format(
                             "Row %d has too many columns (expected %d)", physicalRowNum + 1, numCols);
@@ -193,7 +177,7 @@ public class ParseInputToDenseStorage {
             }
 
             // If "short rows" are not allowed, throw an exception.
-            if (!allowMissingColumns) {
+            if (!specs.allowMissingColumns()) {
                 final String message = String.format(
                         "Row %d has too few columns (expected %d)", physicalRowNum + 1, numCols);
                 throw new CsvReaderException(message);

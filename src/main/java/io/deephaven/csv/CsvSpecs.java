@@ -6,6 +6,10 @@ import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
+import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.Renderer;
+import org.immutables.value.Value;
+import org.immutables.value.Value.Check;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
@@ -199,6 +203,24 @@ public abstract class CsvSpecs {
      */
     public static Builder builder() {
         return ImmutableCsvSpecs.builder();
+    }
+
+    /**
+     * Validates the {@link CsvSpecs}.
+     */
+    @Check
+    protected void check() {
+        // To be friendly, we report all the problems we find at once.
+        final List<String> problems = new ArrayList<>();
+        check7BitAscii("quote", quote(), problems);
+        check7BitAscii("delimiter", delimiter(), problems);
+        checkNonnegative("skipRows", skipRows(), problems);
+        checkNonnegative("numRows", numRows(), problems);
+        if (problems.isEmpty()) {
+            return;
+        }
+        final String message = "CsvSpecs failed validation for the following reasons: " + Renderer.renderList(problems);
+        throw new RuntimeException(message);
     }
 
     /**
@@ -397,5 +419,21 @@ public abstract class CsvSpecs {
     @Default
     public boolean concurrent() {
         return true;
+    }
+
+    private static void check7BitAscii(String what, char c, List<String> problems) {
+        if (c > 0x7f) {
+            final String message = String.format("%s is set to '%c' but is required to be 7-bit ASCII",
+                    what, c);
+            problems.add(message);
+        }
+    }
+
+    private static void checkNonnegative(String what, long value, List<String> problems) {
+        if (value < 0) {
+            final String message = String.format("%s is set to %d, but is required to be nonnegative",
+                    what, value);
+            problems.add(message);
+        }
     }
 }

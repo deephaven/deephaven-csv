@@ -49,6 +49,18 @@ public class CsvReaderTest {
     }
 
     @Test
+    public void validates() {
+        final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
+                + "quote is set to '€' but is required to be 7-bit ASCII, "
+                + "delimiter is set to '€' but is required to be 7-bit ASCII, "
+                + "skipRows is set to -2, but is required to be nonnegative, "
+                + "numRows is set to -5, but is required to be nonnegative";
+        Assertions
+                .assertThatThrownBy(() -> CsvSpecs.builder().numRows(-5).skipRows(-2).delimiter('€').quote('€').build())
+                .hasMessage(lengthyMessage);
+    }
+
+    @Test
     public void countsAreCorrect() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3\n";
         final CsvReader.Result result = parse(defaultCsvSpecs(), toInputStream(input));
