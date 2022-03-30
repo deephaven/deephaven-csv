@@ -62,7 +62,7 @@ public class CsvReaderTest {
         sb.append(expected1).append('\r').append(expected2).append('\r');
         final String input = sb.toString();
         final CsvReader.Result result = parse(defaultCsvSpecs(), toInputStream(input));
-        final String[] col = (String[])result.columns()[0].data();
+        final String[] col = (String[]) result.columns()[0].data();
         final String row1 = col[0];
         final String row2 = col[1];
         Assertions.assertThat(row1).isEqualTo(expected1);
