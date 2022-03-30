@@ -64,8 +64,9 @@ public final class CsvReader {
      */
     public static Result read(final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory)
             throws CsvReaderException {
-        final byte quoteAsByte = check7BitAscii("quote", specs.quote());
-        final byte delimiterAsByte = check7BitAscii("delimiter", specs.delimiter());
+        // These two have already been validated by CsvSpecs to be 7-bit ASCII.
+        final byte quoteAsByte = (byte) specs.quote();
+        final byte delimiterAsByte = (byte) specs.delimiter();
         final CellGrabber grabber =
                 new CellGrabber(stream, quoteAsByte, delimiterAsByte, specs.ignoreSurroundingSpaces(),
                         specs.trim());
@@ -111,8 +112,7 @@ public final class CsvReader {
         final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
         try {
             final Future<Long> numRowsFuture =
-                    exec.submit(
-                            () -> ParseInputToDenseStorage.doit(firstDataRow, specs.nullValueLiteral(), grabber, dsws));
+                    exec.submit(() -> ParseInputToDenseStorage.doit(firstDataRow, grabber, specs, dsws));
 
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii + 1);
@@ -125,9 +125,7 @@ public final class CsvReader {
                                         dsr0s[iiCopy],
                                         dsr1s[iiCopy],
                                         parsersToUse,
-                                        specs.nullParser(),
-                                        specs.customDoubleParser(),
-                                        specs.customTimeZoneParser(),
+                                        specs,
                                         nullValueLiteralToUse,
                                         sinkFactory));
                 sinkFutures.add(fcb);
@@ -289,15 +287,6 @@ public final class CsvReader {
             headers.add(item);
         } while (!lastInRow.booleanValue());
         return headers.toArray(new byte[0][]);
-    }
-
-    private static byte check7BitAscii(String what, char c) throws CsvReaderException {
-        if (c > 0x7f) {
-            final String message = String.format("%s is set to '%c' but is required to be 7-bit ASCII",
-                    what, c);
-            throw new CsvReaderException(message);
-        }
-        return (byte) c;
     }
 
     /** Result of {@link #read}. Represents a set of columns. */

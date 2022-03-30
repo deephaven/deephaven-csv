@@ -1,5 +1,6 @@
 package io.deephaven.csv.reading;
 
+import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.parsers.*;
 import io.deephaven.csv.sinks.Sink;
@@ -23,13 +24,8 @@ public final class ParseDenseStorageToColumn {
      * @param dsrAlt A second reader for the same input (used to perform the second pass over the data, if type
      *        inference deems a second pass to be necessary).
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
-     * @param nullParser The Parser to use if {@code parsers.size() > 1} but the column contains all null values. This
-     *        is needed as a backstop because otherwise type inference would have no way to choose among the multiple
-     *        parsers.
-     * @param customDoubleParser The callback for parsing doubles.
-     * @param customTimeZoneParser A plugin that permits the DateTime parser to understand custom user-supplied
-     *        timezones. For example Deephaven allows timezone strings like " MN" and " NY".
-     * @param nullValueLiteral If a cell text is equal to this value, it will be interpreted as the null value.
+     * @param specs The CsvSpecs which control how the column is interpreted.
+     * @param nullValueLiteralToUse If a cell text is equal to this value, it will be interpreted as the null value.
      *        Typically set to the empty string.
      * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
@@ -38,18 +34,16 @@ public final class ParseDenseStorageToColumn {
     public static Result doit(
             final DenseStorageReader dsr,
             final DenseStorageReader dsrAlt,
-            List<Parser<?>> parsers,
-            final Parser<?> nullParser,
-            final Tokenizer.CustomDoubleParser customDoubleParser,
-            final Tokenizer.CustomTimeZoneParser customTimeZoneParser,
-            final String nullValueLiteral,
+            final List<Parser<?>> parsers,
+            final CsvSpecs specs,
+            final String nullValueLiteralToUse,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
         Set<Parser<?>> parserSet = new HashSet<>(parsers != null ? parsers : Parsers.DEFAULT);
 
-        final Tokenizer tokenizer = new Tokenizer(customDoubleParser, customTimeZoneParser);
+        final Tokenizer tokenizer = new Tokenizer(specs.customDoubleParser(), specs.customTimeZoneParser());
         final Parser.GlobalContext gctx =
-                new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteral);
+                new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteralToUse);
 
         // Skip over leading null cells. There are three cases:
         // 1. There is a non-null cell (so the type inference process can begin)
@@ -69,7 +63,7 @@ public final class ParseDenseStorageToColumn {
         if (columnIsAllNulls) {
             // We get here in cases 2 and 3: the column is all nulls, or the column is empty.
             final Parser<?> nullParserToUse =
-                    parserSet.size() == 1 ? parserSet.iterator().next() : nullParser;
+                    parserSet.size() == 1 ? parserSet.iterator().next() : specs.nullParser();
             if (nullParserToUse == null) {
                 throw new CsvReaderException(
                         "Column contains all null cells: can't infer type of column, and nullParser is not set.");

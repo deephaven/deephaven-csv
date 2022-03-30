@@ -70,6 +70,18 @@ public class CsvReaderTest {
     }
 
     @Test
+    public void validates() {
+        final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
+                + "quote is set to '€' but is required to be 7-bit ASCII, "
+                + "delimiter is set to '€' but is required to be 7-bit ASCII, "
+                + "skipRows is set to -2, but is required to be nonnegative, "
+                + "numRows is set to -5, but is required to be nonnegative";
+        Assertions
+                .assertThatThrownBy(() -> CsvSpecs.builder().numRows(-5).skipRows(-2).delimiter('€').quote('€').build())
+                .hasMessage(lengthyMessage);
+    }
+
+    @Test
     public void countsAreCorrect() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3\n";
         final CsvReader.Result result = parse(defaultCsvSpecs(), toInputStream(input));
@@ -422,7 +434,72 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
-    private final String VARIETY_OF_NUMERICS_INPUT = ""
+    private static final String SKIPPED_INPUT = ""
+            + "Values\n"
+            + "1\n"
+            + "2\n"
+            + "3\n"
+            + "4\n"
+            + "5\n"
+            + "6\n"
+            + "7\n"
+            + "8\n"
+            + "9\n";
+
+    @Test
+    public void skippedAndLimitedInts() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 4, 5, 6, 7));
+
+        invokeTest(defaultCsvBuilder().skipRows(3).numRows(4).build(), SKIPPED_INPUT, expected);
+    }
+
+    @Test
+    public void skippedInts() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 4, 5, 6, 7, 8, 9));
+
+        invokeTest(defaultCsvBuilder().skipRows(3).build(), SKIPPED_INPUT, expected);
+    }
+
+    private static final String EMPTY_LINES_INPUT = ""
+            + "Col1,Col2\n"
+            + "aa,bb\n"
+            + "cc,dd\n"
+            + "\n"
+            + "ee,ff\n"
+            + "\n"
+            + "gg,hh\n";
+
+    @Test
+    public void emptyLinesNull() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(
+                Column.ofRefs("Col1", "aa", "cc", null, "ee", null, "gg"),
+                Column.ofRefs("Col2", "bb", "dd", null, "ff", null, "hh"));
+
+        invokeTest(defaultCsvBuilder().allowMissingColumns(true).ignoreEmptyLines(false).build(), EMPTY_LINES_INPUT,
+                expected);
+    }
+
+    @Test
+    public void emptyLinesIgnored() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(
+                Column.ofRefs("Col1", "aa", "cc", "ee", "gg"),
+                Column.ofRefs("Col2", "bb", "dd", "ff", "hh"));
+
+        invokeTest(defaultCsvBuilder().allowMissingColumns(false).ignoreEmptyLines(true).build(), EMPTY_LINES_INPUT,
+                expected);
+    }
+
+    @Test
+    public void emptyLinesError() {
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().allowMissingColumns(false).ignoreEmptyLines(false).build(),
+                                EMPTY_LINES_INPUT,
+                                ColumnSet.NONE))
+                .hasRootCauseMessage("Row 4 has too few columns (expected 2)");
+    }
+
+    private static final String VARIETY_OF_NUMERICS_INPUT = ""
             + "Values\n"
             + "\n" // NULL
             + "\n" // NULL
@@ -920,7 +997,7 @@ public class CsvReaderTest {
 
     @Test
     public void tooFewColumnsWithFinalNewline() throws CsvReaderException {
-        // If there are too few columns, we just pad with nulls.
+        // If there are too few columns, we just pad with null literals.
         final String input = "" + "A,B,C,D\n" + "-3,foo,1.2,false\n" + "4,bar,3.4,true\n" + "-5\n";
 
         final ColumnSet expected =
@@ -936,7 +1013,7 @@ public class CsvReaderTest {
 
     @Test
     public void tooFewColumnsWithoutFinalNewline() throws CsvReaderException {
-        // If there are too few columns, we just pad with nulls.
+        // If there are too few columns, we just pad with null literals.
         final String input = "" + "A,B,C,D\n" + "-3,foo,1.2,false\n" + "4,bar,3.4,true\n" + "-5";
 
         final ColumnSet expected =
@@ -951,13 +1028,98 @@ public class CsvReaderTest {
     }
 
     @Test
-    public void tooManyColumns() {
-        // Too many columns is an error.
+    public void tooFewColumnsNoNullLiteralIsError() {
+        final String input = "" + "A,B,C,D\n" + "-3,foo,1.2,false\n" + "4,bar,3.4,true\n" + "-5\n";
+
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().allowMissingColumns(true).nullValueLiteral(null).build(),
+                                input, ColumnSet.NONE))
+                .hasRootCauseMessage(
+                        "Row 4 is short, but can't null-fill it because there is no configured null value literal.");
+    }
+
+    @Test
+    public void tooFewColumnsDisallowedIsError() {
+        final String input = "" + "A,B,C,D\n" + "-3,foo,1.2,false\n" + "4,bar,3.4,true\n" + "-5\n";
+
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().allowMissingColumns(false).build(), input, ColumnSet.NONE))
+                .hasRootCauseMessage("Row 4 has too few columns (expected 4)");
+    }
+
+    @Test
+    public void excessColumnsError() {
         final String input = "" + "SomeInts,SomeStrings\n" + "-3,foo\n" + "4,bar,quz\n" + "-5,baz\n";
 
         Assertions.assertThatThrownBy(() -> invokeTest(defaultCsvSpecs(), input, ColumnSet.NONE))
                 .hasRootCauseMessage("Row 3 has too many columns (expected 2)");
     }
+
+    @Test
+    public void excessColumnsDropped() throws CsvReaderException {
+        final String input = "" + "SomeInts,SomeStrings\n" + "-3,foo\n" + "4,bar,quz,zax\n" + "-5,baz\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("SomeInts", -3, 4, -5),
+                        Column.ofRefs("SomeStrings", "foo", "bar", "baz"));
+
+        invokeTest(defaultCsvBuilder().ignoreExcessColumns(true).build(), input, expected);
+    }
+
+    private static final String SINGLE_COLUMN_EMPTY_ROW = ""
+            + "SomeInts\n"
+            + "3\n"
+            + "\n"
+            + "4\n"
+            + "5\n";
+
+    @Test
+    public void singleColumnEmptyRowIsNull() throws CsvReaderException {
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("SomeInts", 3, Sentinels.NULL_INT, 4, 5));
+
+        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).build(), SINGLE_COLUMN_EMPTY_ROW, expected);
+    }
+
+    @Test
+    public void singleColumnEmptyRowIsSkipped() throws CsvReaderException {
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("SomeInts", 3, 4, 5));
+
+        invokeTest(defaultCsvBuilder().ignoreEmptyLines(true).build(), SINGLE_COLUMN_EMPTY_ROW, expected);
+    }
+
+    @Test
+    public void singleColumnEmptyRowIsString() throws CsvReaderException {
+        // Thanks to type inference, if you can't skip the empty row and you can't parse it as null,
+        // then it's the empty string!
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("SomeInts", "3", "", "4", "5"));
+
+        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiteral(null).build(), SINGLE_COLUMN_EMPTY_ROW,
+                expected);
+    }
+
+    @Test
+    public void singleColumnEmptyRowIsError() {
+        // If you can't skip the empty row, you can't parse it as null, and you can't parse it as String,
+        // then you are really out of luck!
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("SomeInts", "3", "", "4", "5"));
+
+        Assertions
+                .assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiteral(null)
+                        .parsers(List.of(Parsers.INT)).build(), SINGLE_COLUMN_EMPTY_ROW, expected))
+                .hasRootCauseMessage("No available parsers.");
+    }
+
 
     @Test
     public void duplicateColumnName() {
@@ -1680,7 +1842,7 @@ public class CsvReaderTest {
     }
 
     private static CsvSpecs.Builder defaultCsvBuilder() {
-        return CsvSpecs.builder().ignoreSurroundingSpaces(true);
+        return CsvSpecs.builder().ignoreSurroundingSpaces(true).allowMissingColumns(true);
     }
 
     private static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected)
