@@ -11,6 +11,7 @@ import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.IteratorHolder;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
+import io.deephaven.csv.reading.CellGrabber;
 import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
@@ -46,6 +47,26 @@ public class CsvReaderTest {
         public static final char NULL_CHAR = Character.MAX_VALUE;
         public static final long NULL_DATETIME_AS_LONG = Long.MIN_VALUE;
         public static final long NULL_TIMESTAMP_AS_LONG = Long.MIN_VALUE;
+    }
+
+    /**
+     * https://github.com/deephaven/deephaven-core/issues/2133
+     */
+    @Test
+    public void bug2133() throws CsvReaderException {
+        final int bufferSize = CellGrabber.BUFFER_SIZE;
+        final StringBuilder sb = new StringBuilder("Values\r");
+        final int numAs = bufferSize - sb.length() - 1;
+        final String expected1 = "a".repeat(numAs);
+        final String expected2 = "b".repeat(bufferSize);
+        sb.append(expected1).append('\r').append(expected2).append('\r');
+        final String input = sb.toString();
+        final CsvReader.Result result = parse(defaultCsvSpecs(), toInputStream(input));
+        final String[] col = (String[]) result.columns()[0].data();
+        final String row1 = col[0];
+        final String row2 = col[1];
+        Assertions.assertThat(row1).isEqualTo(expected1);
+        Assertions.assertThat(row2).isEqualTo(expected2);
     }
 
     @Test

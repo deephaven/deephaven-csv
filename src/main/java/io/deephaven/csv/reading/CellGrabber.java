@@ -13,9 +13,9 @@ import java.io.InputStream;
  * This class is used to traverse over text from a Reader, understanding both field and line delimiters, as well as the
  * CSV quoting convention, and breaking the text into cells for use by the calling code.
  */
-final class CellGrabber {
+public final class CellGrabber {
     /** Size of chunks to read from the {@link InputStream}. */
-    private static final int BUFFER_SIZE = 65536;
+    public static final int BUFFER_SIZE = 65536;
     /** The {@link InputStream} for the input. */
     private final InputStream inputStream;
     /** The configured CSV quote character (typically '"'). Must be 7-bit ASCII. */
@@ -162,10 +162,8 @@ final class CellGrabber {
         finishField(dest, lastInRow);
 
         // From this point on, note that dest is a slice that may point to the underlying input buffer
-        // or the spill
-        // buffer. Take care from this point on to not disturb the input (e.g. by reading the next
-        // chunk) or the
-        // spill buffer.
+        // or the spill buffer. Take care from this point on to not disturb the input (e.g. by reading
+        // the next chunk) or the spill buffer.
 
         // The easiest way to make all the above logic run smoothly is to let the final quotation mark
         // (which will unconditionally be there) and subsequent whitespace (if any) into the field.
@@ -236,14 +234,20 @@ final class CellGrabber {
                 return;
             }
             if (ch == '\r') {
-                finish(dest);
+                // This is slightly complicated because we have to look ahead for a possible \n.
+                // The easiest way to deal with this is to let it into our slice and then trim it
+                // off at the end.
                 ++offset;
+                int excess = 1;
                 if (tryEnsureMore()) {
                     // might be \r\n
                     if (buffer[offset] == '\n') {
                         ++offset;
+                        excess = 2;
                     }
                 }
+                finish(dest);
+                dest.reset(dest.data(), dest.begin(), dest.end() - excess);
                 lastInRow.setValue(true);
                 ++physicalRowNum;
                 return;
