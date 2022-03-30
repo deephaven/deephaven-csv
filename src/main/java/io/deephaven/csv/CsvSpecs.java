@@ -209,7 +209,7 @@ public abstract class CsvSpecs {
      * Validates the {@link CsvSpecs}.
      */
     @Check
-    protected void check() {
+    void check() {
         // To be friendly, we report all the problems we find at once.
         final List<String> problems = new ArrayList<>();
         check7BitAscii("quote", quote(), problems);
