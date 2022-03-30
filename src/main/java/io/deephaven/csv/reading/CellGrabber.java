@@ -13,9 +13,9 @@ import java.io.InputStream;
  * This class is used to traverse over text from a Reader, understanding both field and line delimiters, as well as the
  * CSV quoting convention, and breaking the text into cells for use by the calling code.
  */
-final class CellGrabber {
+public final class CellGrabber {
     /** Size of chunks to read from the {@link InputStream}. */
-    private static final int BUFFER_SIZE = 65536;
+    public static final int BUFFER_SIZE = 65536;
     /** The {@link InputStream} for the input. */
     private final InputStream inputStream;
     /** The configured CSV quote character (typically '"'). Must be 7-bit ASCII. */
