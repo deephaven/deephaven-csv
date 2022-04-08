@@ -6,9 +6,7 @@ import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
-import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.Renderer;
-import org.immutables.value.Value;
 import org.immutables.value.Value.Check;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
@@ -69,24 +67,25 @@ public abstract class CsvSpecs {
         Builder putParserForIndex(int index, Parser<?> parser);
 
         /**
-         * The default string that means "null value" in the input. This default is used for a column if there is no
-         * corresponding {@link #nullValueLiteralForName()} or {@link #nullValueLiteralForName()} specified for that
-         * column. Default value is "", the empty string. If the configured sink data structures do not support nulls,
-         * the caller can set this to null so that nothing will be parsed as null.
+         * The default collection of strings that means "null value" in the input. These defaults are used for a column
+         * if there is no corresponding {@link #nullValueLiteralsForName()} or {@link #nullValueLiteralsForIndex()}
+         * specified for that column. Default value is String[]{""}, a single-element array containing the empty string.
+         * If the configured sink data structures do not support nulls, the caller can set this to the empty array so
+         * that nothing will be parsed as null.
          */
-        Builder nullValueLiteral(@Nullable String nullValueLiteral);
+        Builder nullValueLiterals(@Nullable String[] nullValueLiterals);
 
         /**
          * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
-         * column overrides the value in {@link #nullValueLiteral()}.
+         * column overrides the value in {@link #nullValueLiterals()}.
          */
-        Builder putNullValueLiteralForName(String columnName, String nullValueLiteral);
+        Builder putNullValueLiteralsForName(String columnName, String[] nullValueLiteral);
 
         /**
          * The null value literal for specific columns, specified by 1-based column index. Specifying a null value
-         * literal for a column overrides the value in {@link #nullValueLiteral()}.
+         * literal for a column overrides the value in {@link #nullValueLiterals()}.
          */
-        Builder putNullValueLiteralForIndex(int index, String nullValueLiteral);
+        Builder putNullValueLiteralsForIndex(int index, String[] nullValueLiteral);
 
         /**
          * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
@@ -273,23 +272,23 @@ public abstract class CsvSpecs {
     public abstract Map<Integer, Parser<?>> parserForIndex();
 
     /**
-     * See {@link Builder#nullValueLiteral}.
+     * See {@link Builder#nullValueLiterals}.
      */
     @Default
     @Nullable
-    public String nullValueLiteral() {
-        return "";
+    public String[] nullValueLiterals() {
+        return new String[] {""};
     }
 
     /**
-     * See {@link Builder#nullValueLiteral}.
+     * See {@link Builder#nullValueLiterals}.
      */
-    public abstract Map<String, String> nullValueLiteralForName();
+    public abstract Map<String, String[]> nullValueLiteralsForName();
 
     /**
-     * See {@link Builder#putNullValueLiteralForIndex}.
+     * See {@link Builder#putNullValueLiteralsForIndex}.
      */
-    public abstract Map<Integer, String> nullValueLiteralForIndex();
+    public abstract Map<Integer, String[]> nullValueLiteralsForIndex();
 
     /**
      * See {@link Builder#nullParser}.

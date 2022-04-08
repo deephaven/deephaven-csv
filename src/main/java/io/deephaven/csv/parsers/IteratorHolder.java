@@ -3,6 +3,7 @@ package io.deephaven.csv.parsers;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.Moveable;
 
 /**
  * This class is used to hold the underlying {@link DenseStorageReader} plus some associated helper information (an

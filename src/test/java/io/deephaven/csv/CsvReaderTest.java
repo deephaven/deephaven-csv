@@ -15,6 +15,7 @@ import io.deephaven.csv.reading.CellGrabber;
 import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
+import io.deephaven.csv.sinks.Source;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
@@ -24,6 +25,7 @@ import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.lang.reflect.Array;
@@ -32,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -460,6 +463,38 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().skipRows(3).build(), SKIPPED_INPUT, expected);
     }
 
+    private static final String MULTIPLE_NULLS_INPUT = ""
+            + "Col1,Col2\n"
+            + "1,aaaaa\n"
+            + "2,bbbbb\n"
+            + ",ccccc\n" // cell for Col1 is blank
+            + "*NULL*,ddddd\n"
+            + "3,*NULL*\n";
+
+    @Test
+    public void multipleNullLiterals() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(
+                Column.ofValues("Col1", 1, 2, Sentinels.NULL_INT, Sentinels.NULL_INT, 3),
+                Column.ofRefs("Col2", "aaaaa", "bbbbb", "ccccc", "ddddd", null));
+
+        final CsvSpecs specs = defaultCsvBuilder().nullValueLiterals(new String[] {"", "*NULL*"}).build();
+        invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
+    }
+
+    @Test
+    public void perColumnNullLiterals() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(
+                Column.ofValues("Col1", 1, 2, Sentinels.NULL_INT, Sentinels.NULL_INT, 3),
+                Column.ofRefs("Col2", "aaaaa", null, "ccccc", null, "*NULL*"));
+
+        final CsvSpecs specs = defaultCsvBuilder()
+                .nullValueLiterals(new String[] {"", "*NULL*"})
+                .putNullValueLiteralsForName("Col2", new String[] {"bbbbb", "ddddd"})
+                .build();
+        invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
+    }
+
+
     private static final String EMPTY_LINES_INPUT = ""
             + "Col1,Col2\n"
             + "aa,bb\n"
@@ -723,7 +758,7 @@ public class CsvReaderTest {
 
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", "hello", null));
 
-        invokeTest(defaultCsvBuilder().nullValueLiteral("NULL").build(), input, expected);
+        invokeTest(defaultCsvBuilder().nullValueLiterals(new String[] {"NULL"}).build(), input, expected);
     }
 
     @Test
@@ -1033,10 +1068,11 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().allowMissingColumns(true).nullValueLiteral(null).build(),
+                        () -> invokeTest(
+                                defaultCsvBuilder().allowMissingColumns(true).nullValueLiterals(new String[0]).build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage(
-                        "Row 4 is short, but can't null-fill it because there is no configured null value literal.");
+                        "Row 4 is short, but can't null-fill it because there is no configured null value literal for column 2.");
     }
 
     @Test
@@ -1102,7 +1138,8 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("SomeInts", "3", "", "4", "5"));
 
-        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiteral(null).build(), SINGLE_COLUMN_EMPTY_ROW,
+        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0]).build(),
+                SINGLE_COLUMN_EMPTY_ROW,
                 expected);
     }
 
@@ -1115,11 +1152,34 @@ public class CsvReaderTest {
                         Column.ofRefs("SomeInts", "3", "", "4", "5"));
 
         Assertions
-                .assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiteral(null)
-                        .parsers(List.of(Parsers.INT)).build(), SINGLE_COLUMN_EMPTY_ROW, expected))
-                .hasRootCauseMessage("No available parsers.");
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0])
+                                .parsers(List.of(Parsers.INT)).build(), SINGLE_COLUMN_EMPTY_ROW, expected))
+                .hasRootCauseMessage(
+                        "Parsing failed on input, with nothing left to fall back to. Parser io.deephaven.csv.parsers.IntParser successfully parsed 1 items before failure.");
     }
 
+    @Test
+    public void haveSomeParsersButNotTheOnesYouNeed() {
+        final String input = ""
+                + "SomeInts\n"
+                + "3\n"
+                + "4\n"
+                + "5\n"
+                + "6.6\n";
+
+        // If you have some parsers but not the ones you need, you are out of luck.
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("SomeInts", "3", "4", "5", "6.6"));
+
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0])
+                                .parsers(List.of(Parsers.INT, Parsers.LONG)).build(), input, expected))
+                .hasRootCauseMessage(
+                        "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
+    }
 
     @Test
     public void duplicateColumnName() {
@@ -1466,7 +1526,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeLongs", 4L, Sentinels.NULL_LONG, 4000000000L));
 
         invokeTest(
-                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiteral("NULL").build(),
+                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiterals(new String[] {"NULL"}).build(),
                 input,
                 expected);
     }
@@ -1494,10 +1554,10 @@ public class CsvReaderTest {
         invokeTest(
                 defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
-                        .putNullValueLiteralForIndex(1, "❌")
-                        .putNullValueLiteralForIndex(2, "🔥")
-                        .putNullValueLiteralForName("SomeInts", "⋰⋱")
-                        .putNullValueLiteralForName("SomeLongs", "𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷")
+                        .putNullValueLiteralsForIndex(1, new String[] {"❌"})
+                        .putNullValueLiteralsForIndex(2, new String[] {"🔥"})
+                        .putNullValueLiteralsForName("SomeInts", new String[] {"⋰⋱"})
+                        .putNullValueLiteralsForName("SomeLongs", new String[] {"𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷"})
                         .build(),
                 input,
                 expected);
@@ -1595,6 +1655,65 @@ public class CsvReaderTest {
         };
         invokeTest(defaultCsvBuilder().putParserForIndex(2, new MyBigDecimalParser()).build(), input, expected,
                 makeMySinkFactory(), makeCustomColumn);
+    }
+
+    /**
+     * Provide lots of data with a blackhole sink. System behaves reasonably (doesn't OOM).
+     */
+    @Test
+    public void lotsOfDataDoesntChoke() throws CsvReaderException {
+        final int numRows = 50_000_000;
+        final RepeatingInputStream inputStream = new RepeatingInputStream("A,B\n", "111111111,222222222\n", numRows);
+
+        final CsvSpecs specs = defaultCsvBuilder().parsers(List.of(Parsers.INT)).build();
+        final SinkFactory sinkFactory = makeBlackholeSinkFactory();
+        final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
+    }
+
+    private static final class RepeatingInputStream extends InputStream {
+        private byte[] data;
+        private final byte[] body;
+        private int bodyRepeatsRemaining;
+        private final byte[] tempBufferForRead;
+        private int offset;
+
+        public RepeatingInputStream(final String header, final String body, int bodyRepeats) {
+            this.data = header.getBytes(StandardCharsets.UTF_8);
+            this.body = body.getBytes(StandardCharsets.UTF_8);
+            bodyRepeatsRemaining = bodyRepeats;
+            tempBufferForRead = new byte[1];
+            offset = 0;
+
+        }
+
+        @Override
+        public int read() throws IOException {
+            final int numBytes = read(tempBufferForRead, 0, 1);
+            if (numBytes == 0) {
+                return -1;
+            }
+            return tempBufferForRead[0] & 0xff;
+        }
+
+        @Override
+        public int read(@NotNull byte[] b, int off, int len) throws IOException {
+            if (len == 0) {
+                return 0;
+            }
+            while (offset == data.length) {
+                if (bodyRepeatsRemaining == 0) {
+                    return -1;
+                }
+                data = body;
+                offset = 0;
+                --bodyRepeatsRemaining;
+            }
+            final int currentSize = data.length - offset;
+            final int sizeToUse = Math.min(currentSize, len);
+            System.arraycopy(data, offset, b, off, sizeToUse);
+            offset += sizeToUse;
+            return sizeToUse;
+        }
     }
 
     private static class MyBigDecimalParser implements Parser<BigDecimal[]> {
@@ -1853,7 +1972,12 @@ public class CsvReaderTest {
     private static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected,
             final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
             throws CsvReaderException {
-        final InputStream inputStream = toInputStream(input);
+        invokeTest(specs, toInputStream(input), expected, sinkFactory, makeCustomColumn);
+    }
+
+    private static void invokeTest(final CsvSpecs specs, final InputStream inputStream, final ColumnSet expected,
+            final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
+            throws CsvReaderException {
         final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
         final ColumnSet actual = toColumnSet(result, makeCustomColumn);
         final String expectedToString = expected.toString();
@@ -1963,5 +2087,42 @@ public class CsvReaderTest {
                 null,
                 Sentinels.NULL_DATETIME_AS_LONG,
                 Sentinels.NULL_TIMESTAMP_AS_LONG);
+    }
+
+    private static SinkFactory makeBlackholeSinkFactory() {
+        return SinkFactory.of(
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>(),
+                () -> new Blackhole<>());
+    }
+
+    private static class Blackhole<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+        @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            // System.out.println("SLEEPING FOR 5 SECONDS");
+            // try {
+            // Thread.sleep(5 * 1000);
+            // } catch (InterruptedException ie) {
+            // throw new RuntimeException("sad");
+            // }
+        }
+
+        @Override
+        public Object getUnderlying() {
+            return null;
+        }
+
+        @Override
+        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+            // Do nothing.
+        }
     }
 }

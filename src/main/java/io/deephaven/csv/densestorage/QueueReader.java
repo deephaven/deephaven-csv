@@ -6,10 +6,10 @@ import io.deephaven.csv.util.MutableInt;
 /** Companion to the {@link QueueWriter}. See the documentation there for details. */
 public class QueueReader<TARRAY> {
     /**
-     * Sync object which synchronizes access to the "next" fields of every node in our linked list. Shared with the
-     * QueueWriter.
+     * Queue state object which synchronizes access to the "next" fields of every node in our linked list and also keeps
+     * track of how far the writer is ahead of the reader. Shared with the QueueWriter.
      */
-    private final Object sync;
+    private final QueueState queueState;
     /** Current node. */
     private QueueNode<TARRAY> node;
     /** Current block we are reading from, extracted from the current node. */
@@ -23,12 +23,20 @@ public class QueueReader<TARRAY> {
     protected int end;
 
     /** Constructor. */
-    protected QueueReader(Object sync, QueueNode<TARRAY> node) {
-        this.sync = sync;
+    protected QueueReader(QueueState queueState, QueueNode<TARRAY> node) {
+        this.queueState = queueState;
         this.node = node;
         this.genericBlock = null;
         this.current = 0;
         this.end = 0;
+    }
+
+    protected QueueReader(final QueueReader<TARRAY> other) {
+        this.queueState = other.queueState;
+        this.node = other.node;
+        this.genericBlock = other.genericBlock;
+        this.current = other.current;
+        this.end = other.end;
     }
 
     /**
@@ -74,14 +82,15 @@ public class QueueReader<TARRAY> {
                 end = 0;
                 return false;
             }
-            synchronized (sync) {
-                while (node.next == null) {
-                    catchyWait(sync);
-                }
-                node = node.next;
-                genericBlock = node.data;
-                current = node.begin;
-                end = node.end;
+            final boolean firstObserver = node.waitUntilNextValid();
+            node = node.next;
+            genericBlock = node.data;
+            current = node.begin;
+            end = node.end;
+            if (firstObserver) {
+                // There may be more than one reader processing the queue. We only note the first time a block
+                // was observed.
+                queueState.noteBlockObserved();
             }
         }
         if (end - current < size) {
@@ -90,16 +99,6 @@ public class QueueReader<TARRAY> {
                             "Logic error: got short block: expected at least %d, got %d", size, end - current));
         }
         return true;
-    }
-
-    /** Call Object.wait() but suppress the need to deal with checked InterruptedExceptions. */
-    private static void catchyWait(Object o) {
-        try {
-            o.wait();
-        } catch (InterruptedException ie) {
-            throw new RuntimeException(
-                    "Thread interrupted: probably cancelled in the CsvReader class due to some other exception.");
-        }
     }
 
     /** A QueueReader specialized for bytes. */
@@ -111,8 +110,17 @@ public class QueueReader<TARRAY> {
         private byte[] typedBlock;
 
         /** Constructor. */
-        public ByteReader(final Object sync, final QueueNode<byte[]> head) {
-            super(sync, head);
+        public ByteReader(final QueueState queueState, final QueueNode<byte[]> head) {
+            super(queueState, head);
+        }
+
+        private ByteReader(final ByteReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public ByteReader copy() {
+            return new ByteReader(this);
         }
 
         /**
@@ -144,8 +152,17 @@ public class QueueReader<TARRAY> {
         private int[] typedBlock;
 
         /** Constructor. */
-        public IntReader(Object sync, QueueNode<int[]> head) {
-            super(sync, head);
+        public IntReader(QueueState queueState, QueueNode<int[]> head) {
+            super(queueState, head);
+        }
+
+        private IntReader(final IntReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public IntReader copy() {
+            return new IntReader(this);
         }
 
         /**
@@ -174,8 +191,17 @@ public class QueueReader<TARRAY> {
          */
         private byte[][] typedBlock;
 
-        public ByteArrayReader(final Object sync, final QueueNode<byte[][]> head) {
-            super(sync, head);
+        public ByteArrayReader(final QueueState queueState, final QueueNode<byte[][]> head) {
+            super(queueState, head);
+        }
+
+        private ByteArrayReader(final ByteArrayReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public ByteArrayReader copy() {
+            return new ByteArrayReader(this);
         }
 
         /**

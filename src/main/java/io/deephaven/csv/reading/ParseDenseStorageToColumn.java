@@ -6,12 +6,10 @@ import io.deephaven.csv.parsers.*;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
 import io.deephaven.csv.tokenization.Tokenizer;
-import io.deephaven.csv.util.CsvReaderException;
+import io.deephaven.csv.util.*;
+
 import java.util.*;
 
-import io.deephaven.csv.util.MutableBoolean;
-import io.deephaven.csv.util.MutableDouble;
-import io.deephaven.csv.util.MutableLong;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -21,40 +19,42 @@ import org.jetbrains.annotations.NotNull;
 public final class ParseDenseStorageToColumn {
     /**
      * @param dsr A reader for the input.
-     * @param dsrAlt A second reader for the same input (used to perform the second pass over the data, if type
-     *        inference deems a second pass to be necessary).
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
      * @param specs The CsvSpecs which control how the column is interpreted.
-     * @param nullValueLiteralToUse If a cell text is equal to this value, it will be interpreted as the null value.
-     *        Typically set to the empty string.
+     * @param nullValueLiteralsToUse If a cell text is equal to any of the values in this array, the cell will be
+     *        interpreted as the null value. Typically set to a one-element array containing the empty string.
      * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
      *         data.
      */
     public static Result doit(
-            final DenseStorageReader dsr,
-            final DenseStorageReader dsrAlt,
+            Moveable<DenseStorageReader> dsr,
             final List<Parser<?>> parsers,
             final CsvSpecs specs,
-            final String nullValueLiteralToUse,
+            final String[] nullValueLiteralsToUse,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
         Set<Parser<?>> parserSet = new HashSet<>(parsers != null ? parsers : Parsers.DEFAULT);
 
         final Tokenizer tokenizer = new Tokenizer(specs.customDoubleParser(), specs.customTimeZoneParser());
         final Parser.GlobalContext gctx =
-                new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteralToUse);
+                new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteralsToUse);
+
+        // Make an IteratorHolder for the first pass over the input. Make a copy of the DenseStorageReader in case
+        // we need to do a second pass. We take care to not hold these references longer than necessary, to give the
+        // GC a chance to collect the data in our linked list.
+        final Moveable<IteratorHolder> ihAlt = new Moveable<>(new IteratorHolder(dsr.get().copy()));
+        final Moveable<IteratorHolder> ih = new Moveable<>(new IteratorHolder(dsr.move().get()));
 
         // Skip over leading null cells. There are three cases:
         // 1. There is a non-null cell (so the type inference process can begin)
         // 2. The column is full of all nulls
         // 3. The column is empty
-        final IteratorHolder ih = new IteratorHolder(dsr);
         boolean columnIsEmpty = true;
         boolean columnIsAllNulls = true;
-        while (ih.tryMoveNext()) {
+        while (ih.get().tryMoveNext()) {
             columnIsEmpty = false;
-            if (!gctx.isNullCell(ih)) {
+            if (!gctx.isNullCell(ih.get())) {
                 columnIsAllNulls = false;
                 break;
             }
@@ -71,65 +71,81 @@ public final class ParseDenseStorageToColumn {
             if (columnIsEmpty) {
                 return emptyParse(nullParserToUse, gctx);
             }
-            return onePhaseParse(nullParserToUse, gctx, dsrAlt);
+            ih.reset();
+            return onePhaseParse(nullParserToUse, gctx, ihAlt.move());
+        }
+
+        if (parserSet.size() == 1) {
+            // Column is not all nulls, but there is only one available parser.
+            final Parser<?> parserToUse = parserSet.iterator().next();
+            ih.reset();
+            return onePhaseParse(parserToUse, gctx, ihAlt.move());
         }
 
         final CategorizedParsers cats = CategorizedParsers.create(parserSet);
 
         if (cats.customParser != null) {
-            return onePhaseParse(cats.customParser, gctx, dsrAlt);
+            ih.reset();
+            return onePhaseParse(cats.customParser, gctx, ihAlt.move());
         }
 
         // Numerics are special and they get their own fast path that uses Sources and Sinks rather than
         // reparsing the text input.
         final MutableDouble dummyDouble = new MutableDouble();
-        if (!cats.numericParsers.isEmpty() && tokenizer.tryParseDouble(ih.bs(), dummyDouble)) {
-            return parseNumerics(cats, gctx, ih, dsrAlt);
+        if (!cats.numericParsers.isEmpty() && tokenizer.tryParseDouble(ih.get().bs(), dummyDouble)) {
+            return parseNumerics(cats, gctx, ih.move(), ihAlt.move());
         }
 
         List<Parser<?>> universeByPrecedence = Arrays.asList(Parsers.CHAR, Parsers.STRING);
         final MutableBoolean dummyBoolean = new MutableBoolean();
         final MutableLong dummyLong = new MutableLong();
-        if (cats.timestampParser != null && tokenizer.tryParseLong(ih.bs(), dummyLong)) {
+        if (cats.timestampParser != null && tokenizer.tryParseLong(ih.get().bs(), dummyLong)) {
             universeByPrecedence = Arrays.asList(cats.timestampParser, Parsers.CHAR, Parsers.STRING);
-        } else if (cats.booleanParser != null && tokenizer.tryParseBoolean(ih.bs(), dummyBoolean)) {
+        } else if (cats.booleanParser != null && tokenizer.tryParseBoolean(ih.get().bs(), dummyBoolean)) {
             universeByPrecedence = Arrays.asList(Parsers.BOOLEAN, Parsers.STRING);
-        } else if (cats.dateTimeParser != null && tokenizer.tryParseDateTime(ih.bs(), dummyLong)) {
+        } else if (cats.dateTimeParser != null && tokenizer.tryParseDateTime(ih.get().bs(), dummyLong)) {
             universeByPrecedence = Arrays.asList(Parsers.DATETIME, Parsers.STRING);
         }
         List<Parser<?>> parsersToUse = limitToSpecified(universeByPrecedence, parserSet);
-        return parseFromList(parsersToUse, gctx, ih, dsrAlt);
+        return parseFromList(parsersToUse, gctx, ih.move(), ihAlt.move());
     }
 
     @NotNull
-    private static Result parseNumerics(
-            CategorizedParsers cats,
-            final Parser.GlobalContext gctx,
-            final IteratorHolder ih,
-            final DenseStorageReader dsrAlt)
-            throws CsvReaderException {
+    private static Result parseNumerics(CategorizedParsers cats, final Parser.GlobalContext gctx,
+            Moveable<IteratorHolder> ih, Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
         final List<ParserResultWrapper<?>> wrappers = new ArrayList<>();
         for (Parser<?> parser : cats.numericParsers) {
-            final ParserResultWrapper<?> prw = parseNumericsHelper(parser, gctx, ih);
+            final ParserResultWrapper<?> prw = parseNumericsHelper(parser, gctx, ih.get());
             wrappers.add(prw);
-            if (ih.isExhausted()) {
+            if (ih.get().isExhausted()) {
                 break;
             }
         }
 
-        if (!ih.isExhausted()) {
+        if (!ih.get().isExhausted()) {
+            // More friendly error message here.
+            if (cats.charAndStringParsers.isEmpty()) {
+                final String message = String.format(
+                        "Consumed %d numeric items, then encountered a non-numeric item but there are no char/string parsers available.",
+                        ih.get().numConsumed() - 1);
+                throw new CsvReaderException(message);
+            }
             // Tried all numeric parsers but couldn't consume all input. Fall back to the char and string parsers.
-            return parseFromList(cats.charAndStringParsers, gctx, ih, dsrAlt);
+            wrappers.clear();
+            return parseFromList(cats.charAndStringParsers, gctx, ih.move(), ihAlt.move());
         }
+
+        ih.reset();
 
         // If all the wrappers implement the Source interface (except possibly the last, which doesn't need to),
         // we can read the data back and cast it to the right numeric type.
         if (canUnify(wrappers)) {
+            ihAlt.reset();
             return unifyNumericResults(gctx, wrappers);
         }
         // Otherwise (if some wrappers do not implement the Source interface), we have to do a reparse.
         final ParserResultWrapper<?> last = wrappers.get(wrappers.size() - 1);
-        return performSecondParsePhase(gctx, last, dsrAlt);
+        return performSecondParsePhase(gctx, last, ihAlt.move());
     }
 
     private static boolean canUnify(final List<ParserResultWrapper<?>> items) {
@@ -152,81 +168,79 @@ public final class ParseDenseStorageToColumn {
     }
 
     @NotNull
-    private static Result parseFromList(
-            final List<Parser<?>> parsers,
-            final Parser.GlobalContext gctx,
-            final IteratorHolder ih,
-            final DenseStorageReader dsrAlt)
-            throws CsvReaderException {
+    private static Result parseFromList(final List<Parser<?>> parsers, final Parser.GlobalContext gctx,
+            Moveable<IteratorHolder> ih, Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
         if (parsers.isEmpty()) {
             throw new CsvReaderException("No available parsers.");
         }
 
         for (int ii = 0; ii < parsers.size() - 1; ++ii) {
-            final Result result = tryTwoPhaseParse(parsers.get(ii), gctx, ih, dsrAlt);
-            if (result != null) {
-                return result;
+            final Pair<Result, Failure> rof = tryTwoPhaseParse(parsers.get(ii), gctx, ih.move(), ihAlt.move());
+            if (rof.first != null) {
+                return rof.first;
             }
+            // If the operation failed, we need to move the IteratorHolders back to our local variables and try
+            // again. This might feel like overkill, but we are trying to be very disciplined about having at
+            // most one variable holding a reference to our DenseStorageReader.
+            ih = rof.second.ih.move();
+            ihAlt = rof.second.ihAlt.move();
         }
 
         // The final parser in the set gets special (more efficient) handling because there's nothing to
         // fall back to.
-        return onePhaseParse(parsers.get(parsers.size() - 1), gctx, dsrAlt);
+        ih.reset();
+        return onePhaseParse(parsers.get(parsers.size() - 1), gctx, ihAlt.move());
     }
 
-    private static <TARRAY> Result tryTwoPhaseParse(
-            final Parser<TARRAY> parser,
+    private static <TARRAY> Pair<Result, Failure> tryTwoPhaseParse(final Parser<TARRAY> parser,
             final Parser.GlobalContext gctx,
-            final IteratorHolder ih,
-            final DenseStorageReader dsrAlt)
-            throws CsvReaderException {
-        final long phaseOneStart = ih.numConsumed() - 1;
+            final Moveable<IteratorHolder> ih, final Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
+        final long phaseOneStart = ih.get().numConsumed() - 1;
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
-        final long end = parser.tryParse(gctx, pctx, ih, phaseOneStart, Long.MAX_VALUE, true);
-        if (!ih.isExhausted()) {
+        final long end = parser.tryParse(gctx, pctx, ih.get(), phaseOneStart, Long.MAX_VALUE, true);
+        if (!ih.get().isExhausted()) {
             // This parser couldn't make it to the end but there are others remaining to try. Signal a
-            // failure to the
-            // caller so that it can try the next one.
-            return null;
+            // failure to the caller so that it can try the next one. Also, since we are being disciplined
+            // about moving the IteratorHolders around, move them back to the caller so the caller can use
+            // them again.
+            return new Pair<>(null, new Failure(ih.move(), ihAlt.move()));
         }
         if (phaseOneStart == 0) {
             // Reached end, and started at zero so everything was parsed and we are done.
-            return new Result(pctx.sink(), pctx.dataType());
+            final Result result = new Result(pctx.sink(), pctx.dataType());
+            return new Pair<>(result, null);
         }
         final ParserResultWrapper<TARRAY> wrapper = new ParserResultWrapper<>(parser, pctx, phaseOneStart, end);
-        return performSecondParsePhase(gctx, wrapper, dsrAlt);
+        ih.reset();
+        final Result result = performSecondParsePhase(gctx, wrapper, ihAlt.move());
+        return new Pair<>(result, null);
     }
 
-    private static <TARRAY> Result performSecondParsePhase(
-            final Parser.GlobalContext gctx,
-            final ParserResultWrapper<TARRAY> wrapper,
-            final DenseStorageReader dsrAlt) throws CsvReaderException {
-        final IteratorHolder ihAlt = new IteratorHolder(dsrAlt);
-        ihAlt.tryMoveNext(); // Input is not empty, so we know this will succeed.
-        final long end = wrapper.parser.tryParse(gctx, wrapper.pctx, ihAlt, 0, wrapper.begin, false);
+    private static <TARRAY> Result performSecondParsePhase(final Parser.GlobalContext gctx,
+            final ParserResultWrapper<TARRAY> wrapper, final Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
+        ihAlt.get().tryMoveNext(); // Input is not empty, so we know this will succeed.
+        final long end = wrapper.parser.tryParse(gctx, wrapper.pctx, ihAlt.get(), 0, wrapper.begin, false);
 
         if (end == wrapper.begin) {
             return new Result(wrapper.pctx.sink(), wrapper.pctx.dataType());
         }
-        final String message =
-                "Logic error: second parser phase failed on input. Parser was: "
-                        + wrapper.parser.getClass().getCanonicalName();
+        final String message = "Logic error: second parser phase failed on input. Parser was: "
+                + wrapper.parser.getClass().getCanonicalName();
         throw new RuntimeException(message);
     }
 
     @NotNull
-    private static <TARRAY> Result onePhaseParse(
-            final Parser<TARRAY> parser, final Parser.GlobalContext gctx, final DenseStorageReader dsrAlt)
-            throws CsvReaderException {
+    private static <TARRAY> Result onePhaseParse(final Parser<TARRAY> parser, final Parser.GlobalContext gctx,
+            final Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
         final Parser.ParserContext<TARRAY> pctx = parser.makeParserContext(gctx, Parser.CHUNK_SIZE);
-        final IteratorHolder ihAlt = new IteratorHolder(dsrAlt);
-        ihAlt.tryMoveNext(); // Input is not empty, so we know this will succeed.
-        parser.tryParse(gctx, pctx, ihAlt, 0, Long.MAX_VALUE, true);
-        if (ihAlt.isExhausted()) {
+        ihAlt.get().tryMoveNext(); // Input is not empty, so we know this will succeed.
+        parser.tryParse(gctx, pctx, ihAlt.get(), 0, Long.MAX_VALUE, true);
+        if (ihAlt.get().isExhausted()) {
             return new Result(pctx.sink(), pctx.dataType());
         }
-        final String message =
-                "One phase parser failed on input. Parser was: " + parser.getClass().getCanonicalName();
+        final String message = String.format(
+                "Parsing failed on input, with nothing left to fall back to. Parser %s successfully parsed %d items before failure.",
+                parser.getClass().getCanonicalName(), ihAlt.get().numConsumed() - 1);
         throw new CsvReaderException(message);
     }
 
@@ -327,6 +341,16 @@ public final class ParseDenseStorageToColumn {
 
         public DataType dataType() {
             return dataType;
+        }
+    }
+
+    private static class Failure {
+        public final Moveable<IteratorHolder> ih;
+        public final Moveable<IteratorHolder> ihAlt;
+
+        public Failure(Moveable<IteratorHolder> ih, Moveable<IteratorHolder> ihAlt) {
+            this.ih = ih;
+            this.ihAlt = ihAlt;
         }
     }
 

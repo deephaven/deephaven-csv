@@ -87,21 +87,24 @@ public interface Parser<TARRAY> {
          */
         public boolean isNullOrWidthOneSoFar;
         /**
-         * If the null sentinel is not the empty string, then this field contains the UTF-8 encoded bytes of the null
-         * sentinel string. Otherwise this field contains null.
+         * The array of null sentinels, each encoded in UTF-8. The user can configure as many null sentinels as they
+         * want (including no null sentinels).
          */
-        private final byte[] nullSentinelBytes;
+        private final byte[][] nullSentinelsAsBytes;
         /** An "isNull" chunk */
         private final boolean[] nullChunk;
 
         public GlobalContext(
-                final Tokenizer tokenizer, final SinkFactory sinkFactory, final String nullValueLiteral) {
+                final Tokenizer tokenizer, final SinkFactory sinkFactory, final String[] nullValueLiterals) {
             this.tokenizer = tokenizer;
             this.sinkFactory = sinkFactory;
             isNullOrWidthOneSoFar = true;
 
-            // Process the nullValueLiteral into a byte array so the isNullCell test can run quickly.
-            nullSentinelBytes = nullValueLiteral != null ? nullValueLiteral.getBytes(StandardCharsets.UTF_8) : null;
+            // Process the nullValueLiterals into UTF-8 byte arrays so the isNullCell test can run more efficiently.
+            nullSentinelsAsBytes = new byte[nullValueLiterals.length][];
+            for (int ii = 0; ii < nullValueLiterals.length; ++ii) {
+                nullSentinelsAsBytes[ii] = nullValueLiterals[ii].getBytes(StandardCharsets.UTF_8);
+            }
             nullChunk = new boolean[CHUNK_SIZE];
         }
 
@@ -112,17 +115,18 @@ public interface Parser<TARRAY> {
          * @return whether the iterator's current text contains the null cell.
          */
         public boolean isNullCell(final IteratorHolder ih) {
-            if (nullSentinelBytes == null) {
-                // There is no null sentinel.
-                return false;
+            for (final byte[] nullSentinel : nullSentinelsAsBytes) {
+                if (equals(
+                        ih.bs().data(),
+                        ih.bs().begin(),
+                        ih.bs().end(),
+                        nullSentinel,
+                        0,
+                        nullSentinel.length)) {
+                    return true;
+                }
             }
-            return equals(
-                    ih.bs().data(),
-                    ih.bs().begin(),
-                    ih.bs().end(),
-                    nullSentinelBytes,
-                    0,
-                    nullSentinelBytes.length);
+            return false;
         }
 
         public boolean[] nullChunk() {

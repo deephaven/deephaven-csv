@@ -1,5 +1,7 @@
 package io.deephaven.csv.densestorage;
 
+import io.deephaven.csv.CsvSpecs;
+
 /**
  * Constants that control the behavior of the {@link DenseStorageWriter} and {@link DenseStorageReader}.
  */
@@ -31,4 +33,9 @@ public class DenseStorageConstants {
      * rather its own byte array.
      */
     public static final int LARGE_BYTE_ARRAY_SENTINEL = -1;
+    /**
+     * The maximum number of data blocks that we allow to go unobserved before the blocking the QueueWriter. This is
+     * only used when {@link CsvSpecs#concurrent()} is true.
+     */
+    public static final int MAX_UNOBSERVED_BLOCKS = 4;
 }

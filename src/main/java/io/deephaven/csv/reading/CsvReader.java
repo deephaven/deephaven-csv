@@ -8,10 +8,7 @@ import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
-import io.deephaven.csv.util.CsvReaderException;
-import io.deephaven.csv.util.MutableBoolean;
-import io.deephaven.csv.util.MutableObject;
-import io.deephaven.csv.util.Renderer;
+import io.deephaven.csv.util.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -88,18 +85,23 @@ public final class CsvReader {
         final int numOutputCols = headersTemp2.length;
         final String[] headersToUse = canonicalizeHeaders(specs, headersTemp2);
 
-        // Create a DenseStorageWriter and two readers for each column.
-        final DenseStorageWriter[] dsws = new DenseStorageWriter[numInputCols];
-        final DenseStorageReader[] dsr0s = new DenseStorageReader[numInputCols];
-        final DenseStorageReader[] dsr1s = new DenseStorageReader[numInputCols];
-        // The arrays are sized to "numInputCols" but only populated up to "numOutputCols".
-        // The code in ParseInputToDenseStorge knows that a null DenseStorageWriter means that the
-        // column is all-empty and (once the data is confirmed to be empty) just drop the data.
+        final String[][] nullValueLiteralsToUse = new String[numOutputCols][];
         for (int ii = 0; ii < numOutputCols; ++ii) {
-            final DenseStorageWriter dsw = new DenseStorageWriter();
-            dsws[ii] = dsw;
-            dsr0s[ii] = dsw.newReader();
-            dsr1s[ii] = dsw.newReader();
+            nullValueLiteralsToUse[ii] = calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1);
+        }
+
+        // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to
+        // "numOutputCols". The remaining (numInputCols - numOutputCols) are set to null. The code in
+        // parseInputToDenseStorge knows that having a null DenseStorageWriter means that the column is all-empty and
+        // (once the data is confirmed to be empty) just drops the data. "While we're here" we also make the List
+        // (not array, because Java generics) of DenseStorageReaders. This list is of size numOutputCols and is used
+        // down below to hand to each parseDenseStorageToColumn reader in a separate thread.
+        final DenseStorageWriter[] dsws = new DenseStorageWriter[numInputCols];
+        final List<Moveable<DenseStorageReader>> dsrs = new ArrayList<>();
+        for (int ii = 0; ii < numOutputCols; ++ii) {
+            final Pair<DenseStorageWriter, DenseStorageReader> pair = DenseStorageWriter.create(specs.concurrent());
+            dsws[ii] = pair.first;
+            dsrs.add(new Moveable<>(pair.second));
         }
 
         // Select an Excecutor based on whether the user wants the code to run asynchronously
@@ -109,25 +111,25 @@ public final class CsvReader {
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
 
+        // Start the writer
+        final Future<Long> numRowsFuture =
+                exec.submit(wrapError(() -> ParseInputToDenseStorage.doit(firstDataRow, grabber, specs,
+                        nullValueLiteralsToUse, dsws)));
+
+        // Start the readers, taking care to not hold a reference to the DenseStorageReader.
         final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
         try {
-            final Future<Long> numRowsFuture =
-                    exec.submit(() -> ParseInputToDenseStorage.doit(firstDataRow, grabber, specs, dsws));
-
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii + 1);
-                final String nullValueLiteralToUse = calcNullValueLiteralToUse(specs, headersToUse[ii], ii + 1);
 
                 final int iiCopy = ii;
                 final Future<ParseDenseStorageToColumn.Result> fcb =
-                        exec.submit(
-                                () -> ParseDenseStorageToColumn.doit(
-                                        dsr0s[iiCopy],
-                                        dsr1s[iiCopy],
-                                        parsersToUse,
-                                        specs,
-                                        nullValueLiteralToUse,
-                                        sinkFactory));
+                        exec.submit(wrapError(() -> ParseDenseStorageToColumn.doit(
+                                dsrs.get(iiCopy).move(),
+                                parsersToUse,
+                                specs,
+                                nullValueLiteralsToUse[iiCopy],
+                                sinkFactory)));
                 sinkFutures.add(fcb);
             }
 
@@ -153,6 +155,17 @@ public final class CsvReader {
         }
     }
 
+    private static <T> Callable<T> wrapError(Callable<T> inner) {
+        return () -> {
+            try {
+                return inner.call();
+            } catch (Error e) {
+                // Want to catch all Errors here and specifically OutOfMemoryError
+                throw new CsvReaderException("Caught exception", e);
+            }
+        };
+    }
+
     /**
      * Determine which list of parsers to use for type inference. Returns {@link CsvSpecs#parsers} unless the user has
      * set an override on a column name or column number basis.
@@ -171,20 +184,20 @@ public final class CsvReader {
     }
 
     /**
-     * Determine which null value literal to use. Returns {@link CsvSpecs#nullValueLiteral()} unless the user has set an
-     * override on a column name or column number basis.
+     * Determine which null value literal to use. Returns {@link CsvSpecs#nullValueLiterals()} unless the user has set
+     * an override on a column name or column number basis.
      */
-    private static String calcNullValueLiteralToUse(final CsvSpecs specs,
+    private static String[] calcNullValueLiteralsToUse(final CsvSpecs specs,
             final String columnName, final int oneBasedColumnNumber) {
-        String result = specs.nullValueLiteralForName().get(columnName);
+        String[] result = specs.nullValueLiteralsForName().get(columnName);
         if (result != null) {
             return result;
         }
-        result = specs.nullValueLiteralForIndex().get(oneBasedColumnNumber);
+        result = specs.nullValueLiteralsForIndex().get(oneBasedColumnNumber);
         if (result != null) {
             return result;
         }
-        return specs.nullValueLiteral();
+        return specs.nullValueLiterals();
     }
 
     /**
