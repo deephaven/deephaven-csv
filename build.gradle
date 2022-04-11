@@ -1,6 +1,6 @@
 plugins {
     id 'java-library'
-    id 'com.diffplug.spotless' version '6.4.1'
+    id 'com.diffplug.spotless' version '6.4.2'
     id 'me.champeau.jmh' version '0.6.6'
 }
 
