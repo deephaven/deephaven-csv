@@ -87,7 +87,7 @@ public final class CsvReader {
 
         final String[][] nullValueLiteralsToUse = new String[numOutputCols][];
         for (int ii = 0; ii < numOutputCols; ++ii) {
-            nullValueLiteralsToUse[ii] = calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1);
+            nullValueLiteralsToUse[ii] = calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1).toArray(new String[0]);
         }
 
         // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to
@@ -187,9 +187,9 @@ public final class CsvReader {
      * Determine which null value literal to use. Returns {@link CsvSpecs#nullValueLiterals()} unless the user has set
      * an override on a column name or column number basis.
      */
-    private static String[] calcNullValueLiteralsToUse(final CsvSpecs specs,
+    private static List<String> calcNullValueLiteralsToUse(final CsvSpecs specs,
             final String columnName, final int oneBasedColumnNumber) {
-        String[] result = specs.nullValueLiteralsForName().get(columnName);
+        List<String> result = specs.nullValueLiteralsForName().get(columnName);
         if (result != null) {
             return result;
         }

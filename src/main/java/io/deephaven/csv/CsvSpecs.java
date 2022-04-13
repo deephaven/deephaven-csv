@@ -69,23 +69,23 @@ public abstract class CsvSpecs {
         /**
          * The default collection of strings that means "null value" in the input. These defaults are used for a column
          * if there is no corresponding {@link #nullValueLiteralsForName()} or {@link #nullValueLiteralsForIndex()}
-         * specified for that column. Default value is String[]{""}, a single-element array containing the empty string.
-         * If the configured sink data structures do not support nulls, the caller can set this to the empty array so
+         * specified for that column. Default value is a single-element list containing the empty string.
+         * If the configured sink data structures do not support nulls, the caller can set this to the empty list so
          * that nothing will be parsed as null.
          */
-        Builder nullValueLiterals(@Nullable String[] nullValueLiterals);
+        Builder nullValueLiterals(Iterable<String> nullValueLiterals);
 
         /**
          * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
          * column overrides the value in {@link #nullValueLiterals()}.
          */
-        Builder putNullValueLiteralsForName(String columnName, String[] nullValueLiteral);
+        Builder putNullValueLiteralsForName(String columnName, List<String> nullValueLiteral);
 
         /**
          * The null value literal for specific columns, specified by 1-based column index. Specifying a null value
          * literal for a column overrides the value in {@link #nullValueLiterals()}.
          */
-        Builder putNullValueLiteralsForIndex(int index, String[] nullValueLiteral);
+        Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
 
         /**
          * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
@@ -275,20 +275,19 @@ public abstract class CsvSpecs {
      * See {@link Builder#nullValueLiterals}.
      */
     @Default
-    @Nullable
-    public String[] nullValueLiterals() {
-        return new String[] {""};
+    public List<String> nullValueLiterals() {
+        return Collections.singletonList("");
     }
 
     /**
      * See {@link Builder#nullValueLiterals}.
      */
-    public abstract Map<String, String[]> nullValueLiteralsForName();
+    public abstract Map<String, List<String>> nullValueLiteralsForName();
 
     /**
      * See {@link Builder#putNullValueLiteralsForIndex}.
      */
-    public abstract Map<Integer, String[]> nullValueLiteralsForIndex();
+    public abstract Map<Integer, List<String>> nullValueLiteralsForIndex();
 
     /**
      * See {@link Builder#nullParser}.

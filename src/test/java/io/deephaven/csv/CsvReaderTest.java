@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -477,7 +478,7 @@ public class CsvReaderTest {
                 Column.ofValues("Col1", 1, 2, Sentinels.NULL_INT, Sentinels.NULL_INT, 3),
                 Column.ofRefs("Col2", "aaaaa", "bbbbb", "ccccc", "ddddd", null));
 
-        final CsvSpecs specs = defaultCsvBuilder().nullValueLiterals(new String[] {"", "*NULL*"}).build();
+        final CsvSpecs specs = defaultCsvBuilder().nullValueLiterals(Arrays.asList("", "*NULL*")).build();
         invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
     }
 
@@ -488,8 +489,8 @@ public class CsvReaderTest {
                 Column.ofRefs("Col2", "aaaaa", null, "ccccc", null, "*NULL*"));
 
         final CsvSpecs specs = defaultCsvBuilder()
-                .nullValueLiterals(new String[] {"", "*NULL*"})
-                .putNullValueLiteralsForName("Col2", new String[] {"bbbbb", "ddddd"})
+                .nullValueLiterals(Arrays.asList("", "*NULL*"))
+                .putNullValueLiteralsForName("Col2", Arrays.asList("bbbbb", "ddddd"))
                 .build();
         invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
     }
@@ -758,7 +759,7 @@ public class CsvReaderTest {
 
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", "hello", null));
 
-        invokeTest(defaultCsvBuilder().nullValueLiterals(new String[] {"NULL"}).build(), input, expected);
+        invokeTest(defaultCsvBuilder().nullValueLiterals(Collections.singletonList("NULL")).build(), input, expected);
     }
 
     @Test
@@ -1069,7 +1070,7 @@ public class CsvReaderTest {
         Assertions
                 .assertThatThrownBy(
                         () -> invokeTest(
-                                defaultCsvBuilder().allowMissingColumns(true).nullValueLiterals(new String[0]).build(),
+                                defaultCsvBuilder().allowMissingColumns(true).nullValueLiterals(Collections.emptyList()).build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage(
                         "Row 4 is short, but can't null-fill it because there is no configured null value literal for column 2.");
@@ -1138,7 +1139,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("SomeInts", "3", "", "4", "5"));
 
-        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0]).build(),
+        invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList()).build(),
                 SINGLE_COLUMN_EMPTY_ROW,
                 expected);
     }
@@ -1153,7 +1154,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0])
+                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
                                 .parsers(List.of(Parsers.INT)).build(), SINGLE_COLUMN_EMPTY_ROW, expected))
                 .hasRootCauseMessage(
                         "Parsing failed on input, with nothing left to fall back to. Parser io.deephaven.csv.parsers.IntParser successfully parsed 1 items before failure.");
@@ -1175,7 +1176,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(new String[0])
+                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
                                 .parsers(List.of(Parsers.INT, Parsers.LONG)).build(), input, expected))
                 .hasRootCauseMessage(
                         "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
@@ -1526,7 +1527,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeLongs", 4L, Sentinels.NULL_LONG, 4000000000L));
 
         invokeTest(
-                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiterals(new String[] {"NULL"}).build(),
+                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiterals(Collections.singletonList("NULL")).build(),
                 input,
                 expected);
     }
@@ -1554,10 +1555,10 @@ public class CsvReaderTest {
         invokeTest(
                 defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
-                        .putNullValueLiteralsForIndex(1, new String[] {"❌"})
-                        .putNullValueLiteralsForIndex(2, new String[] {"🔥"})
-                        .putNullValueLiteralsForName("SomeInts", new String[] {"⋰⋱"})
-                        .putNullValueLiteralsForName("SomeLongs", new String[] {"𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷"})
+                        .putNullValueLiteralsForIndex(1, Collections.singletonList("❌"))
+                        .putNullValueLiteralsForIndex(2, Collections.singletonList("🔥"))
+                        .putNullValueLiteralsForName("SomeInts", Collections.singletonList("⋰⋱"))
+                        .putNullValueLiteralsForName("SomeLongs", Collections.singletonList("𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷"))
                         .build(),
                 input,
                 expected);

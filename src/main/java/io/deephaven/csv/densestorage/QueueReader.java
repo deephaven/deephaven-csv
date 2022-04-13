@@ -5,11 +5,6 @@ import io.deephaven.csv.util.MutableInt;
 
 /** Companion to the {@link QueueWriter}. See the documentation there for details. */
 public class QueueReader<TARRAY> {
-    /**
-     * Queue state object which synchronizes access to the "next" fields of every node in our linked list and also keeps
-     * track of how far the writer is ahead of the reader. Shared with the QueueWriter.
-     */
-    private final QueueState queueState;
     /** Current node. */
     private QueueNode<TARRAY> node;
     /** Current block we are reading from, extracted from the current node. */
@@ -23,8 +18,7 @@ public class QueueReader<TARRAY> {
     protected int end;
 
     /** Constructor. */
-    protected QueueReader(QueueState queueState, QueueNode<TARRAY> node) {
-        this.queueState = queueState;
+    protected QueueReader(QueueNode<TARRAY> node) {
         this.node = node;
         this.genericBlock = null;
         this.current = 0;
@@ -32,7 +26,6 @@ public class QueueReader<TARRAY> {
     }
 
     protected QueueReader(final QueueReader<TARRAY> other) {
-        this.queueState = other.queueState;
         this.node = other.node;
         this.genericBlock = other.genericBlock;
         this.current = other.current;
@@ -82,16 +75,10 @@ public class QueueReader<TARRAY> {
                 end = 0;
                 return false;
             }
-            final boolean firstObserver = node.waitUntilNextValid();
-            node = node.next;
+            node = node.waitForNext();
             genericBlock = node.data;
             current = node.begin;
             end = node.end;
-            if (firstObserver) {
-                // There may be more than one reader processing the queue. We only note the first time a block
-                // was observed.
-                queueState.noteBlockObserved();
-            }
         }
         if (end - current < size) {
             throw new RuntimeException(
@@ -110,8 +97,8 @@ public class QueueReader<TARRAY> {
         private byte[] typedBlock;
 
         /** Constructor. */
-        public ByteReader(final QueueState queueState, final QueueNode<byte[]> head) {
-            super(queueState, head);
+        public ByteReader(final QueueNode<byte[]> head) {
+            super(head);
         }
 
         private ByteReader(final ByteReader other) {
@@ -152,8 +139,8 @@ public class QueueReader<TARRAY> {
         private int[] typedBlock;
 
         /** Constructor. */
-        public IntReader(QueueState queueState, QueueNode<int[]> head) {
-            super(queueState, head);
+        public IntReader(QueueNode<int[]> head) {
+            super(head);
         }
 
         private IntReader(final IntReader other) {
@@ -191,8 +178,8 @@ public class QueueReader<TARRAY> {
          */
         private byte[][] typedBlock;
 
-        public ByteArrayReader(final QueueState queueState, final QueueNode<byte[][]> head) {
-            super(queueState, head);
+        public ByteArrayReader(final QueueNode<byte[][]> head) {
+            super(head);
         }
 
         private ByteArrayReader(final ByteArrayReader other) {
