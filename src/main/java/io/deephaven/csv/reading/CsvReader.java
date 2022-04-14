@@ -87,7 +87,8 @@ public final class CsvReader {
 
         final String[][] nullValueLiteralsToUse = new String[numOutputCols][];
         for (int ii = 0; ii < numOutputCols; ++ii) {
-            nullValueLiteralsToUse[ii] = calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1).toArray(new String[0]);
+            nullValueLiteralsToUse[ii] =
+                    calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1).toArray(new String[0]);
         }
 
         // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to

@@ -120,13 +120,13 @@ public class ParseInputToDenseStorage {
             // to pick the right null value literal and convert it into UTF8 for slightly faster processing down
             // the line, in the code RowAppender.processNextRow(). There are three cases. For a given column i:
             // 1. If there is no null literal configured for column i, leave the Java value null here. When
-            //    RowAppender.processNextRow() sees a short row that includes this missing column, it will throw
-            //    an exception.
+            // RowAppender.processNextRow() sees a short row that includes this missing column, it will throw
+            // an exception.
             // 2. If there is exactly one null literal configured for column i, use it.
-            //    When RowAppender.processNextRow() sees a short row that includes this missing column, it will
-            //    provide this null literal text instead.
+            // When RowAppender.processNextRow() sees a short row that includes this missing column, it will
+            // provide this null literal text instead.
             // 3. If there is more than one null literal configured for column i, arbitrarily choose one (say,
-            //    the first). Then the code behaves as if it is in case 2.
+            // the first). Then the code behaves as if it is in case 2.
             //
             // Example:
             // Column 4 is configured to accept the single null value literal "NoCustomerData".

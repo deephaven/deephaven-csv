@@ -69,9 +69,9 @@ public abstract class CsvSpecs {
         /**
          * The default collection of strings that means "null value" in the input. These defaults are used for a column
          * if there is no corresponding {@link #nullValueLiteralsForName()} or {@link #nullValueLiteralsForIndex()}
-         * specified for that column. Default value is a single-element list containing the empty string.
-         * If the configured sink data structures do not support nulls, the caller can set this to the empty list so
-         * that nothing will be parsed as null.
+         * specified for that column. Default value is a single-element list containing the empty string. If the
+         * configured sink data structures do not support nulls, the caller can set this to the empty list so that
+         * nothing will be parsed as null.
          */
         Builder nullValueLiterals(Iterable<String> nullValueLiterals);
 

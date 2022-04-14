@@ -1070,7 +1070,8 @@ public class CsvReaderTest {
         Assertions
                 .assertThatThrownBy(
                         () -> invokeTest(
-                                defaultCsvBuilder().allowMissingColumns(true).nullValueLiterals(Collections.emptyList()).build(),
+                                defaultCsvBuilder().allowMissingColumns(true).nullValueLiterals(Collections.emptyList())
+                                        .build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage(
                         "Row 4 is short, but can't null-fill it because there is no configured null value literal for column 2.");
@@ -1154,8 +1155,10 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
-                                .parsers(List.of(Parsers.INT)).build(), SINGLE_COLUMN_EMPTY_ROW, expected))
+                        () -> invokeTest(
+                                defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
+                                        .parsers(List.of(Parsers.INT)).build(),
+                                SINGLE_COLUMN_EMPTY_ROW, expected))
                 .hasRootCauseMessage(
                         "Parsing failed on input, with nothing left to fall back to. Parser io.deephaven.csv.parsers.IntParser successfully parsed 1 items before failure.");
     }
@@ -1176,8 +1179,10 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
-                                .parsers(List.of(Parsers.INT, Parsers.LONG)).build(), input, expected))
+                        () -> invokeTest(
+                                defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
+                                        .parsers(List.of(Parsers.INT, Parsers.LONG)).build(),
+                                input, expected))
                 .hasRootCauseMessage(
                         "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
     }
@@ -1527,7 +1532,8 @@ public class CsvReaderTest {
                         Column.ofValues("SomeLongs", 4L, Sentinels.NULL_LONG, 4000000000L));
 
         invokeTest(
-                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiterals(Collections.singletonList("NULL")).build(),
+                defaultCsvBuilder().parsers(Parsers.COMPLETE).nullValueLiterals(Collections.singletonList("NULL"))
+                        .build(),
                 input,
                 expected);
     }
