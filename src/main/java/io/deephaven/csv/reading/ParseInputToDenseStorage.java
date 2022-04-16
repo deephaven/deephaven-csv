@@ -36,13 +36,15 @@ public class ParseInputToDenseStorage {
      */
     public static long doit(final byte[][] optionalFirstDataRow,
             final CellGrabber grabber,
-            CsvSpecs specs,
+            final CsvSpecs specs,
+            final String[][] nullValueLiteralsToUse,
             final DenseStorageWriter[] dsws)
             throws CsvReaderException {
         // This is the number of data rows read.
         long numProcessedRows = 0;
 
-        final RowAppender rowAppender = new RowAppender(optionalFirstDataRow, grabber, specs, dsws);
+        final RowAppender rowAppender =
+                new RowAppender(optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
         long skipRows = specs.skipRows();
         while (skipRows != 0) {
             final RowResult result = rowAppender.processNextRow(false);
@@ -85,10 +87,10 @@ public class ParseInputToDenseStorage {
         private final int numCols;
         private final ByteSlice byteSlice;
         private final MutableBoolean lastInRow;
-        private final ByteSlice nullSlice;
+        private final byte[][] nullValueLiteralsAsUtf8;
 
         public RowAppender(final byte[][] optionalFirstDataRow, final CellGrabber grabber, final CsvSpecs specs,
-                DenseStorageWriter[] dsws) throws CsvReaderException {
+                final String[][] nullValueLiteralsToUse, final DenseStorageWriter[] dsws) throws CsvReaderException {
             this.optionalFirstDataRow = optionalFirstDataRow;
             this.grabber = grabber;
             this.dsws = dsws;
@@ -102,12 +104,48 @@ public class ParseInputToDenseStorage {
             }
             byteSlice = new ByteSlice();
             lastInRow = new MutableBoolean();
-            final String nvl = specs.nullValueLiteral();
-            if (nvl != null) {
-                final byte[] nullValueBytes = nvl.getBytes(StandardCharsets.UTF_8);
-                nullSlice = new ByteSlice(nullValueBytes, 0, nullValueBytes.length);
-            } else {
-                nullSlice = null;
+            // Here we prepare ahead of time what we are going to do when we encounter a short row. Say the input looks
+            // like:
+            // 10,20,30,40,50
+            // 60,70,80
+            // The "60,70,80" line is a short row; it provides no data for the fourth or fifth columns. If
+            // CsvSpecs.allowMissingColumns is false, we would throw an exception at this point. However, if
+            // it is true, then we behave as if the line actually had looked like this
+            // 60,70,80,$NullLiteralFor4,$NullLiteralFor5
+            // Here $NullLiteralFor...(4 or 5) are not the literal text "$NullLiteralFor4" and so on,
+            // but rather the specific null value strings configured for the given column in CsvSpecs.
+            // These are configured via CsvSpecs.nullValueLiterals(), CsvSpecs.nullValueLiteralsForName(),
+            // and CsvSpecs.nullValueLiteralsForIndex(). By this point the interpretation as already been done
+            // and the answers have been passed to this method via 'nullValueLiteralsToUse'. Our job here is
+            // to pick the right null value literal and convert it into UTF8 for slightly faster processing down
+            // the line, in the code RowAppender.processNextRow(). There are three cases. For a given column i:
+            // 1. If there is no null literal configured for column i, leave the Java value null here. When
+            // RowAppender.processNextRow() sees a short row that includes this missing column, it will throw
+            // an exception.
+            // 2. If there is exactly one null literal configured for column i, use it.
+            // When RowAppender.processNextRow() sees a short row that includes this missing column, it will
+            // provide this null literal text instead.
+            // 3. If there is more than one null literal configured for column i, arbitrarily choose one (say,
+            // the first). Then the code behaves as if it is in case 2.
+            //
+            // Example:
+            // Column 4 is configured to accept the single null value literal "NoCustomerData".
+            // Column 5 is configured to accept multiple null literals "N/A", "null", "Null", and "NULL"
+            // In our example we would interpret the short row as if it had read
+            // 60,70,80,NoCustomerData,N/A
+            //
+            // Then, code in ParseDenseStorageToColumn would see these strings "NoCustomerData" and "N/A" and
+            // interpret them as nulls for that column. Note that for column 5 we could have chosen any of the four
+            // available null tokens, and regardless of which one we chose, the reader in ParseDenseStorageToColumn
+            // would have interpreted our choice as the null element value for that column, because they are
+            // interchangeable.
+            nullValueLiteralsAsUtf8 = new byte[nullValueLiteralsToUse.length][];
+            for (int ii = 0; ii < nullValueLiteralsToUse.length; ++ii) {
+                final String[] nvls = nullValueLiteralsToUse[ii];
+                if (nvls.length != 0) {
+                    nullValueLiteralsAsUtf8[ii] = nvls[0].getBytes(StandardCharsets.UTF_8);
+                }
+                // otherwise leave that slot as null.
             }
         }
 
@@ -183,17 +221,16 @@ public class ParseInputToDenseStorage {
                 throw new CsvReaderException(message);
             }
 
-            // If there is no null value literal configured, throw an exception.
-            if (nullSlice == null) {
-                final String message = String.format(
-                        "Row %d is short, but can't null-fill it because there is no configured null value literal.",
-                        physicalRowNum + 1);
-                throw new CsvReaderException(message);
-            }
-
-            // Pad the row with the null vlaue literal.
-            byteSlice.reset(nullSlice.data(), nullSlice.begin(), nullSlice.end());
+            // Pad the row with a null vlaue literal appropriate for each column.
             while (colNum < numCols) {
+                final byte[] nvl = nullValueLiteralsAsUtf8[colNum];
+                if (nvl == null) {
+                    final String message = String.format(
+                            "Row %d is short, but can't null-fill it because there is no configured null value literal for column %d.",
+                            physicalRowNum + 1, colNum + 1);
+                    throw new CsvReaderException(message);
+                }
+                byteSlice.reset(nvl, 0, nvl.length);
                 appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
                 ++colNum;
             }

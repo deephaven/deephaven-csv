@@ -1,6 +1,8 @@
 package io.deephaven.csv.densestorage;
 
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.util.MutableObject;
+import io.deephaven.csv.util.Pair;
 
 /**
  * The DenseStorageWriter and {@link DenseStorageReader} work in tandem, forming a FIFO queue. The DenseStorageWriter
@@ -77,6 +79,20 @@ import io.deephaven.csv.containers.ByteSlice;
  * </ul>
  */
 public final class DenseStorageWriter {
+    /** Constructor */
+    public static Pair<DenseStorageWriter, DenseStorageReader> create(final boolean concurrent) {
+        final Pair<QueueWriter.IntWriter, QueueReader.IntReader> control =
+                QueueWriter.IntWriter.create(DenseStorageConstants.CONTROL_QUEUE_SIZE, concurrent);
+        final Pair<QueueWriter.ByteWriter, QueueReader.ByteReader> bytes =
+                QueueWriter.ByteWriter.create(DenseStorageConstants.PACKED_QUEUE_SIZE, concurrent);
+        final Pair<QueueWriter.ByteArrayWriter, QueueReader.ByteArrayReader> byteArrays =
+                QueueWriter.ByteArrayWriter.create(DenseStorageConstants.ARRAY_QUEUE_SIZE, concurrent);
+
+        final DenseStorageWriter writer = new DenseStorageWriter(control.first, bytes.first, byteArrays.first);
+        final DenseStorageReader reader = new DenseStorageReader(control.second, bytes.second, byteArrays.second);
+        return new Pair<>(writer, reader);
+    }
+
     /**
      * The ints in this array indicate where the next item is stored:
      *
@@ -93,17 +109,11 @@ public final class DenseStorageWriter {
     /** Byte sequences >= DENSE_THRESHOLD are stored here */
     private final QueueWriter.ByteArrayWriter largeByteArrayWriter;
 
-    /** Constructor */
-    public DenseStorageWriter() {
-        this.controlWriter = new QueueWriter.IntWriter(DenseStorageConstants.CONTROL_QUEUE_SIZE);
-        this.byteWriter = new QueueWriter.ByteWriter(DenseStorageConstants.PACKED_QUEUE_SIZE);
-        this.largeByteArrayWriter =
-                new QueueWriter.ByteArrayWriter(DenseStorageConstants.ARRAY_QUEUE_SIZE);
-    }
-
-    public DenseStorageReader newReader() {
-        return new DenseStorageReader(
-                controlWriter.newReader(), byteWriter.newReader(), largeByteArrayWriter.newReader());
+    private DenseStorageWriter(QueueWriter.IntWriter controlWriter, QueueWriter.ByteWriter byteWriter,
+            QueueWriter.ByteArrayWriter largeByteArrayWriter) {
+        this.controlWriter = controlWriter;
+        this.byteWriter = byteWriter;
+        this.largeByteArrayWriter = largeByteArrayWriter;
     }
 
     /**

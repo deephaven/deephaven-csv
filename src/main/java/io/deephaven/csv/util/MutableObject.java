@@ -6,6 +6,12 @@ package io.deephaven.csv.util;
 public final class MutableObject<T> {
     private T value;
 
+    public MutableObject() {}
+
+    public MutableObject(final T value) {
+        this.value = value;
+    }
+
     public void setValue(T newValue) {
         value = newValue;
     }

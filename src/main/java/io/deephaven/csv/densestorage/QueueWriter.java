@@ -1,7 +1,8 @@
 package io.deephaven.csv.densestorage;
 
 import io.deephaven.csv.containers.ByteSlice;
-import java.util.function.BiFunction;
+import io.deephaven.csv.util.Pair;
+
 import java.util.function.IntFunction;
 
 /**
@@ -19,25 +20,13 @@ import java.util.function.IntFunction;
  * QueueWriters and {@link QueueReader}s. This explains why the semantics of {@link DenseStorageWriter} and
  * {@link DenseStorageReader} are similar to those of the underlying QueueWriters and {@link QueueReader}s.
  */
-public class QueueWriter<TARRAY, TREADER> {
-    /**
-     * Sync object which synchronizes access to the "next" fields of every node in our linked list. Shared with the
-     * QueueReader.
-     */
-    private final Object sync;
+public class QueueWriter<TARRAY> {
     /** Tail of the linked list. We append here when we flush. */
-    private QueueNode<TARRAY> tail;
+    protected QueueNode<TARRAY> tail;
     /** Size of the chunks we allocate that we pack data into. */
     protected final int blockSize;
     /** Lambda for allocating arrays for our chunks. */
     private final IntFunction<TARRAY> arrayFactory;
-    /** Lambda to make a QueueReader of the right subtype. */
-    private final BiFunction<Object, QueueNode<TARRAY>, TREADER> readerFactory;
-    /**
-     * A flag that says whether it's still early enough to allow QueueReader creation. After the writer starts writing,
-     * they shouldn't be allowed to create any readers. (This is just because we want to keep the semantics simple).
-     */
-    private boolean allowReaderCreation;
     /** Current block we writing to. When we flush, we will write it to a new linked list node. */
     private TARRAY genericBlock;
     /**
@@ -55,17 +44,12 @@ public class QueueWriter<TARRAY, TREADER> {
     protected int end;
 
     /** Constructor. */
-    protected QueueWriter(
-            final int blockSize,
-            final IntFunction<TARRAY> arrayFactory,
-            final BiFunction<Object, QueueNode<TARRAY>, TREADER> readerFactory) {
-        this.sync = new Object();
+    protected QueueWriter(final int blockSize, final IntFunction<TARRAY> arrayFactory, final boolean concurrent) {
+        final int maxUnobservedBlocks = concurrent ? DenseStorageConstants.MAX_UNOBSERVED_BLOCKS : Integer.MAX_VALUE;
         // Creating the linked list with a sentinel object makes linked list manipulation code simpler.
-        this.tail = new QueueNode<>(null, 0, 0, false);
+        this.tail = QueueNode.createInitial(maxUnobservedBlocks);
         this.blockSize = blockSize;
         this.arrayFactory = arrayFactory;
-        this.readerFactory = readerFactory;
-        this.allowReaderCreation = true;
         this.genericBlock = null;
         this.begin = 0;
         this.current = 0;
@@ -79,17 +63,6 @@ public class QueueWriter<TARRAY, TREADER> {
         begin = 0;
         current = 0;
         end = 0;
-    }
-
-    /**
-     * Make a {@link QueueReader} corresponding to this QueueWriter. You can make as many {@link QueueReader}s as you
-     * want, but you should make them before you start writing data.
-     */
-    public TREADER newReader() {
-        if (!allowReaderCreation) {
-            throw new RuntimeException("Logic error: must allocate readers before writing any data");
-        }
-        return readerFactory.apply(sync, tail);
     }
 
     /**
@@ -116,10 +89,7 @@ public class QueueWriter<TARRAY, TREADER> {
             return;
         }
 
-        // No more creating readers after the first flush.
-        allowReaderCreation = false;
-
-        final QueueNode<TARRAY> newNode = new QueueNode<>(genericBlock, begin, current, isLast);
+        tail = tail.appendNextMaybeWait(genericBlock, begin, current, isLast);
         // If this is an early flush (before the block was filled), the next node may share
         // the same underlying storage array (but disjoint segments of that array) as the current node.
         // To accomplish this, we just advance "begin" to "current" here. At this point in the logic
@@ -127,11 +97,6 @@ public class QueueWriter<TARRAY, TREADER> {
         // to actually start a new block is done by the addXXX code in our subclasses which eventually
         // calls flushAndAllocate.
         begin = current;
-        synchronized (sync) {
-            tail.next = newNode;
-            tail = newNode;
-            sync.notifyAll();
-        }
     }
 
     /**
@@ -165,11 +130,17 @@ public class QueueWriter<TARRAY, TREADER> {
     }
 
     /** A QueueWriter specialized for bytes. */
-    public static final class ByteWriter extends QueueWriter<byte[], QueueReader.ByteReader> {
+    public static final class ByteWriter extends QueueWriter<byte[]> {
+        public static Pair<ByteWriter, QueueReader.ByteReader> create(final int blockSize, final boolean concurrent) {
+            final ByteWriter writer = new ByteWriter(blockSize, concurrent);
+            final QueueReader.ByteReader reader = new QueueReader.ByteReader(writer.tail);
+            return new Pair<>(writer, reader);
+        }
+
         private byte[] typedBlock = null;
 
-        public ByteWriter(final int blockSize) {
-            super(blockSize, byte[]::new, QueueReader.ByteReader::new);
+        private ByteWriter(final int blockSize, final boolean concurrent) {
+            super(blockSize, byte[]::new, concurrent);
         }
 
         /**
@@ -193,11 +164,17 @@ public class QueueWriter<TARRAY, TREADER> {
     }
 
     /** A QueueWriter specialized for ints. */
-    public static final class IntWriter extends QueueWriter<int[], QueueReader.IntReader> {
+    public static final class IntWriter extends QueueWriter<int[]> {
+        public static Pair<IntWriter, QueueReader.IntReader> create(final int blockSize, final boolean concurrent) {
+            final IntWriter writer = new IntWriter(blockSize, concurrent);
+            final QueueReader.IntReader reader = new QueueReader.IntReader(writer.tail);
+            return new Pair<>(writer, reader);
+        }
+
         private int[] typedBlock = null;
 
-        public IntWriter(final int blockSize) {
-            super(blockSize, int[]::new, QueueReader.IntReader::new);
+        private IntWriter(final int blockSize, final boolean concurrent) {
+            super(blockSize, int[]::new, concurrent);
         }
 
         /**
@@ -216,12 +193,18 @@ public class QueueWriter<TARRAY, TREADER> {
     }
 
     /** A QueueWriter specialized for byte arrays. */
-    public static final class ByteArrayWriter
-            extends QueueWriter<byte[][], QueueReader.ByteArrayReader> {
+    public static final class ByteArrayWriter extends QueueWriter<byte[][]> {
+        public static Pair<ByteArrayWriter, QueueReader.ByteArrayReader> create(final int blockSize,
+                final boolean concurrent) {
+            final ByteArrayWriter writer = new ByteArrayWriter(blockSize, concurrent);
+            final QueueReader.ByteArrayReader reader = new QueueReader.ByteArrayReader(writer.tail);
+            return new Pair<>(writer, reader);
+        }
+
         private byte[][] block = null;
 
-        public ByteArrayWriter(int blobSize) {
-            super(blobSize, byte[][]::new, QueueReader.ByteArrayReader::new);
+        private ByteArrayWriter(int blockSize, final boolean concurrent) {
+            super(blockSize, byte[][]::new, concurrent);
         }
 
         /**

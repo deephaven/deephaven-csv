@@ -6,14 +6,14 @@ import io.deephaven.csv.util.MutableInt;
 
 /** Companion to the {@link DenseStorageWriter}. See the documentation there for details. */
 public final class DenseStorageReader {
+    /** Control bytes (lengths, negated lengths, or sentinels). See DenseStorageWriter. */
+    private final QueueReader.IntReader controlReader;
     /** Byte sequences < DENSE_THRESHOLD are compactly stored here */
     private final QueueReader.ByteReader byteReader;
     /** Byte sequences >= DENSE_THRESHOLD are stored here */
     private final QueueReader.ByteArrayReader largeByteArrayReader;
-    /** Control bytes (lengths, negated lengths, or sentinels). See DenseStorageWriter. */
-    private final QueueReader.IntReader controlReader;
     /** For the "out" parameter of controlReader.tryGetInt() */
-    private final MutableInt intHolder = new MutableInt();
+    private final MutableInt intHolder;
 
     /** Constructor. */
     public DenseStorageReader(
@@ -23,6 +23,11 @@ public final class DenseStorageReader {
         this.controlReader = controlReader;
         this.byteReader = byteReader;
         this.largeByteArrayReader = largeByteArrayReader;
+        this.intHolder = new MutableInt();
+    }
+
+    public DenseStorageReader copy() {
+        return new DenseStorageReader(controlReader.copy(), byteReader.copy(), largeByteArrayReader.copy());
     }
 
     /**

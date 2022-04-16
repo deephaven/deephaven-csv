@@ -65,7 +65,7 @@ public class Tokenizer {
      * @param bs The input text. This slice is *NOT* modified, regardless of success or failure.
      * @param result Contains the parsed value if this method returns true. Otherwise, the contents are unspecified.
      * @return true if the input was successfully parsed. Otherwise, false. The return value is provided in a
-     *         {@link MutableInt} because Apache doesn't provide a MutableChar.
+     *         {@link MutableInt} because we don't have a MutableChar.
      */
     public boolean tryParseBMPChar(final ByteSlice bs, final MutableInt result) {
         final byte[] d = bs.data();
@@ -121,7 +121,7 @@ public class Tokenizer {
     }
 
     private static int byteToInt(byte b) {
-        return b >= 0 ? b : 256 + b;
+        return b & 0xff;
     }
 
     /**
@@ -561,8 +561,7 @@ public class Tokenizer {
 
             if (!tryEatChar(bs, '.') && !tryEatChar(bs, ',')) {
                 // Period (or comma!) introduces fraction. If not present, then stop the parse here (with a
-                // success
-                // indication)
+                // success indication)
                 return true;
             }
 

@@ -5,11 +5,6 @@ import io.deephaven.csv.util.MutableInt;
 
 /** Companion to the {@link QueueWriter}. See the documentation there for details. */
 public class QueueReader<TARRAY> {
-    /**
-     * Sync object which synchronizes access to the "next" fields of every node in our linked list. Shared with the
-     * QueueWriter.
-     */
-    private final Object sync;
     /** Current node. */
     private QueueNode<TARRAY> node;
     /** Current block we are reading from, extracted from the current node. */
@@ -23,12 +18,18 @@ public class QueueReader<TARRAY> {
     protected int end;
 
     /** Constructor. */
-    protected QueueReader(Object sync, QueueNode<TARRAY> node) {
-        this.sync = sync;
+    protected QueueReader(QueueNode<TARRAY> node) {
         this.node = node;
         this.genericBlock = null;
         this.current = 0;
         this.end = 0;
+    }
+
+    protected QueueReader(final QueueReader<TARRAY> other) {
+        this.node = other.node;
+        this.genericBlock = other.genericBlock;
+        this.current = other.current;
+        this.end = other.end;
     }
 
     /**
@@ -74,15 +75,10 @@ public class QueueReader<TARRAY> {
                 end = 0;
                 return false;
             }
-            synchronized (sync) {
-                while (node.next == null) {
-                    catchyWait(sync);
-                }
-                node = node.next;
-                genericBlock = node.data;
-                current = node.begin;
-                end = node.end;
-            }
+            node = node.waitForNext();
+            genericBlock = node.data;
+            current = node.begin;
+            end = node.end;
         }
         if (end - current < size) {
             throw new RuntimeException(
@@ -90,16 +86,6 @@ public class QueueReader<TARRAY> {
                             "Logic error: got short block: expected at least %d, got %d", size, end - current));
         }
         return true;
-    }
-
-    /** Call Object.wait() but suppress the need to deal with checked InterruptedExceptions. */
-    private static void catchyWait(Object o) {
-        try {
-            o.wait();
-        } catch (InterruptedException ie) {
-            throw new RuntimeException(
-                    "Thread interrupted: probably cancelled in the CsvReader class due to some other exception.");
-        }
     }
 
     /** A QueueReader specialized for bytes. */
@@ -111,8 +97,17 @@ public class QueueReader<TARRAY> {
         private byte[] typedBlock;
 
         /** Constructor. */
-        public ByteReader(final Object sync, final QueueNode<byte[]> head) {
-            super(sync, head);
+        public ByteReader(final QueueNode<byte[]> head) {
+            super(head);
+        }
+
+        private ByteReader(final ByteReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public ByteReader copy() {
+            return new ByteReader(this);
         }
 
         /**
@@ -144,8 +139,17 @@ public class QueueReader<TARRAY> {
         private int[] typedBlock;
 
         /** Constructor. */
-        public IntReader(Object sync, QueueNode<int[]> head) {
-            super(sync, head);
+        public IntReader(QueueNode<int[]> head) {
+            super(head);
+        }
+
+        private IntReader(final IntReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public IntReader copy() {
+            return new IntReader(this);
         }
 
         /**
@@ -174,8 +178,17 @@ public class QueueReader<TARRAY> {
          */
         private byte[][] typedBlock;
 
-        public ByteArrayReader(final Object sync, final QueueNode<byte[][]> head) {
-            super(sync, head);
+        public ByteArrayReader(final QueueNode<byte[][]> head) {
+            super(head);
+        }
+
+        private ByteArrayReader(final ByteArrayReader other) {
+            super(other);
+            typedBlock = other.typedBlock;
+        }
+
+        public ByteArrayReader copy() {
+            return new ByteArrayReader(this);
         }
 
         /**
