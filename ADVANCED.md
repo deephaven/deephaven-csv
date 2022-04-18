@@ -44,7 +44,7 @@ The job of each wrapper class is to:
 
 The definition of the `Sink<TARRAY>` interface is:
 
-```
+```java
 public interface Sink<TARRAY> {
     void write(TARRAY src, boolean[] isNull, long destBegin,
         long destEnd, boolean appending);
@@ -82,7 +82,7 @@ write the "suffix" of a column prior to writing its "prefix". For example the sy
 
 Here is a sample implementation of `MyIntSink`, using a Java `int[]` array as the underlying data structure.
 
-```
+```java
 private static final class MyIntSink implements Sink<int[]> {
     private static final int INITIAL_SIZE = 1024;
 
@@ -126,7 +126,7 @@ factory methods. In our example, we would call `SinkFactory.ofSimple` as describ
 type is unused by your input, you can pass in `null` for that type. For example, if your application doesn't ever read
 DateTimes or Timestamps, you might leave those arguments null rather than bothering to implement sinks for them.
 
-```
+```java
 private static SinkFactory makeMySinkFactory() {
     return SinkFactory.ofSimple(
         MyByteSink::new,
@@ -148,7 +148,7 @@ private static SinkFactory makeMySinkFactory() {
 We now have everything we need to use our own data structures with the library. We use the same code from
 [README.md](README.md) with one small change: we call `makeMySinkFactory()` instead of `SinkFactory.arrays()`:
 
-```
+```java
 final InputStream inputStream = ...;
 final CsvSpecs specs = CsvSpecs.csv();
 final CsvReader.Result result = CsvReader.read(specs, inputStream, makeMySinkFactory); // ** CHANGED **
@@ -190,7 +190,7 @@ To handle nulls, you will need to modify the `write()` method that we described 
 uses `Integer.MIN_VALUE` as a null sentinel for the `int` type. These are the modifications needed for `MyIntSink`;
 you would need to do something similar for all your `MyXXXSinks`.
 
-```
+```java
 private static final class MyIntSink implements Sink<int[]> {
     private static final int INITIAL_SIZE = 1024;
 
@@ -250,7 +250,7 @@ int and would normally parse as an int. Instead, it needs to be rejected as an i
 as the next widest type, namely `long`. Sentinel values are conveyed to the library via the `SinkFactory` interface. For
 example, If you are using the factory methods, you can invoke this overload of SinkFactory.ofSimple:
 
-```
+```java
 private static SinkFactory makeMySinkFactory() {
     return SinkFactory.ofSimple(
         MyByteSink::new,
@@ -291,7 +291,7 @@ etc).
 
 The definition of `Source<TARRAY>` is:
 
-```
+```java
 public interface Source<TARRAY> {
     void read(final TARRAY dest, final boolean[] isNull,
         final long srcBegin, final long srcEnd);
@@ -318,7 +318,7 @@ These are the four arguments to `read`:
 What follows is a complete implementation of `MyIntSink`, including a `Source<int[]>` implementation and null value
 handling:
 
-```
+```java
 private static final class MyIntSink implements Sink<int[]>, Source<int[]> {
     private static final int INITIAL_SIZE = 1024;
 
