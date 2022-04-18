@@ -32,7 +32,7 @@ production applications will likely want to define their own column representati
 supplies them. The documentation in [ADVANCED.md](ADVANCED.md) describes how to do this. For now, we show how to process
 data using the builtin sink factory for arrays:
 
-```
+```java
 final InputStream inputStream = ...;
 final CsvSpecs specs = CsvSpecs.csv();
 final CsvReader.Result result = CsvReader.read(specs, inputStream, SinkFactory.arrays());
