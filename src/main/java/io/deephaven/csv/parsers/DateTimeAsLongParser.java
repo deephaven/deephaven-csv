@@ -15,7 +15,7 @@ public final class DateTimeAsLongParser implements Parser<long[]> {
     @NotNull
     @Override
     public ParserContext<long[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<long[]> sink = gctx.sinkFactory.forDateTimeAsLong();
+        final Sink<long[]> sink = gctx.sinkFactory.forDateTimeAsLong(gctx.colNum);
         return new ParserContext<>(sink, null, DataType.DATETIME_AS_LONG, new long[chunkSize]);
     }
 
@@ -33,7 +33,7 @@ public final class DateTimeAsLongParser implements Parser<long[]> {
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<long[]> sink = pctx.sink();
-        final Long reservedValue = gctx.sinkFactory.reservedLong();
+        final Long reservedValue = gctx.sinkFactory.reservedDateTimeAsLong();
         final long[] values = pctx.valueChunk();
 
         long current = begin;

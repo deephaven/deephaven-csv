@@ -19,7 +19,7 @@ public final class ByteParser implements Parser<byte[]> {
     @Override
     public ParserContext<byte[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<byte[]>> sourceHolder = new MutableObject<>();
-        final Sink<byte[]> sink = gctx.sinkFactory.forByte(sourceHolder);
+        final Sink<byte[]> sink = gctx.sinkFactory.forByte(gctx.colNum, sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.BYTE, new byte[chunkSize]);
     }
 

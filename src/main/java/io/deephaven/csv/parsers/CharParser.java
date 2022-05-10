@@ -15,7 +15,7 @@ public final class CharParser implements Parser<char[]> {
     @NotNull
     @Override
     public ParserContext<char[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<char[]> sink = gctx.sinkFactory.forChar();
+        final Sink<char[]> sink = gctx.sinkFactory.forChar(gctx.colNum);
         return new ParserContext<>(sink, null, DataType.CHAR, new char[chunkSize]);
     }
 

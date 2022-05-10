@@ -126,6 +126,7 @@ public final class CsvReader {
                 final int iiCopy = ii;
                 final Future<ParseDenseStorageToColumn.Result> fcb =
                         exec.submit(wrapError(() -> ParseDenseStorageToColumn.doit(
+                                iiCopy + 1, // 1-based column numbers
                                 dsrs.get(iiCopy).move(),
                                 parsersToUse,
                                 specs,

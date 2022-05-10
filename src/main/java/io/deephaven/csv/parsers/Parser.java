@@ -23,7 +23,7 @@ public interface Parser<TARRAY> {
      * 
      * <pre>
      * final MySink sink = new MySink();
-     * return new ParserContext&lt;&gt;(sink, null, new MyType[chunkSize]);
+     * return new ParserContext&lt;&gt;(sink, null, DataType.XXXType, new MyType[chunkSize]);
      * </pre>
      * 
      * <p>
@@ -76,6 +76,10 @@ public interface Parser<TARRAY> {
 
     class GlobalContext {
         /**
+         * The 1-based column number that the parser is working on.
+         */
+        public final int colNum;
+        /**
          * The Tokenizer is responsible for parsing entities like ints, doubles, supported DateTime formats, etc.
          */
         public final Tokenizer tokenizer;
@@ -94,8 +98,9 @@ public interface Parser<TARRAY> {
         /** An "isNull" chunk */
         private final boolean[] nullChunk;
 
-        public GlobalContext(
-                final Tokenizer tokenizer, final SinkFactory sinkFactory, final String[] nullValueLiterals) {
+        public GlobalContext(final int colNum, final Tokenizer tokenizer, final SinkFactory sinkFactory,
+                final String[] nullValueLiterals) {
+            this.colNum = colNum;
             this.tokenizer = tokenizer;
             this.sinkFactory = sinkFactory;
             isNullOrWidthOneSoFar = true;

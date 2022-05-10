@@ -31,7 +31,7 @@ public abstract class TimestampParserBase implements Parser<long[]> {
     @Override
     public ParserContext<long[]> makeParserContext(
             final Parser.GlobalContext gctx, final int chunkSize) {
-        final Sink<long[]> sink = gctx.sinkFactory.forTimestampAsLong();
+        final Sink<long[]> sink = gctx.sinkFactory.forTimestampAsLong(gctx.colNum);
         return new ParserContext<>(sink, null, DataType.TIMESTAMP_AS_LONG, new long[chunkSize]);
     }
 
@@ -49,7 +49,7 @@ public abstract class TimestampParserBase implements Parser<long[]> {
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<long[]> sink = pctx.sink();
-        final Long reservedValue = gctx.sinkFactory.reservedLong();
+        final Long reservedValue = gctx.sinkFactory.reservedTimestampAsLong();
         final long[] values = pctx.valueChunk();
 
         long current = begin;

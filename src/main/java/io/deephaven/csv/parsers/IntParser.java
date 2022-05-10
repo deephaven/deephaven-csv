@@ -19,7 +19,7 @@ public final class IntParser implements Parser<int[]> {
     @Override
     public ParserContext<int[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<int[]>> sourceHolder = new MutableObject<>();
-        final Sink<int[]> sink = gctx.sinkFactory.forInt(sourceHolder);
+        final Sink<int[]> sink = gctx.sinkFactory.forInt(gctx.colNum, sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.INT, new int[chunkSize]);
     }
 

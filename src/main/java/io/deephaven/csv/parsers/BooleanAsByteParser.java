@@ -16,7 +16,7 @@ public final class BooleanAsByteParser implements Parser<byte[]> {
     @NotNull
     @Override
     public ParserContext<byte[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<byte[]> sink = gctx.sinkFactory.forBooleanAsByte();
+        final Sink<byte[]> sink = gctx.sinkFactory.forBooleanAsByte(gctx.colNum);
         return new ParserContext<>(sink, null, DataType.BOOLEAN_AS_BYTE, new byte[chunkSize]);
     }
 
