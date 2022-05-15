@@ -13,7 +13,7 @@ public final class StringParser implements Parser<String[]> {
     @NotNull
     @Override
     public ParserContext<String[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<String[]> sink = gctx.sinkFactory.forString(gctx.colNum);
+        final Sink<String[]> sink = gctx.sinkFactory().forString(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.STRING, new String[chunkSize]);
     }
 
@@ -29,7 +29,7 @@ public final class StringParser implements Parser<String[]> {
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<String[]> sink = pctx.sink();
-        final String reservedValue = gctx.sinkFactory.reservedString();
+        final String reservedValue = gctx.sinkFactory().reservedString();
         final String[] values = pctx.valueChunk();
 
         long current = begin;

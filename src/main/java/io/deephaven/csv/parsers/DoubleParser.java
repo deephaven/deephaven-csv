@@ -15,7 +15,7 @@ public final class DoubleParser implements Parser<double[]> {
     @NotNull
     @Override
     public ParserContext<double[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<double[]> sink = gctx.sinkFactory.forDouble(gctx.colNum);
+        final Sink<double[]> sink = gctx.sinkFactory().forDouble(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.DOUBLE, new double[chunkSize]);
     }
 
@@ -29,11 +29,11 @@ public final class DoubleParser implements Parser<double[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableDouble doubleHolder = new MutableDouble();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<double[]> sink = pctx.sink();
-        final Double reservedValue = gctx.sinkFactory.reservedDouble();
+        final Double reservedValue = gctx.sinkFactory().reservedDouble();
         final double[] values = pctx.valueChunk();
 
         long current = begin;
@@ -60,7 +60,7 @@ public final class DoubleParser implements Parser<double[]> {
                 break;
             }
             if (ih.bs().size() > 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = value;
             nulls[chunkIndex] = false;

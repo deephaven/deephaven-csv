@@ -1698,10 +1698,10 @@ public class CsvReaderTest {
         final int bh0Num = (Integer) col[0].data();
         final int bh1Num = (Integer) col[1].data();
         final int bh2Num = (Integer) col[2].data();
-        // 1-based column numbers
-        Assertions.assertThat(bh0Num).isEqualTo(1);
-        Assertions.assertThat(bh1Num).isEqualTo(2);
-        Assertions.assertThat(bh2Num).isEqualTo(3);
+        // 0-based column numbers
+        Assertions.assertThat(bh0Num).isEqualTo(0);
+        Assertions.assertThat(bh1Num).isEqualTo(1);
+        Assertions.assertThat(bh2Num).isEqualTo(2);
     }
 
     private static final class RepeatingInputStream extends InputStream {

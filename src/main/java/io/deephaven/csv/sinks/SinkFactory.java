@@ -221,7 +221,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink and optional Source for the byte representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      * @param source The optional Source that can be used to read back the data for faster type inference.
      **/
     Sink<byte[]> forByte(int colNum, MutableObject<Source<byte[]>> source);
@@ -232,7 +232,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink and optional Source for the short representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      * @param source The optional Source that can be used to read back the data for faster type inference.
      **/
     Sink<short[]> forShort(int colNum, MutableObject<Source<short[]>> source);
@@ -243,7 +243,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink and optional Source for the int representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      * @param source The optional Source that can be used to read back the data for faster type inference.
      **/
     Sink<int[]> forInt(int colNum, MutableObject<Source<int[]>> source);
@@ -254,7 +254,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink and optional Source for the long representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      * @param source The optional Source that can be used to read back the data for faster type inference.
      **/
     Sink<long[]> forLong(int colNum, MutableObject<Source<long[]>> source);
@@ -265,7 +265,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the float representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<float[]> forFloat(int colNum);
 
@@ -275,7 +275,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the double representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<double[]> forDouble(int colNum);
 
@@ -285,7 +285,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the booelan as byte representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<byte[]> forBooleanAsByte(int colNum);
 
@@ -294,7 +294,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the char representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<char[]> forChar(int colNum);
 
@@ -304,7 +304,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the String representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<String[]> forString(int colNum);
 
@@ -314,7 +314,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the datetime as long representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<long[]> forDateTimeAsLong(int colNum);
 
@@ -324,7 +324,7 @@ public interface SinkFactory {
     /**
      * Provide a Sink for the Timestamp (as long) representation.
      * 
-     * @param colNum The (one-based) column number that this Sink will be used for.
+     * @param colNum The (zero-based) column number that this Sink will be used for.
      **/
     Sink<long[]> forTimestampAsLong(int colNum);
 
