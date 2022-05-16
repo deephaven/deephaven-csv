@@ -69,7 +69,7 @@ dependencies {
     testImplementation(platform('org.junit:junit-bom:5.8.2'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
-    jmh 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.2'
+    jmh 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.3'
     jmh 'com.opencsv:opencsv:5.6'
     jmh 'com.univocity:univocity-parsers:2.9.1'
     jmh 'de.siegmar:fastcsv:2.1.0'
