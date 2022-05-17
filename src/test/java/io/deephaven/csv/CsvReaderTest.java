@@ -792,7 +792,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("A", 1, 4), Column.ofValues("Qux", 2, 5), Column.ofValues("C", 3, 6));
 
-        invokeTest(defaultCsvBuilder().headers(List.of("A", "B", "C")).putHeaderForIndex(2, "Qux").build(), input,
+        invokeTest(defaultCsvBuilder().headers(List.of("A", "B", "C")).putHeaderForIndex(1, "Qux").build(), input,
                 expected);
     }
 
@@ -1074,7 +1074,7 @@ public class CsvReaderTest {
                                         .build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage(
-                        "Row 4 is short, but can't null-fill it because there is no configured null value literal for column 2.");
+                        "Row 4 is short, but can't null-fill it because there is no configured null value literal for column \"B\".");
     }
 
     @Test
@@ -1561,8 +1561,8 @@ public class CsvReaderTest {
         invokeTest(
                 defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
-                        .putNullValueLiteralsForIndex(1, Collections.singletonList("❌"))
-                        .putNullValueLiteralsForIndex(2, Collections.singletonList("🔥"))
+                        .putNullValueLiteralsForIndex(0, Collections.singletonList("❌"))
+                        .putNullValueLiteralsForIndex(1, Collections.singletonList("🔥"))
                         .putNullValueLiteralsForName("SomeInts", Collections.singletonList("⋰⋱"))
                         .putNullValueLiteralsForName("SomeLongs", Collections.singletonList("𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷"))
                         .build(),
@@ -1660,7 +1660,7 @@ public class CsvReaderTest {
             final BigDecimal[] arr = ((List<BigDecimal>) obj).toArray(new BigDecimal[0]);
             return Column.ofArray(name, arr, size);
         };
-        invokeTest(defaultCsvBuilder().putParserForIndex(2, new MyBigDecimalParser()).build(), input, expected,
+        invokeTest(defaultCsvBuilder().putParserForIndex(1, new MyBigDecimalParser()).build(), input, expected,
                 makeMySinkFactory(), makeCustomColumn);
     }
 
@@ -1730,7 +1730,7 @@ public class CsvReaderTest {
         }
 
         @Override
-        public int read(@NotNull byte[] b, int off, int len) throws IOException {
+        public int read(byte @NotNull [] b, int off, int len) {
             if (len == 0) {
                 return 0;
             }

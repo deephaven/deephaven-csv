@@ -35,8 +35,7 @@ public abstract class CsvSpecs {
         Builder headers(Iterable<String> elements);
 
         /**
-         * Override a specific column header by number. This is applied after {@link #headers()}. Column numbers start
-         * with 1.
+         * Override a specific column header by 0-based column index. This is applied after {@link #headers()}.
          */
         Builder putHeaderForIndex(int index, String header);
 
@@ -61,8 +60,8 @@ public abstract class CsvSpecs {
         Builder putParserForName(String columnName, Parser<?> parser);
 
         /**
-         * Used to force a specific parser for a specific column, specified by column number. Column numbers start with
-         * 1. Specifying a parser forgoes column inference for that column.
+         * Used to force a specific parser for a specific column, specified by 0-based column index. Specifying a parser
+         * forgoes column inference for that column.
          */
         Builder putParserForIndex(int index, Parser<?> parser);
 
@@ -82,7 +81,7 @@ public abstract class CsvSpecs {
         Builder putNullValueLiteralsForName(String columnName, List<String> nullValueLiteral);
 
         /**
-         * The null value literal for specific columns, specified by 1-based column index. Specifying a null value
+         * The null value literal for specific columns, specified by 0-based column index. Specifying a null value
          * literal for a column overrides the value in {@link #nullValueLiterals()}.
          */
         Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
