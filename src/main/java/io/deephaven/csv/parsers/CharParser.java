@@ -15,7 +15,7 @@ public final class CharParser implements Parser<char[]> {
     @NotNull
     @Override
     public ParserContext<char[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<char[]> sink = gctx.sinkFactory.forChar();
+        final Sink<char[]> sink = gctx.sinkFactory().forChar(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.CHAR, new char[chunkSize]);
     }
 
@@ -29,14 +29,14 @@ public final class CharParser implements Parser<char[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableInt intHolder = new MutableInt();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<char[]> sink = pctx.sink();
-        final Character reservedValue = gctx.sinkFactory.reservedChar();
+        final Character reservedValue = gctx.sinkFactory().reservedChar();
         final char[] values = pctx.valueChunk();
 
-        if (!gctx.isNullOrWidthOneSoFar) {
+        if (!gctx.isNullOrWidthOneSoFar()) {
             return begin;
         }
 
@@ -56,7 +56,7 @@ public final class CharParser implements Parser<char[]> {
                 continue;
             }
             if (!t.tryParseBMPChar(ih.bs(), intHolder)) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
                 break;
             }
             final char value = (char) intHolder.intValue();

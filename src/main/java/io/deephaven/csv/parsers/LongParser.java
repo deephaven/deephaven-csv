@@ -18,7 +18,7 @@ public final class LongParser implements Parser<long[]> {
     @Override
     public ParserContext<long[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<long[]>> sourceHolder = new MutableObject<>();
-        final Sink<long[]> sink = gctx.sinkFactory.forLong(sourceHolder);
+        final Sink<long[]> sink = gctx.sinkFactory().forLong(gctx.colNum(), sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.LONG, new long[chunkSize]);
     }
 
@@ -32,11 +32,11 @@ public final class LongParser implements Parser<long[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableLong longHolder = new MutableLong();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<long[]> sink = pctx.sink();
-        final Long reservedValue = gctx.sinkFactory.reservedLong();
+        final Long reservedValue = gctx.sinkFactory().reservedLong();
         final long[] values = pctx.valueChunk();
 
         long current = begin;
@@ -63,7 +63,7 @@ public final class LongParser implements Parser<long[]> {
                 break;
             }
             if (ih.bs().size() > 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = value;
             nulls[chunkIndex] = false;

@@ -31,7 +31,7 @@ public abstract class TimestampParserBase implements Parser<long[]> {
     @Override
     public ParserContext<long[]> makeParserContext(
             final Parser.GlobalContext gctx, final int chunkSize) {
-        final Sink<long[]> sink = gctx.sinkFactory.forTimestampAsLong();
+        final Sink<long[]> sink = gctx.sinkFactory().forTimestampAsLong(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.TIMESTAMP_AS_LONG, new long[chunkSize]);
     }
 
@@ -45,11 +45,11 @@ public abstract class TimestampParserBase implements Parser<long[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableLong longHolder = new MutableLong();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<long[]> sink = pctx.sink();
-        final Long reservedValue = gctx.sinkFactory.reservedLong();
+        final Long reservedValue = gctx.sinkFactory().reservedTimestampAsLong();
         final long[] values = pctx.valueChunk();
 
         long current = begin;
@@ -79,7 +79,7 @@ public abstract class TimestampParserBase implements Parser<long[]> {
                 break;
             }
             if (ih.bs().size() > 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = value * scale;
             nulls[chunkIndex] = false;

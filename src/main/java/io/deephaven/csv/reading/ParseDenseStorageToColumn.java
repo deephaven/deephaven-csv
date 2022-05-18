@@ -28,7 +28,8 @@ public final class ParseDenseStorageToColumn {
      *         data.
      */
     public static Result doit(
-            Moveable<DenseStorageReader> dsr,
+            final int colNum,
+            final Moveable<DenseStorageReader> dsr,
             final List<Parser<?>> parsers,
             final CsvSpecs specs,
             final String[] nullValueLiteralsToUse,
@@ -38,7 +39,7 @@ public final class ParseDenseStorageToColumn {
 
         final Tokenizer tokenizer = new Tokenizer(specs.customDoubleParser(), specs.customTimeZoneParser());
         final Parser.GlobalContext gctx =
-                new Parser.GlobalContext(tokenizer, sinkFactory, nullValueLiteralsToUse);
+                new Parser.GlobalContext(colNum, tokenizer, sinkFactory, nullValueLiteralsToUse);
 
         // Make an IteratorHolder for the first pass over the input. Make a copy of the DenseStorageReader in case
         // we need to do a second pass. We take care to not hold these references longer than necessary, to give the

@@ -792,7 +792,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("A", 1, 4), Column.ofValues("Qux", 2, 5), Column.ofValues("C", 3, 6));
 
-        invokeTest(defaultCsvBuilder().headers(List.of("A", "B", "C")).putHeaderForIndex(2, "Qux").build(), input,
+        invokeTest(defaultCsvBuilder().headers(List.of("A", "B", "C")).putHeaderForIndex(1, "Qux").build(), input,
                 expected);
     }
 
@@ -1074,7 +1074,7 @@ public class CsvReaderTest {
                                         .build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage(
-                        "Row 4 is short, but can't null-fill it because there is no configured null value literal for column 2.");
+                        "Row 4 is short, but can't null-fill it because there is no configured null value literal for column \"B\".");
     }
 
     @Test
@@ -1561,8 +1561,8 @@ public class CsvReaderTest {
         invokeTest(
                 defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
-                        .putNullValueLiteralsForIndex(1, Collections.singletonList("❌"))
-                        .putNullValueLiteralsForIndex(2, Collections.singletonList("🔥"))
+                        .putNullValueLiteralsForIndex(0, Collections.singletonList("❌"))
+                        .putNullValueLiteralsForIndex(1, Collections.singletonList("🔥"))
                         .putNullValueLiteralsForName("SomeInts", Collections.singletonList("⋰⋱"))
                         .putNullValueLiteralsForName("SomeLongs", Collections.singletonList("𝓓𝓮𝓮𝓹𝓱𝓪𝓿𝓮𝓷"))
                         .build(),
@@ -1660,7 +1660,7 @@ public class CsvReaderTest {
             final BigDecimal[] arr = ((List<BigDecimal>) obj).toArray(new BigDecimal[0]);
             return Column.ofArray(name, arr, size);
         };
-        invokeTest(defaultCsvBuilder().putParserForIndex(2, new MyBigDecimalParser()).build(), input, expected,
+        invokeTest(defaultCsvBuilder().putParserForIndex(1, new MyBigDecimalParser()).build(), input, expected,
                 makeMySinkFactory(), makeCustomColumn);
     }
 
@@ -1675,6 +1675,33 @@ public class CsvReaderTest {
         final CsvSpecs specs = defaultCsvBuilder().parsers(List.of(Parsers.INT)).build();
         final SinkFactory sinkFactory = makeBlackholeSinkFactory();
         final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
+    }
+
+    /**
+     * Check that Sinks get told their colnums.
+     */
+    @Test
+    public void colnumPassedThrough() throws CsvReaderException {
+        final String input = "" + "Col1,Col2,Col3\n" + "1,2,3\n" + "4,5,6\n" + "7,8,9\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("Col1", 1, 4, 7),
+                        Column.ofValues("Col2", 2, 5, 8),
+                        Column.ofValues("Col3", 3, 6, 9));
+
+        final InputStream inputStream = toInputStream(input);
+        final CsvSpecs specs = defaultCsvSpecs();
+        final SinkFactory sinkFactory = makeBlackholeSinkFactory();
+        final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
+        final CsvReader.ResultColumn[] col = result.columns();
+        final int bh0Num = (Integer) col[0].data();
+        final int bh1Num = (Integer) col[1].data();
+        final int bh2Num = (Integer) col[2].data();
+        // 0-based column numbers
+        Assertions.assertThat(bh0Num).isEqualTo(0);
+        Assertions.assertThat(bh1Num).isEqualTo(1);
+        Assertions.assertThat(bh2Num).isEqualTo(2);
     }
 
     private static final class RepeatingInputStream extends InputStream {
@@ -1703,7 +1730,7 @@ public class CsvReaderTest {
         }
 
         @Override
-        public int read(@NotNull byte[] b, int off, int len) throws IOException {
+        public int read(byte @NotNull [] b, int off, int len) {
             if (len == 0) {
                 return 0;
             }
@@ -2098,33 +2125,37 @@ public class CsvReaderTest {
 
     private static SinkFactory makeBlackholeSinkFactory() {
         return SinkFactory.of(
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>(),
-                () -> new Blackhole<>());
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new);
     }
 
     private static class Blackhole<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
-        @Override
-        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
-            // System.out.println("SLEEPING FOR 5 SECONDS");
-            // try {
-            // Thread.sleep(5 * 1000);
-            // } catch (InterruptedException ie) {
-            // throw new RuntimeException("sad");
-            // }
+        private final int colNum;
+
+        public Blackhole(int colNum) {
+            this.colNum = colNum;
         }
 
         @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            // Do nothing.
+        }
+
+        /**
+         * For the sake of one of our unit tests, we return the colNum as our underlying.
+         */
+        @Override
         public Object getUnderlying() {
-            return null;
+            return colNum;
         }
 
         @Override

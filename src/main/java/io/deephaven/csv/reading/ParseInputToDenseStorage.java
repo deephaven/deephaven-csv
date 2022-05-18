@@ -24,6 +24,7 @@ public class ParseInputToDenseStorage {
      * Take cell text (parsed by the {@link CellGrabber}), and feed them to the various {@link DenseStorageWriter}
      * classes.
      *
+     * @param columnHeaders The column headers.
      * @param optionalFirstDataRow If not null, this is the first row of data from the file, which the caller had to
      *        peek at in order to know the number of columns in the file.
      * @param grabber The {@link CellGrabber} which does all the CSV format handling (delimiters, quotes, etc).
@@ -34,7 +35,8 @@ public class ParseInputToDenseStorage {
      * @param specs The {@link CsvSpecs} which control how the CSV file is interpreted.
      * @return The number of data rows in the input (i.e. not including headers or strings split across multiple lines).
      */
-    public static long doit(final byte[][] optionalFirstDataRow,
+    public static long doit(final String[] columnHeaders,
+            final byte[][] optionalFirstDataRow,
             final CellGrabber grabber,
             final CsvSpecs specs,
             final String[][] nullValueLiteralsToUse,
@@ -44,7 +46,7 @@ public class ParseInputToDenseStorage {
         long numProcessedRows = 0;
 
         final RowAppender rowAppender =
-                new RowAppender(optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
+                new RowAppender(columnHeaders, optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
         long skipRows = specs.skipRows();
         while (skipRows != 0) {
             final RowResult result = rowAppender.processNextRow(false);
@@ -80,6 +82,7 @@ public class ParseInputToDenseStorage {
     }
 
     private static class RowAppender {
+        private final String[] columnHeaders;
         private byte[][] optionalFirstDataRow;
         private final CellGrabber grabber;
         private final DenseStorageWriter[] dsws;
@@ -89,8 +92,10 @@ public class ParseInputToDenseStorage {
         private final MutableBoolean lastInRow;
         private final byte[][] nullValueLiteralsAsUtf8;
 
-        public RowAppender(final byte[][] optionalFirstDataRow, final CellGrabber grabber, final CsvSpecs specs,
-                final String[][] nullValueLiteralsToUse, final DenseStorageWriter[] dsws) throws CsvReaderException {
+        public RowAppender(final String[] columnHeaders, final byte[][] optionalFirstDataRow, final CellGrabber grabber,
+                final CsvSpecs specs, final String[][] nullValueLiteralsToUse, final DenseStorageWriter[] dsws)
+                throws CsvReaderException {
+            this.columnHeaders = columnHeaders;
             this.optionalFirstDataRow = optionalFirstDataRow;
             this.grabber = grabber;
             this.dsws = dsws;
@@ -188,8 +193,8 @@ public class ParseInputToDenseStorage {
                     }
                     appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
                 } catch (Exception e) {
-                    final String message =
-                            String.format("While processing row %d, column %d:", physicalRowNum + 1, colNum + 1);
+                    final String message = String.format("While processing row %d, column %s:", physicalRowNum + 1,
+                            describeColumnHeader(columnHeaders, colNum));
                     throw new CsvReaderException(message, e);
                 }
             }
@@ -226,8 +231,8 @@ public class ParseInputToDenseStorage {
                 final byte[] nvl = nullValueLiteralsAsUtf8[colNum];
                 if (nvl == null) {
                     final String message = String.format(
-                            "Row %d is short, but can't null-fill it because there is no configured null value literal for column %d.",
-                            physicalRowNum + 1, colNum + 1);
+                            "Row %d is short, but can't null-fill it because there is no configured null value literal for column %s.",
+                            physicalRowNum + 1, describeColumnHeader(columnHeaders, colNum));
                     throw new CsvReaderException(message);
                 }
                 byteSlice.reset(nvl, 0, nvl.length);
@@ -258,5 +263,18 @@ public class ParseInputToDenseStorage {
         if (bs.size() != 0) {
             throw new CsvReaderException("Column assumed empty but contains data");
         }
+    }
+
+    /**
+     * Return either the specified header name in quotes, or the string "(Column N)" if we don't have a header name for
+     * the specified colNum. This latter case can happen if the file has trailing delimiters, which we treat as a kind
+     * of shadow column with no data, and if there's an error in that column (i.e. if some data shows up in some row of
+     * that column, which is required to be completely empty).
+     */
+    private static String describeColumnHeader(final String[] columnHeaders, final int colNum) {
+        if (colNum < columnHeaders.length) {
+            return '"' + columnHeaders[colNum] + '"';
+        }
+        return String.format("(Column %d)", colNum);
     }
 }

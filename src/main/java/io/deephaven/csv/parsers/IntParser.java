@@ -19,7 +19,7 @@ public final class IntParser implements Parser<int[]> {
     @Override
     public ParserContext<int[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<int[]>> sourceHolder = new MutableObject<>();
-        final Sink<int[]> sink = gctx.sinkFactory.forInt(sourceHolder);
+        final Sink<int[]> sink = gctx.sinkFactory().forInt(gctx.colNum(), sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.INT, new int[chunkSize]);
     }
 
@@ -33,11 +33,11 @@ public final class IntParser implements Parser<int[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableLong longHolder = new MutableLong();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<int[]> sink = pctx.sink();
-        final Integer reservedValue = gctx.sinkFactory.reservedInt();
+        final Integer reservedValue = gctx.sinkFactory().reservedInt();
         final int[] values = pctx.valueChunk();
 
         long current = begin;
@@ -68,7 +68,7 @@ public final class IntParser implements Parser<int[]> {
             }
             if (ih.bs().size() > 1) {
                 // Not an error, but needed in case we eventually fall back to char.
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = (int) value;
             nulls[chunkIndex] = false;

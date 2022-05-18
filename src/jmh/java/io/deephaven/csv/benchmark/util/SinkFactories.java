@@ -4,7 +4,7 @@ import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.Source;
 import io.deephaven.csv.sinks.SinkFactory;
 
-import java.util.function.Supplier;
+import java.util.function.IntFunction;
 
 public final class SinkFactories {
     public static SinkFactory makeRecyclingSinkFactory(byte[][] byteBuffers, int[][] intBuffers, long[][] longBuffers,
@@ -26,11 +26,11 @@ public final class SinkFactories {
     private interface SourceSink<TARRAY> extends Source<TARRAY>, Sink<TARRAY> {
     }
 
-    private static <TARRAY> Supplier<SourceSink<TARRAY>> makeSupplier(final TARRAY[] buffers) {
+    private static <TARRAY> IntFunction<SourceSink<TARRAY>> makeSupplier(final TARRAY[] buffers) {
         return buffers == null ? null : new RecyclingSinkSupplier<>(buffers);
     }
 
-    private static final class RecyclingSinkSupplier<TARRAY> implements Supplier<SourceSink<TARRAY>> {
+    private static final class RecyclingSinkSupplier<TARRAY> implements IntFunction<SourceSink<TARRAY>> {
         private final TARRAY[] buffers;
         private int nextIndex;
 
@@ -40,7 +40,7 @@ public final class SinkFactories {
         }
 
         @Override
-        public SourceSink<TARRAY> get() {
+        public SourceSink<TARRAY> apply(final int colNum) {
             if (nextIndex == buffers.length) {
                 throw new RuntimeException("Ran out of buffers");
             }

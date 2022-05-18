@@ -20,7 +20,7 @@ public final class FloatStrictParser implements Parser<float[]> {
     @NotNull
     @Override
     public ParserContext<float[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<float[]> sink = gctx.sinkFactory.forFloat();
+        final Sink<float[]> sink = gctx.sinkFactory().forFloat(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.FLOAT, new float[chunkSize]);
     }
 
@@ -34,11 +34,11 @@ public final class FloatStrictParser implements Parser<float[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableFloat floatHolder = new MutableFloat();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<float[]> sink = pctx.sink();
-        final Float reservedValue = gctx.sinkFactory.reservedFloat();
+        final Float reservedValue = gctx.sinkFactory().reservedFloat();
         final float[] values = pctx.valueChunk();
 
         long current = begin;
@@ -65,7 +65,7 @@ public final class FloatStrictParser implements Parser<float[]> {
                 break;
             }
             if (ih.bs().size() > 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = value;
             nulls[chunkIndex] = false;

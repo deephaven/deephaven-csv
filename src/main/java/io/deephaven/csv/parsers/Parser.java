@@ -23,7 +23,7 @@ public interface Parser<TARRAY> {
      * 
      * <pre>
      * final MySink sink = new MySink();
-     * return new ParserContext&lt;&gt;(sink, null, new MyType[chunkSize]);
+     * return new ParserContext&lt;&gt;(sink, null, DataType.XXXType, new MyType[chunkSize]);
      * </pre>
      * 
      * <p>
@@ -76,16 +76,20 @@ public interface Parser<TARRAY> {
 
     class GlobalContext {
         /**
+         * The 0-based column number that the parser is working on.
+         */
+        private final int colNum;
+        /**
          * The Tokenizer is responsible for parsing entities like ints, doubles, supported DateTime formats, etc.
          */
-        public final Tokenizer tokenizer;
+        private final Tokenizer tokenizer;
         /** Caller-specified interface for making all the various Sink&lt;TARRAY&gt; types. */
-        public final SinkFactory sinkFactory;
+        private final SinkFactory sinkFactory;
         /**
          * Whether all the cells seen so far are the "null" indicator (usually the empty string), or are 1 character in
          * length. This is used when inferring char vs String.
          */
-        public boolean isNullOrWidthOneSoFar;
+        private boolean isNullOrWidthOneSoFar;
         /**
          * The array of null sentinels, each encoded in UTF-8. The user can configure as many null sentinels as they
          * want (including no null sentinels).
@@ -94,8 +98,9 @@ public interface Parser<TARRAY> {
         /** An "isNull" chunk */
         private final boolean[] nullChunk;
 
-        public GlobalContext(
-                final Tokenizer tokenizer, final SinkFactory sinkFactory, final String[] nullValueLiterals) {
+        public GlobalContext(final int colNum, final Tokenizer tokenizer, final SinkFactory sinkFactory,
+                final String[] nullValueLiterals) {
+            this.colNum = colNum;
             this.tokenizer = tokenizer;
             this.sinkFactory = sinkFactory;
             isNullOrWidthOneSoFar = true;
@@ -127,6 +132,30 @@ public interface Parser<TARRAY> {
                 }
             }
             return false;
+        }
+
+        public int colNum() {
+            return colNum;
+        }
+
+        public Tokenizer tokenizer() {
+            return tokenizer;
+        }
+
+        public SinkFactory sinkFactory() {
+            return sinkFactory;
+        }
+
+        public boolean isNullOrWidthOneSoFar() {
+            return isNullOrWidthOneSoFar;
+        }
+
+        public void clearIsNullOrWidthOneSoFar() {
+            isNullOrWidthOneSoFar = false;
+        }
+
+        public byte[][] nullSentinelsAsBytes() {
+            return nullSentinelsAsBytes;
         }
 
         public boolean[] nullChunk() {

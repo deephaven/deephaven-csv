@@ -88,7 +88,7 @@ public final class CsvReader {
         final String[][] nullValueLiteralsToUse = new String[numOutputCols][];
         for (int ii = 0; ii < numOutputCols; ++ii) {
             nullValueLiteralsToUse[ii] =
-                    calcNullValueLiteralsToUse(specs, headersToUse[ii], ii + 1).toArray(new String[0]);
+                    calcNullValueLiteralsToUse(specs, headersToUse[ii], ii).toArray(new String[0]);
         }
 
         // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to
@@ -114,18 +114,19 @@ public final class CsvReader {
 
         // Start the writer
         final Future<Long> numRowsFuture =
-                exec.submit(wrapError(() -> ParseInputToDenseStorage.doit(firstDataRow, grabber, specs,
+                exec.submit(wrapError(() -> ParseInputToDenseStorage.doit(headersToUse, firstDataRow, grabber, specs,
                         nullValueLiteralsToUse, dsws)));
 
         // Start the readers, taking care to not hold a reference to the DenseStorageReader.
         final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
         try {
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii + 1);
+                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii);
 
                 final int iiCopy = ii;
                 final Future<ParseDenseStorageToColumn.Result> fcb =
                         exec.submit(wrapError(() -> ParseDenseStorageToColumn.doit(
+                                iiCopy, // 0-based column numbers
                                 dsrs.get(iiCopy).move(),
                                 parsersToUse,
                                 specs,
@@ -171,13 +172,13 @@ public final class CsvReader {
      * Determine which list of parsers to use for type inference. Returns {@link CsvSpecs#parsers} unless the user has
      * set an override on a column name or column number basis.
      */
-    private static List<Parser<?>> calcParsersToUse(final CsvSpecs specs,
-            final String columnName, final int oneBasedColumnNumber) {
+    private static List<Parser<?>> calcParsersToUse(final CsvSpecs specs, final String columnName,
+            final int columnIndex) {
         Parser<?> specifiedParser = specs.parserForName().get(columnName);
         if (specifiedParser != null) {
             return Collections.singletonList(specifiedParser);
         }
-        specifiedParser = specs.parserForIndex().get(oneBasedColumnNumber);
+        specifiedParser = specs.parserForIndex().get(columnIndex);
         if (specifiedParser != null) {
             return Collections.singletonList(specifiedParser);
         }
@@ -188,13 +189,13 @@ public final class CsvReader {
      * Determine which null value literal to use. Returns {@link CsvSpecs#nullValueLiterals()} unless the user has set
      * an override on a column name or column number basis.
      */
-    private static List<String> calcNullValueLiteralsToUse(final CsvSpecs specs,
-            final String columnName, final int oneBasedColumnNumber) {
+    private static List<String> calcNullValueLiteralsToUse(final CsvSpecs specs, final String columnName,
+            final int columnIndex) {
         List<String> result = specs.nullValueLiteralsForName().get(columnName);
         if (result != null) {
             return result;
         }
-        result = specs.nullValueLiteralsForIndex().get(oneBasedColumnNumber);
+        result = specs.nullValueLiteralsForIndex().get(columnIndex);
         if (result != null) {
             return result;
         }
@@ -224,8 +225,7 @@ public final class CsvReader {
         }
 
         // If we still have nothing, try generate synthetic column headers (works only if the file is
-        // non-empty,
-        // because we need to infer the column count).
+        // non-empty, because we need to infer the column count).
         final byte[][] firstDataRow;
         if (headersToUse == null) {
             firstDataRow = tryReadOneRow(grabber);
@@ -243,7 +243,7 @@ public final class CsvReader {
 
         // Apply column specific overrides.
         for (Map.Entry<Integer, String> entry : specs.headerForIndex().entrySet()) {
-            headersToUse[entry.getKey() - 1] = entry.getValue();
+            headersToUse[entry.getKey()] = entry.getValue();
         }
 
         firstDataRowHolder.setValue(firstDataRow);

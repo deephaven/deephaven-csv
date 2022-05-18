@@ -35,7 +35,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<byte[]> forByte(MutableObject<Source<byte[]>> source) {
+    public Sink<byte[]> forByte(final int colNum, final MutableObject<Source<byte[]>> source) {
         final ArrayByteSink result = new ArrayByteSink(byteSentinel);
         source.setValue(result);
         return result;
@@ -47,7 +47,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<short[]> forShort(MutableObject<Source<short[]>> source) {
+    public Sink<short[]> forShort(final int colNum, final MutableObject<Source<short[]>> source) {
         final ArrayShortSink result = new ArrayShortSink(shortSentinel);
         source.setValue(result);
         return result;
@@ -59,7 +59,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<int[]> forInt(MutableObject<Source<int[]>> source) {
+    public Sink<int[]> forInt(final int colNum, final MutableObject<Source<int[]>> source) {
         final ArrayIntSink result = new ArrayIntSink(intSentinel);
         source.setValue(result);
         return result;
@@ -71,7 +71,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<long[]> forLong(MutableObject<Source<long[]>> source) {
+    public Sink<long[]> forLong(final int colNum, final MutableObject<Source<long[]>> source) {
         final ArrayLongSink result = new ArrayLongSink(longSentinel);
         source.setValue(result);
         return result;
@@ -83,7 +83,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<float[]> forFloat() {
+    public Sink<float[]> forFloat(final int colNum) {
         return new ArrayFloatSink(floatSentinel);
     }
 
@@ -93,7 +93,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<double[]> forDouble() {
+    public Sink<double[]> forDouble(final int colNum) {
         return new ArrayDoubleSink(doubleSentinel);
     }
 
@@ -103,12 +103,12 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<byte[]> forBooleanAsByte() {
+    public Sink<byte[]> forBooleanAsByte(final int colNum) {
         return new ArrayBooleanAsByteSink(booleanAsByteSentinel);
     }
 
     @Override
-    public Sink<char[]> forChar() {
+    public Sink<char[]> forChar(final int colNum) {
         return new ArrayCharSink(charSentinel);
     }
 
@@ -118,7 +118,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<String[]> forString() {
+    public Sink<String[]> forString(final int colNum) {
         return new ArrayStringSink(stringSentinel);
     }
 
@@ -128,7 +128,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<long[]> forDateTimeAsLong() {
+    public Sink<long[]> forDateTimeAsLong(final int colNum) {
         return new ArrayDateTimeAsLongSink(dateTimeAsLongSentinel);
     }
 
@@ -138,7 +138,7 @@ public class ArraySinkFactory implements SinkFactory {
     }
 
     @Override
-    public Sink<long[]> forTimestampAsLong() {
+    public Sink<long[]> forTimestampAsLong(final int colNum) {
         return new ArrayTimestampAsLongSink(timestampAsLongSentinel);
     }
 

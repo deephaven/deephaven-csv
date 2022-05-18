@@ -1,6 +1,5 @@
 package io.deephaven.csv.parsers;
 
-import io.deephaven.csv.reading.CsvReader;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.util.CsvReaderException;
@@ -16,7 +15,7 @@ public final class BooleanAsByteParser implements Parser<byte[]> {
     @NotNull
     @Override
     public ParserContext<byte[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
-        final Sink<byte[]> sink = gctx.sinkFactory.forBooleanAsByte();
+        final Sink<byte[]> sink = gctx.sinkFactory().forBooleanAsByte(gctx.colNum());
         return new ParserContext<>(sink, null, DataType.BOOLEAN_AS_BYTE, new byte[chunkSize]);
     }
 
@@ -30,7 +29,7 @@ public final class BooleanAsByteParser implements Parser<byte[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableBoolean booleanHolder = new MutableBoolean();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<byte[]> sink = pctx.sink();
@@ -54,7 +53,7 @@ public final class BooleanAsByteParser implements Parser<byte[]> {
             if (!t.tryParseBoolean(ih.bs(), booleanHolder)) {
                 break;
             }
-            gctx.isNullOrWidthOneSoFar = false;
+            gctx.clearIsNullOrWidthOneSoFar();
             values[chunkIndex] = booleanHolder.booleanValue() ? (byte) 1 : (byte) 0;
             nulls[chunkIndex] = false;
             ++chunkIndex;

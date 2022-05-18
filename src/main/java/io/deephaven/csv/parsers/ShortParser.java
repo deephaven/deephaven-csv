@@ -19,7 +19,7 @@ public final class ShortParser implements Parser<short[]> {
     @Override
     public ParserContext<short[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<short[]>> sourceHolder = new MutableObject<>();
-        final Sink<short[]> sink = gctx.sinkFactory.forShort(sourceHolder);
+        final Sink<short[]> sink = gctx.sinkFactory().forShort(gctx.colNum(), sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.SHORT, new short[chunkSize]);
     }
 
@@ -33,11 +33,11 @@ public final class ShortParser implements Parser<short[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableLong longHolder = new MutableLong();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<short[]> sink = pctx.sink();
-        final Short reservedValue = gctx.sinkFactory.reservedShort();
+        final Short reservedValue = gctx.sinkFactory().reservedShort();
         final short[] values = pctx.valueChunk();
 
         long current = begin;
@@ -67,7 +67,7 @@ public final class ShortParser implements Parser<short[]> {
                 break;
             }
             if (ih.bs().size() > 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = (short) value;
             nulls[chunkIndex] = false;

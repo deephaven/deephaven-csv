@@ -19,7 +19,7 @@ public final class ByteParser implements Parser<byte[]> {
     @Override
     public ParserContext<byte[]> makeParserContext(final GlobalContext gctx, final int chunkSize) {
         final MutableObject<Source<byte[]>> sourceHolder = new MutableObject<>();
-        final Sink<byte[]> sink = gctx.sinkFactory.forByte(sourceHolder);
+        final Sink<byte[]> sink = gctx.sinkFactory().forByte(gctx.colNum(), sourceHolder);
         return new ParserContext<>(sink, sourceHolder.getValue(), DataType.BYTE, new byte[chunkSize]);
     }
 
@@ -33,11 +33,11 @@ public final class ByteParser implements Parser<byte[]> {
             final boolean appending)
             throws CsvReaderException {
         final MutableLong longHolder = new MutableLong();
-        final Tokenizer t = gctx.tokenizer;
+        final Tokenizer t = gctx.tokenizer();
         final boolean[] nulls = gctx.nullChunk();
 
         final Sink<byte[]> sink = pctx.sink();
-        final Byte reservedValue = gctx.sinkFactory.reservedByte();
+        final Byte reservedValue = gctx.sinkFactory().reservedByte();
         final byte[] values = pctx.valueChunk();
 
         long current = begin;
@@ -67,7 +67,7 @@ public final class ByteParser implements Parser<byte[]> {
                 break;
             }
             if (ih.bs().size() != 1) {
-                gctx.isNullOrWidthOneSoFar = false;
+                gctx.clearIsNullOrWidthOneSoFar();
             }
             values[chunkIndex] = (byte) value;
             nulls[chunkIndex] = false;
