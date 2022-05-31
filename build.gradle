@@ -65,7 +65,7 @@ dependencies {
     testImplementation 'commons-io:commons-io:2.11.0'
     testCompileOnly 'org.jetbrains:annotations:23.0.0'
 
-    testImplementation 'org.assertj:assertj-core:3.22.0'
+    testImplementation 'org.assertj:assertj-core:3.23.0'
     testImplementation(platform('org.junit:junit-bom:5.8.2'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
