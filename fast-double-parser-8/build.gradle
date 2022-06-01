@@ -33,7 +33,7 @@ dependencies {
     // Requires Java 8+
     implementation 'ch.randelshofer:fastdoubleparser:0.2.0'
 
-    testImplementation 'org.assertj:assertj-core:3.22.0'
+    testImplementation 'org.assertj:assertj-core:3.23.1'
     testImplementation(platform('org.junit:junit-bom:5.8.2'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
