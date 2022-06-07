@@ -112,10 +112,11 @@ public final class CsvReader {
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
 
+        final GroupWaiter groupWaiter = new GroupWaiter(exec);
+
         // Start the writer
-        final Future<Long> numRowsFuture =
-                exec.submit(wrapError(() -> ParseInputToDenseStorage.doit(headersToUse, firstDataRow, grabber, specs,
-                        nullValueLiteralsToUse, dsws)));
+        final Future<Long> numRowsFuture = groupWaiter.submit(() -> ParseInputToDenseStorage.doit(headersToUse,
+                firstDataRow, grabber, specs, nullValueLiteralsToUse, dsws));
 
         // Start the readers, taking care to not hold a reference to the DenseStorageReader.
         final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
@@ -124,16 +125,18 @@ public final class CsvReader {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii);
 
                 final int iiCopy = ii;
-                final Future<ParseDenseStorageToColumn.Result> fcb =
-                        exec.submit(wrapError(() -> ParseDenseStorageToColumn.doit(
+                final Future<ParseDenseStorageToColumn.Result> fcb = groupWaiter.submit(
+                        () -> ParseDenseStorageToColumn.doit(
                                 iiCopy, // 0-based column numbers
                                 dsrs.get(iiCopy).move(),
                                 parsersToUse,
                                 specs,
                                 nullValueLiteralsToUse[iiCopy],
-                                sinkFactory)));
+                                sinkFactory));
                 sinkFutures.add(fcb);
             }
+
+            groupWaiter.waitAll();
 
             final long numRows;
             final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
@@ -145,27 +148,12 @@ public final class CsvReader {
                 resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);
             }
             return new Result(numRows, resultColumns);
-        } catch (Exception inner) {
-            throw new CsvReaderException("Caught exception", inner);
+        } catch (Throwable throwable) {
+            throw new CsvReaderException("Caught exception", throwable);
         } finally {
-            // Cancel the sinks (interrupting them if necessary). It is harmless to do this if the sinks
-            // have already exited normally.
-            for (Future<ParseDenseStorageToColumn.Result> sf : sinkFutures) {
-                sf.cancel(true); // Result ignored.
-            }
-            exec.shutdown();
+            // Tear down everything (interrupting the threads if necessary).
+            exec.shutdownNow();
         }
-    }
-
-    private static <T> Callable<T> wrapError(Callable<T> inner) {
-        return () -> {
-            try {
-                return inner.call();
-            } catch (Error e) {
-                // Want to catch all Errors here and specifically OutOfMemoryError
-                throw new CsvReaderException("Caught exception", e);
-            }
-        };
     }
 
     /**
