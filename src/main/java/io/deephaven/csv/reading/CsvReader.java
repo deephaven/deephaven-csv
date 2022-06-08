@@ -111,21 +111,22 @@ public final class CsvReader {
                 specs.concurrent()
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
+        // We are generic on Object because we have a diversity of Future types (Long vs
+        // ParseDenseStorageToColumn.Result)
+        final ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<>(exec);
 
-        final GroupWaiter groupWaiter = new GroupWaiter(exec);
-
-        // Start the writer
-        final Future<Long> numRowsFuture = groupWaiter.submit(() -> ParseInputToDenseStorage.doit(headersToUse,
+        // Start the writer.
+        final Future<Object> numRowsFuture = ecs.submit(() -> ParseInputToDenseStorage.doit(headersToUse,
                 firstDataRow, grabber, specs, nullValueLiteralsToUse, dsws));
 
         // Start the readers, taking care to not hold a reference to the DenseStorageReader.
-        final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
+        final ArrayList<Future<Object>> sinkFutures = new ArrayList<>();
         try {
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii);
 
                 final int iiCopy = ii;
-                final Future<ParseDenseStorageToColumn.Result> fcb = groupWaiter.submit(
+                final Future<Object> fcb = ecs.submit(
                         () -> ParseDenseStorageToColumn.doit(
                                 iiCopy, // 0-based column numbers
                                 dsrs.get(iiCopy).move(),
@@ -136,13 +137,16 @@ public final class CsvReader {
                 sinkFutures.add(fcb);
             }
 
-            groupWaiter.waitAll();
+            // Get each task as it finishes. If a task finishes with an exception, we will throw here.
+            for (int ii = 0; ii < numOutputCols + 1; ++ii) {
+                ecs.take().get();
+            }
 
-            final long numRows;
+            final long numRows = (long) numRowsFuture.get();
             final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
-            numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                final ParseDenseStorageToColumn.Result result = sinkFutures.get(ii).get();
+                final ParseDenseStorageToColumn.Result result =
+                        (ParseDenseStorageToColumn.Result) sinkFutures.get(ii).get();
                 final Object data = result.sink().getUnderlying();
                 final DataType dataType = result.dataType();
                 resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);

@@ -56,7 +56,7 @@ public class CsvReaderTest {
     }
 
     /**
-     * https://github.com/deephaven/deephaven-core/issues/2133
+     * Addresses <a href="https://github.com/deephaven/deephaven-core/issues/2133">Deephaven Core Issue #2133</a>.
      */
     @Test
     public void bug2133() throws CsvReaderException {
@@ -76,9 +76,9 @@ public class CsvReaderTest {
     }
 
     /**
-     * https://github.com/deephaven/deephaven-csv/issues/48 When the bug exists, the library hangs (and this tests times
-     * out). When the bug is fixed, the library instantly propagates the exception and the test succeeds (that is, the
-     * library fails as expected).
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/48">Deephaven CSV Issue #48</a>. When the
+     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the library instantly propagates
+     * the exception and the test succeeds (that is, the library fails as expected).
      */
     @Test
     @Timeout(value = 10)
