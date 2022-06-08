@@ -24,7 +24,9 @@ import org.apache.commons.io.input.ReaderInputStream;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -54,7 +56,7 @@ public class CsvReaderTest {
     }
 
     /**
-     * https://github.com/deephaven/deephaven-core/issues/2133
+     * Addresses <a href="https://github.com/deephaven/deephaven-core/issues/2133">Deephaven Core Issue #2133</a>.
      */
     @Test
     public void bug2133() throws CsvReaderException {
@@ -71,6 +73,26 @@ public class CsvReaderTest {
         final String row2 = col[1];
         Assertions.assertThat(row1).isEqualTo(expected1);
         Assertions.assertThat(row2).isEqualTo(expected2);
+    }
+
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/48">Deephaven CSV Issue #48</a>. When the
+     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the library instantly propagates
+     * the exception and the test succeeds (that is, the library fails as expected).
+     */
+    @Test
+    @Timeout(value = 10)
+    public void bug48() {
+        final int numRows = 50_000_000;
+        final RepeatingInputStream inputStream = new RepeatingInputStream("Col1,Col2\n", "1,2.2\n", numRows);
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvSpecs(),
+                                inputStream,
+                                ColumnSet.NONE,
+                                makeBlackholeSinkFactoryWithFailingDoubleSink(),
+                                null))
+                .hasRootCauseMessage("synthetic error for testing: out of memory");
     }
 
     @Test
@@ -2148,6 +2170,47 @@ public class CsvReaderTest {
         @Override
         public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
             // Do nothing.
+        }
+
+        /**
+         * For the sake of one of our unit tests, we return the colNum as our underlying.
+         */
+        @Override
+        public Object getUnderlying() {
+            return colNum;
+        }
+
+        @Override
+        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+            // Do nothing.
+        }
+    }
+
+    private static SinkFactory makeBlackholeSinkFactoryWithFailingDoubleSink() {
+        return SinkFactory.of(
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                FailingSink::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new);
+    }
+
+    private static class FailingSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+        private final int colNum;
+
+        public FailingSink(int colNum) {
+            this.colNum = colNum;
+        }
+
+        @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            throw new RuntimeException("synthetic error for testing: out of memory");
         }
 
         /**

@@ -111,61 +111,53 @@ public final class CsvReader {
                 specs.concurrent()
                         ? Executors.newFixedThreadPool(numOutputCols + 1)
                         : Executors.newSingleThreadExecutor();
+        // We are generic on Object because we have a diversity of Future types (Long vs
+        // ParseDenseStorageToColumn.Result)
+        final ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<>(exec);
 
-        // Start the writer
-        final Future<Long> numRowsFuture =
-                exec.submit(wrapError(() -> ParseInputToDenseStorage.doit(headersToUse, firstDataRow, grabber, specs,
-                        nullValueLiteralsToUse, dsws)));
+        // Start the writer.
+        final Future<Object> numRowsFuture = ecs.submit(() -> ParseInputToDenseStorage.doit(headersToUse,
+                firstDataRow, grabber, specs, nullValueLiteralsToUse, dsws));
 
         // Start the readers, taking care to not hold a reference to the DenseStorageReader.
-        final ArrayList<Future<ParseDenseStorageToColumn.Result>> sinkFutures = new ArrayList<>();
+        final ArrayList<Future<Object>> sinkFutures = new ArrayList<>();
         try {
             for (int ii = 0; ii < numOutputCols; ++ii) {
                 final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii);
 
                 final int iiCopy = ii;
-                final Future<ParseDenseStorageToColumn.Result> fcb =
-                        exec.submit(wrapError(() -> ParseDenseStorageToColumn.doit(
+                final Future<Object> fcb = ecs.submit(
+                        () -> ParseDenseStorageToColumn.doit(
                                 iiCopy, // 0-based column numbers
                                 dsrs.get(iiCopy).move(),
                                 parsersToUse,
                                 specs,
                                 nullValueLiteralsToUse[iiCopy],
-                                sinkFactory)));
+                                sinkFactory));
                 sinkFutures.add(fcb);
             }
 
-            final long numRows;
+            // Get each task as it finishes. If a task finishes with an exception, we will throw here.
+            for (int ii = 0; ii < numOutputCols + 1; ++ii) {
+                ecs.take().get();
+            }
+
+            final long numRows = (long) numRowsFuture.get();
             final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
-            numRows = numRowsFuture.get();
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                final ParseDenseStorageToColumn.Result result = sinkFutures.get(ii).get();
+                final ParseDenseStorageToColumn.Result result =
+                        (ParseDenseStorageToColumn.Result) sinkFutures.get(ii).get();
                 final Object data = result.sink().getUnderlying();
                 final DataType dataType = result.dataType();
                 resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);
             }
             return new Result(numRows, resultColumns);
-        } catch (Exception inner) {
-            throw new CsvReaderException("Caught exception", inner);
+        } catch (Throwable throwable) {
+            throw new CsvReaderException("Caught exception", throwable);
         } finally {
-            // Cancel the sinks (interrupting them if necessary). It is harmless to do this if the sinks
-            // have already exited normally.
-            for (Future<ParseDenseStorageToColumn.Result> sf : sinkFutures) {
-                sf.cancel(true); // Result ignored.
-            }
-            exec.shutdown();
+            // Tear down everything (interrupting the threads if necessary).
+            exec.shutdownNow();
         }
-    }
-
-    private static <T> Callable<T> wrapError(Callable<T> inner) {
-        return () -> {
-            try {
-                return inner.call();
-            } catch (Error e) {
-                // Want to catch all Errors here and specifically OutOfMemoryError
-                throw new CsvReaderException("Caught exception", e);
-            }
-        };
     }
 
     /**
