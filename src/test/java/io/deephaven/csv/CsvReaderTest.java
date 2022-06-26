@@ -1463,7 +1463,7 @@ public class CsvReaderTest {
                 .assertThatThrownBy(
                         () -> invokeTest(defaultCsvBuilder().nullParser(null).build(), ALL_NULLS, ColumnSet.NONE))
                 .hasRootCauseMessage(
-                        "Column contains all null cells: can't infer type of column, and nullParser is not set.");
+                        "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
     }
 
     @Test
