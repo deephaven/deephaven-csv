@@ -26,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -93,6 +92,22 @@ public class CsvReaderTest {
                                 makeBlackholeSinkFactoryWithFailingDoubleSink(),
                                 null))
                 .hasRootCauseMessage("synthetic error for testing: out of memory");
+    }
+
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/52">Deephaven CSV Issue #52</a>. When the
+     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the test succeeds.
+     */
+    @Test
+    @Timeout(value = 30)
+    public void bug52() throws CsvReaderException {
+        final int numRows = 50_000_000;
+        final RepeatingInputStream inputStream =
+                new RepeatingInputStream("Col1,Col2,Col3\n", "1.1,2.2,null\n", numRows);
+        final CsvSpecs specs =
+                defaultCsvBuilder().parsers(List.of(Parsers.DOUBLE)).nullValueLiterals(List.of("null")).build();
+        final SinkFactory sf = makeBlackholeSinkFactoryWithSynchronizingDoubleSink(3, 1_000_000);
+        CsvReader.read(specs, inputStream, sf);
     }
 
     @Test
@@ -1448,7 +1463,7 @@ public class CsvReaderTest {
                 .assertThatThrownBy(
                         () -> invokeTest(defaultCsvBuilder().nullParser(null).build(), ALL_NULLS, ColumnSet.NONE))
                 .hasRootCauseMessage(
-                        "Column contains all null cells: can't infer type of column, and nullParser is not set.");
+                        "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
     }
 
     @Test
@@ -2201,6 +2216,23 @@ public class CsvReaderTest {
                 Blackhole::new);
     }
 
+    private static SinkFactory makeBlackholeSinkFactoryWithSynchronizingDoubleSink(final int numParticipatingColumns,
+            final long thresholdSize) {
+        final SyncState ss = new SyncState(numParticipatingColumns, thresholdSize);
+        return SinkFactory.of(
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                colNum -> new SynchronizingSink<>(colNum, ss),
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new);
+    }
+
     private static class FailingSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
         private final int colNum;
 
@@ -2224,6 +2256,69 @@ public class CsvReaderTest {
         @Override
         public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
             // Do nothing.
+        }
+    }
+
+    private static class SynchronizingSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+        private final int colNum;
+        private final SyncState syncState;
+        private long sizeWritten = 0;
+
+        public SynchronizingSink(int colNum, SyncState syncState) {
+            this.colNum = colNum;
+            this.syncState = syncState;
+        }
+
+        @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            sizeWritten += destEnd - destBegin;
+            syncState.maybeWait(colNum, sizeWritten);
+        }
+
+        @Override
+        public Object getUnderlying() {
+            return null;
+        }
+
+        @Override
+        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+            // Do nothing.
+        }
+    }
+
+    private static class SyncState {
+        private final int numParticipatingColumns;
+        private final long thresholdSize;
+        private long nextThreshold = 0;
+        private int numWaiters = 0;
+
+        public SyncState(int numParticipatingColumns, long thresholdSize) {
+            this.numParticipatingColumns = numParticipatingColumns;
+            this.thresholdSize = thresholdSize;
+        }
+
+        public synchronized void maybeWait(final int colNum, final long sizeWritten) {
+            while (true) {
+                if (sizeWritten < nextThreshold) {
+                    return;
+                }
+
+                if (numWaiters == numParticipatingColumns - 1) {
+                    // Everyone else is waiting, so advance the threshold.
+                    nextThreshold += thresholdSize;
+                    notifyAll();
+                    continue;
+                }
+
+                ++numWaiters;
+                try {
+                    wait();
+                } catch (InterruptedException ie) {
+                    throw new RuntimeException("Interrupted", ie);
+                } finally {
+                    --numWaiters;
+                }
+            }
         }
     }
 }

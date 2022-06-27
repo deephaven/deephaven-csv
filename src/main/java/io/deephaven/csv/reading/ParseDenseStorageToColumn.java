@@ -41,47 +41,60 @@ public final class ParseDenseStorageToColumn {
         final Parser.GlobalContext gctx =
                 new Parser.GlobalContext(colNum, tokenizer, sinkFactory, nullValueLiteralsToUse);
 
-        // Make an IteratorHolder for the first pass over the input. Make a copy of the DenseStorageReader in case
-        // we need to do a second pass. We take care to not hold these references longer than necessary, to give the
-        // GC a chance to collect the data in our linked list.
+        // Make two IteratorHolders for (potentially) having two passes over the input. We take care to not hold these
+        // references longer than necessary, to give the GC a chance to collect the data in our linked list.
         final Moveable<IteratorHolder> ihAlt = new Moveable<>(new IteratorHolder(dsr.get().copy()));
         final Moveable<IteratorHolder> ih = new Moveable<>(new IteratorHolder(dsr.move().get()));
 
-        // Skip over leading null cells. There are three cases:
-        // 1. There is a non-null cell (so the type inference process can begin)
-        // 2. The column is full of all nulls
-        // 3. The column is empty
-        boolean columnIsEmpty = true;
+        // Skip over leading null cells. There are four cases:
+        // 1. The column is empty. In this case we run the "empty parser"
+        // 2. There is only one available parser. In this case we shortcut to that parser and let it deal with the
+        // column, whether full of nulls or not. (Doing this early helps certain use cases, such as Deephaven
+        // Enterprise, in which column sinks synchronize each other and so it is harmful if one column gets too far
+        // ahead without writing to its sink, as would happen in our null-skipping type inference logic).
+        // 3. The column is full of all nulls
+        // 4. There is a non-null cell (so the type inference process can begin)
+
+        final Parser<?> nullParserToUse =
+                parserSet.size() == 1 ? parserSet.iterator().next() : specs.nullParser();
+
+        if (!ih.get().tryMoveNext()) {
+            // Case 1: The column is empty
+            if (nullParserToUse == null) {
+                throw new CsvReaderException(
+                        "Column is empty, so can't infer type of column, and nullParser is not specified.");
+            }
+            ih.reset();
+            ihAlt.reset();
+            return emptyParse(nullParserToUse, gctx);
+        }
+
+        if (parserSet.size() == 1) {
+            // Case 2. There is only one available parser.
+            final Parser<?> parserToUse = parserSet.iterator().next();
+            ih.reset();
+            return onePhaseParse(parserToUse, gctx, ihAlt.move());
+        }
+
         boolean columnIsAllNulls = true;
-        while (ih.get().tryMoveNext()) {
-            columnIsEmpty = false;
+        do {
             if (!gctx.isNullCell(ih.get())) {
                 columnIsAllNulls = false;
                 break;
             }
-        }
+        } while (ih.get().tryMoveNext());
 
         if (columnIsAllNulls) {
-            // We get here in cases 2 and 3: the column is all nulls, or the column is empty.
-            final Parser<?> nullParserToUse =
-                    parserSet.size() == 1 ? parserSet.iterator().next() : specs.nullParser();
+            // case 3. The column is full of all nulls
             if (nullParserToUse == null) {
                 throw new CsvReaderException(
-                        "Column contains all null cells: can't infer type of column, and nullParser is not set.");
-            }
-            if (columnIsEmpty) {
-                return emptyParse(nullParserToUse, gctx);
+                        "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
             }
             ih.reset();
             return onePhaseParse(nullParserToUse, gctx, ihAlt.move());
         }
 
-        if (parserSet.size() == 1) {
-            // Column is not all nulls, but there is only one available parser.
-            final Parser<?> parserToUse = parserSet.iterator().next();
-            ih.reset();
-            return onePhaseParse(parserToUse, gctx, ihAlt.move());
-        }
+        // The rest of this logic is for case 2: there is a non-null cell (so the type inference process can begin).
 
         final CategorizedParsers cats = CategorizedParsers.create(parserSet);
 
