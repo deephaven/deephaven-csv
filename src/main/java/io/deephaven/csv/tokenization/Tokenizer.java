@@ -83,6 +83,7 @@ public class Tokenizer {
             // Last code point U+007F
             value = first & 0x7F;
             result.setValue(value);
+            // Succeed only if the string ended here.
             return o == end;
         }
         if ((first & 0xE0) == 0xC0) {
@@ -117,7 +118,8 @@ public class Tokenizer {
         }
 
         result.setValue(value);
-        return true;
+        // Succeed only if the string ended here.
+        return o == end;
     }
 
     private static int byteToInt(byte b) {
