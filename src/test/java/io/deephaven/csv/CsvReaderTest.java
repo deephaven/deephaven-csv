@@ -111,8 +111,8 @@ public class CsvReaderTest {
     }
 
     /**
-     * Reported in <a href="https://github.com/deephaven/deephaven-core/issues/2898">Deephaven Core Issue #2898</a>.
-     * Bug filed in <a href="https://github.com/deephaven/deephaven-csv/issues/70">Deephaven CSV Issue #70</a>.
+     * Reported in <a href="https://github.com/deephaven/deephaven-core/issues/2898">Deephaven Core Issue #2898</a>. Bug
+     * filed in <a href="https://github.com/deephaven/deephaven-csv/issues/70">Deephaven CSV Issue #70</a>.
      */
     @Test
     public void bug70() throws CsvReaderException {
@@ -126,8 +126,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("Coin", "USDT", "USDT", "USDT", "USDT"),
                         Column.ofValues("Change", -49.00787612, -152.686844, -59.92650232, -102.3862566),
-                        Column.ofRefs("Remark", null, "穿仓保证金补偿", null, null)
-                        );
+                        Column.ofRefs("Remark", null, "穿仓保证金补偿", null, null));
         invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
