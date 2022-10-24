@@ -70,7 +70,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
     jmh 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.4'
-    jmh 'com.opencsv:opencsv:5.7.0'
+    jmh 'com.opencsv:opencsv:5.7.1'
     jmh 'com.univocity:univocity-parsers:2.9.1'
     jmh 'de.siegmar:fastcsv:2.2.0'
     jmh 'net.sf.supercsv:super-csv:2.4.0'
