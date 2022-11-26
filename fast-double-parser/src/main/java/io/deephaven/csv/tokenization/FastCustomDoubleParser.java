@@ -12,10 +12,10 @@ import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
 public final class FastCustomDoubleParser implements CustomDoubleParser {
 
     /**
-     * Equivalent to {@code FastDoubleParserFromByteArray.parseDouble(bs.data(), bs.begin(), bs.size())}.
+     * Equivalent to {@code JavaDoubleParser.parseDouble(bs.data(), bs.begin(), bs.size())}.
      *
      * @param bs The byte slice.
-     * @return the parsed double
+     * @return The parsed value if successful. Otherwise, throws {@link NumberFormatException}.
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
@@ -23,10 +23,10 @@ public final class FastCustomDoubleParser implements CustomDoubleParser {
     }
 
     /**
-     * Equivalent to {@code FastDoubleParser.parseDouble(cs)}.
+     * Equivalent to {@link JavaDoubleParser#parseDouble}.
      *
      * @param cs the char sequence
-     * @return the parsed double
+     * @return The parsed value if successful. Otherwise, throws {@link NumberFormatException}.
      */
     @Override
     public double parse(CharSequence cs) throws NumberFormatException {

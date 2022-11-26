@@ -1,6 +1,6 @@
 package io.deephaven.csv.tokenization;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
+import ch.randelshofer.fastdoubleparser.JavaDoubleParser;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
 
@@ -11,25 +11,25 @@ import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
  */
 public final class FastCustomDoubleParser8 implements CustomDoubleParser {
     /**
-     * Wraps the {@link ByteSlice} in a reusable {@link CharSequence} so that it can be passed to
-     * {@link #parse(CharSequence)}
+     * Equivalent to {@link JavaDoubleParser#parseDouble} (with the {@link ByteSlice} interpreted as a
+     * {@link CharSequence}.
      *
      * @param bs The byte slice.
-     * @return The parsed value if successful. Otherwise, throws NumberFormatException.
+     * @return The parsed value if successful. Otherwise, throws {@link NumberFormatException}.
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
-        return FastDoubleParser.parseDouble(bs);
+        return JavaDoubleParser.parseDouble(bs);
     }
 
     /**
-     * Equivalent to {@link FastDoubleParser#parseDouble}.
+     * Equivalent to {@link JavaDoubleParser#parseDouble}.
      *
      * @param cs the char sequence
-     * @return The parsed value if successful. Otherwise, throws NumberFormatException.
+     * @return The parsed value if successful. Otherwise, throws {@link NumberFormatException}.
      */
     @Override
     public double parse(CharSequence cs) throws NumberFormatException {
-        return FastDoubleParser.parseDouble(cs);
+        return JavaDoubleParser.parseDouble(cs);
     }
 }
