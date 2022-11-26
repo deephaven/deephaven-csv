@@ -19,6 +19,11 @@ public final class FastCustomDoubleParser8 implements CustomDoubleParser {
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
+        // FastDoubleParser used to throw NumberFormatException on empty input. Now it throws IllegalArgumentException.
+        // We will make a change request at the FastDoubleParser project.
+        if (bs.size() == 0) {
+            throw new NumberFormatException("empty input");
+        }
         return JavaDoubleParser.parseDouble(bs);
     }
 
