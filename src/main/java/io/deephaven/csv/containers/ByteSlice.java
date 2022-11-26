@@ -99,11 +99,12 @@ public final class ByteSlice implements CharSequence {
     @NotNull
     @Override
     public CharSequence subSequence(final int start, final int end) {
+        // Beware: parameter 'end' shadows member variable 'this.end'.
         // Adjust start, end to be relative to this.begin.
-        final int newBegin = begin + start;
-        final int newEnd = begin + end;
+        final int newBegin = this.begin + start;
+        final int newEnd = this.begin + end;
         // Can't exceed bounds of current slice
-        if (newBegin < begin || newEnd > end || newBegin > newEnd) {
+        if (newBegin < this.begin || newEnd > this.end || newBegin > newEnd) {
             throw new IndexOutOfBoundsException("Invalid subsequence bounds");
         }
         return new ByteSlice(data, newBegin, newEnd);
