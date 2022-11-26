@@ -1,7 +1,6 @@
 package io.deephaven.csv.tokenization;
 
-import ch.randelshofer.fastdoubleparser.FastDoubleParser;
-import ch.randelshofer.fastdoubleparser.FastDoubleParserFromByteArray;
+import ch.randelshofer.fastdoubleparser.JavaDoubleParser;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
 
@@ -20,7 +19,7 @@ public final class FastCustomDoubleParser implements CustomDoubleParser {
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
-        return FastDoubleParserFromByteArray.parseDouble(bs.data(), bs.begin(), bs.size());
+        return JavaDoubleParser.parseDouble(bs.data(), bs.begin(), bs.size());
     }
 
     /**
@@ -31,6 +30,6 @@ public final class FastCustomDoubleParser implements CustomDoubleParser {
      */
     @Override
     public double parse(CharSequence cs) throws NumberFormatException {
-        return FastDoubleParser.parseDouble(cs);
+        return JavaDoubleParser.parseDouble(cs);
     }
 }
