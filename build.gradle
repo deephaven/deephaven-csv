@@ -1,31 +1,11 @@
+import io.deephaven.csv.Constants
+
 plugins {
-    id 'java-library'
-    id 'com.diffplug.spotless' version '6.12.0'
+    id 'io.deephaven.csv.entry'
     id 'me.champeau.jmh' version '0.6.8'
 }
 
-repositories {
-    mavenCentral()
-}
-
-group = 'io.deephaven'
-version = project.property('version')
-
 description = 'The Deephaven High-Performance CSV Parser'
-
-// Java 11+ required for building
-if (!JavaVersion.current().isJava11Compatible()) {
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(11)
-        }
-    }
-}
-
-// Java 8 compatible jar
-tasks.named('compileJava', JavaCompile) {compile ->
-    compile.options.release.set 8
-}
 
 sourceSets {
     jmhTest {
@@ -41,7 +21,7 @@ configurations {
     jmhTestRuntimeOnly.extendsFrom jmh
 }
 
-def customDoubleParser = project.findProperty('customDoubleParser') ?: '11-compatible'
+def customDoubleParser = project.findProperty('customDoubleParser') ?: 'fast-double-parser'
 
 dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
@@ -49,16 +29,13 @@ dependencies {
     annotationProcessor 'org.immutables:value:2.9.2'
     compileOnly 'org.immutables:value-annotations:2.9.2'
 
-    if (customDoubleParser == '11-compatible') {
-        // By default, use our Java 11 fast double parser for tests and JMH
+    if (customDoubleParser == 'fast-double-parser') {
+        // By default, use the fast double parser for tests and JMH
         testRuntimeOnly project(':fast-double-parser')
-    } else if (customDoubleParser == '8-compatible') {
-        // Use the Java 8 compatible fast double parser for tests and JMH
-        testRuntimeOnly project(':fast-double-parser-8')
     } else if (customDoubleParser == 'none') {
         // Use the JDK Double parser for tests and JMH
     } else {
-        throw new IllegalArgumentException('what')
+        throw new IllegalArgumentException('Invalid customDoubleParser: ' + customDoubleParser)
     }
 
     testImplementation 'net.sf.trove4j:trove4j:3.0.3'
@@ -78,11 +55,6 @@ dependencies {
     jmh 'org.simpleflatmapper:sfm-csv:8.2.3'
 }
 
-tasks.named('test') { test ->
-    test.useJUnitPlatform()
-    test.inputs.property('customDoubleParser', customDoubleParser)
-}
-
 jmh {
     jmhVersion = '1.36'
     // -prof gc
@@ -95,28 +67,33 @@ jmh {
     }
 }
 
-def jmhTestTask = tasks.register('jmhTest', Test) {jmhTest ->
-    jmhTest.description = 'Runs jmh tests.'
-    jmhTest.group = 'verification'
+def registerJmhTest = version -> {
+    project.tasks.register("jmhTestOn${version}", Test) {jmhTest ->
+        jmhTest.description = "Runs the JMH test suite with Java ${version}."
+        jmhTest.group = 'verification'
 
-    jmhTest.inputs.property('customDoubleParser', customDoubleParser)
+        jmhTest.testClassesDirs = sourceSets.jmhTest.output.classesDirs
+        jmhTest.classpath = sourceSets.jmhTest.runtimeClasspath
 
-    jmhTest.testClassesDirs = sourceSets.jmhTest.output.classesDirs
-    jmhTest.classpath = sourceSets.jmhTest.runtimeClasspath
+        jmhTest.maxHeapSize = '2g'
 
-    jmhTest.maxHeapSize = '2g'
-
-    jmhTest.useJUnitPlatform()
-}
-
-spotless {
-    java {
-        eclipse().configFile("${rootDir}/style/eclipse-java-google-style.xml")
+        jmhTest.javaLauncher.set javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(version)
+        }
     }
 }
 
-check.dependsOn(jmhTestTask)
-check.dependsOn(jmhClasses)
-assemble.dependsOn(jmhJar)
+def jmhTests = Constants.TEST_VERSIONS.collect { v -> registerJmhTest(v) }
 
-apply plugin: 'io.deephaven.csv.java-publishing-conventions'
+tasks.named('check').configure {
+    dependsOn jmhClasses
+    dependsOn jmhTests
+}
+
+tasks.named('assemble').configure {
+    dependsOn jmhJar
+}
+
+tasks.withType(Test).configureEach {
+    inputs.property('customDoubleParser', customDoubleParser)
+}

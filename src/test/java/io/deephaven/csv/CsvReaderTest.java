@@ -39,6 +39,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CsvReaderTest {
     private static class Sentinels {
@@ -62,8 +64,8 @@ public class CsvReaderTest {
         final int bufferSize = CellGrabber.BUFFER_SIZE;
         final StringBuilder sb = new StringBuilder("Values\r");
         final int numAs = bufferSize - sb.length() - 1;
-        final String expected1 = "a".repeat(numAs);
-        final String expected2 = "b".repeat(bufferSize);
+        final String expected1 = repeat("a", numAs);
+        final String expected2 = repeat("b", bufferSize);
         sb.append(expected1).append('\r').append(expected2).append('\r');
         final String input = sb.toString();
         final CsvReader.Result result = parse(defaultCsvSpecs(), toInputStream(input));
@@ -104,8 +106,10 @@ public class CsvReaderTest {
         final int numRows = 50_000_000;
         final RepeatingInputStream inputStream =
                 new RepeatingInputStream("Col1,Col2,Col3\n", "1.1,2.2,null\n", numRows);
-        final CsvSpecs specs =
-                defaultCsvBuilder().parsers(List.of(Parsers.DOUBLE)).nullValueLiterals(List.of("null")).build();
+        final CsvSpecs specs = defaultCsvBuilder()
+                .parsers(Collections.singletonList(Parsers.DOUBLE))
+                .nullValueLiterals(Collections.singletonList("null"))
+                .build();
         final SinkFactory sf = makeBlackholeSinkFactoryWithSynchronizingDoubleSink(3, 1_000_000);
         CsvReader.read(specs, inputStream, sf);
     }
@@ -162,7 +166,8 @@ public class CsvReaderTest {
     public void countsAreCorrectHeaderless() throws CsvReaderException {
         final String input = "" + "1\n" + "\n" + "3\n";
         final CsvReader.Result result =
-                parse(defaultCsvBuilder().hasHeaderRow(false).headers(List.of("Value")).build(), toInputStream(input));
+                parse(defaultCsvBuilder().hasHeaderRow(false).headers(Collections.singletonList("Value")).build(),
+                        toInputStream(input));
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -175,8 +180,7 @@ public class CsvReaderTest {
                         + "-3,foo,false,1.0\n"
                         + "4,bar,true,2.0\n"
                         + "-5,baz,false,3.0\n";
-        final CsvReader.Result result =
-                parse(defaultCsvBuilder().quote('|').build(), toInputStream(input));
+        final CsvReader.Result result = parse(defaultCsvBuilder().quote('|').build(), toInputStream(input));
         final ColumnSet cs = toColumnSet(result, null);
         Assertions.assertThat(cs.columns[0].name).isEqualTo("Some\nInts");
         Assertions.assertThat(cs.columns[1].name).isEqualTo("Some\rStrings");
@@ -351,7 +355,8 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofRefs("Values", "-9223372036854775807", null, "9223372036854775807"));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.STRING)).build(), LONG_INPUT, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.STRING)).build(), LONG_INPUT,
+                expected);
     }
 
     @Test
@@ -404,7 +409,8 @@ public class CsvReaderTest {
                                 Float.MIN_NORMAL,
                                 Float.MIN_VALUE));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.FLOAT_FAST)).build(), FLOAT_INPUT, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.FLOAT_FAST)).build(), FLOAT_INPUT,
+                expected);
     }
 
     @Test
@@ -849,7 +855,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("A", 1, 4), Column.ofValues("Qux", 2, 5), Column.ofValues("C", 3, 6));
 
-        invokeTest(defaultCsvBuilder().headers(List.of("A", "B", "C")).putHeaderForIndex(1, "Qux").build(), input,
+        invokeTest(defaultCsvBuilder().headers(Arrays.asList("A", "B", "C")).putHeaderForIndex(1, "Qux").build(), input,
                 expected);
     }
 
@@ -904,7 +910,7 @@ public class CsvReaderTest {
     public void languageExampleHeaderlessExplicit() throws CsvReaderException {
         final ColumnSet expected = languageCreatorTypeTable();
         invokeTest(
-                defaultCsvBuilder().hasHeaderRow(false).headers(List.of("Language", "Creator", "Type")).build(),
+                defaultCsvBuilder().hasHeaderRow(false).headers(Arrays.asList("Language", "Creator", "Type")).build(),
                 LANGUAGE_EXAMPLE_HEADERLESS_INPUT,
                 expected);
     }
@@ -1214,7 +1220,7 @@ public class CsvReaderTest {
                 .assertThatThrownBy(
                         () -> invokeTest(
                                 defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
-                                        .parsers(List.of(Parsers.INT)).build(),
+                                        .parsers(Collections.singletonList(Parsers.INT)).build(),
                                 SINGLE_COLUMN_EMPTY_ROW, expected))
                 .hasRootCauseMessage(
                         "Parsing failed on input, with nothing left to fall back to. Parser io.deephaven.csv.parsers.IntParser successfully parsed 1 items before failure.");
@@ -1238,7 +1244,7 @@ public class CsvReaderTest {
                 .assertThatThrownBy(
                         () -> invokeTest(
                                 defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
-                                        .parsers(List.of(Parsers.INT, Parsers.LONG)).build(),
+                                        .parsers(Arrays.asList(Parsers.INT, Parsers.LONG)).build(),
                                 input, expected))
                 .hasRootCauseMessage(
                         "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
@@ -1356,7 +1362,8 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.TIMESTAMP_SECONDS)).build(), input, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_SECONDS)).build(), input,
+                expected);
     }
 
     @Test
@@ -1372,7 +1379,8 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.TIMESTAMP_MILLIS)).build(), input, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_MILLIS)).build(), input,
+                expected);
     }
 
     @Test
@@ -1388,7 +1396,8 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.TIMESTAMP_MICROS)).build(), input, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_MICROS)).build(), input,
+                expected);
     }
 
     @Test
@@ -1404,7 +1413,8 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        invokeTest(defaultCsvBuilder().parsers(List.of(Parsers.TIMESTAMP_NANOS)).build(), input, expected);
+        invokeTest(defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_NANOS)).build(), input,
+                expected);
     }
 
     @Test
@@ -1447,7 +1457,7 @@ public class CsvReaderTest {
 
         Assertions.assertThatThrownBy(
                 () -> invokeTest(
-                        defaultCsvBuilder().parsers(List.of(Parsers.INT, Parsers.LONG, Parsers.DATETIME)).build(),
+                        defaultCsvBuilder().parsers(Arrays.asList(Parsers.INT, Parsers.LONG, Parsers.DATETIME)).build(),
                         input,
                         ColumnSet.NONE));
     }
@@ -1457,7 +1467,7 @@ public class CsvReaderTest {
         final String input = "" + "Values\n" + "hello\n" + "there\n";
 
         Assertions.assertThatThrownBy(
-                () -> invokeTest(defaultCsvBuilder().parsers(List.of()).build(), input, ColumnSet.NONE))
+                () -> invokeTest(defaultCsvBuilder().parsers(Collections.emptyList()).build(), input, ColumnSet.NONE))
                 .hasRootCauseMessage("No available parsers.");
     }
 
@@ -1729,7 +1739,7 @@ public class CsvReaderTest {
         final int numRows = 50_000_000;
         final RepeatingInputStream inputStream = new RepeatingInputStream("A,B\n", "111111111,222222222\n", numRows);
 
-        final CsvSpecs specs = defaultCsvBuilder().parsers(List.of(Parsers.INT)).build();
+        final CsvSpecs specs = defaultCsvBuilder().parsers(Collections.singletonList(Parsers.INT)).build();
         final SinkFactory sinkFactory = makeBlackholeSinkFactory();
         final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
     }
@@ -1939,7 +1949,7 @@ public class CsvReaderTest {
         @Override
         public String toString() {
             final StringBuilder sb = new StringBuilder();
-            final List<Column<?>> colList = List.of(columns);
+            final List<Column<?>> colList = Arrays.asList(columns);
 
             final BiFunction<Class<?>, Class<?>, String> renderType =
                     (etype, rtype) -> {
@@ -2340,5 +2350,9 @@ public class CsvReaderTest {
                 }
             }
         }
+    }
+
+    private static String repeat(String x, int count) {
+        return Stream.generate(() -> x).limit(count).collect(Collectors.joining());
     }
 }

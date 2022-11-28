@@ -1,51 +1,16 @@
 plugins {
-    id 'java-library'
-    id 'com.diffplug.spotless'
+    id 'io.deephaven.csv.entry'
 }
 
-repositories {
-    mavenCentral()
-}
-
-group = 'io.deephaven'
-archivesBaseName = 'deephaven-csv-fast-double-parser'
-version = project.property('version')
-
-description = 'The Deephaven High-Performance CSV Parser - Fast Double extension (Java 11+)'
-
-// Java 11+ required for building
-if (!JavaVersion.current().isJava11Compatible()) {
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(11)
-        }
-    }
-}
-
-// Java 11 compatible jar
-tasks.named('compileJava', JavaCompile) {compile ->
-    compile.options.release.set 11
-}
+description = 'The Deephaven High-Performance CSV Parser - Fast Double extension'
 
 dependencies {
     api rootProject
 
-    // Requires Java 11+
-    implementation 'ch.randelshofer:fastdoubleparser:0.5.0'
+    // Multi-release jar, 8+ compatible
+    implementation 'ch.randelshofer:fastdoubleparser:0.5.2'
 
     testImplementation 'org.assertj:assertj-core:3.23.1'
     testImplementation(platform('org.junit:junit-bom:5.9.1'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
-
-tasks.named('test') { test ->
-    test.useJUnitPlatform()
-}
-
-spotless {
-    java {
-        eclipse().configFile("${rootDir}/style/eclipse-java-google-style.xml")
-    }
-}
-
-apply plugin: 'io.deephaven.csv.java-publishing-conventions'
