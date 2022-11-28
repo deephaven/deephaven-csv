@@ -84,7 +84,7 @@ tasks.named('test') { test ->
 }
 
 jmh {
-    jmhVersion = '1.34'
+    jmhVersion = '1.36'
     // -prof gc
     profilers = ['gc']
     // -rf JSON
