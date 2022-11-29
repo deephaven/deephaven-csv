@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        customDoubleParser: [ '11-compatible', '8-compatible', 'none' ]
+        customDoubleParser: [ 'fast-double-parser', 'none' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,27 +19,59 @@ jobs:
       - name: Check gitignore rules
         run: .github/scripts/check-gitignore-rules.sh
 
-      - name: Setup JDK
-        id: setup-java
+      - name: Setup JDK 8
+        id: setup-java-8
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          cache: 'gradle'
+
+      - name: Setup JDK 11
+        id: setup-java-11
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
           cache: 'gradle'
 
+      - name: Setup JDK 17
+        id: setup-java-17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup JDK 19
+        id: setup-java-19
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '19'
+          cache: 'gradle'
+
+      - name: Set JAVA_HOME
+        run: echo "JAVA_HOME=${{ steps.setup-java-17.outputs.path }}" >> $GITHUB_ENV
+
       - name: Setup gradle properties
         run: |
           cat .github/env/${{ runner.os }}/gradle.properties >> gradle.properties
           echo >> gradle.properties
-          echo "org.gradle.java.installations.paths=${{ steps.setup-java.outputs.path }}" >> gradle.properties
+          echo "org.gradle.java.installations.paths=${{ steps.setup-java-8.outputs.path }},${{ steps.setup-java-11.outputs.path }},${{ steps.setup-java-17.outputs.path }},${{ steps.setup-java-19.outputs.path }}" >> gradle.properties
+          echo "customDoubleParser=${{ matrix.customDoubleParser }}" >> gradle.properties
           cat gradle.properties
 
       - name: Check
-        run: ./gradlew check -PcustomDoubleParser=${{ matrix.customDoubleParser }}
+        run: ./gradlew check
 
-      - name: Upload Test Reports
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: check-reports-${{ matrix.customDoubleParser }}
-          path: '**/build/reports/tests/**'
+          name: check-artifacts-${{ matrix.customDoubleParser }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+            !**/build/test-results/**/binary/**
+            **/*_pid*.log

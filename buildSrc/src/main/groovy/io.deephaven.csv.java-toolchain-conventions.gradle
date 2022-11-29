@@ -1,0 +1,45 @@
+import io.deephaven.csv.Constants
+
+plugins {
+    id 'java'
+}
+
+int latestLts = Constants.LATEST_LTS
+int[] testVersions = Constants.TEST_VERSIONS
+
+// Java 11+ required for building
+if (!JavaVersion.current().isJava11Compatible()) {
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(latestLts)
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release.set 8
+}
+
+def registerTest = version -> {
+    project.tasks.register("testOn${version}", Test) { test ->
+        test.group = 'verification'
+        test.description = "Runs the test suite with Java ${version}."
+        test.javaLauncher.set javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(version)
+        }
+    }
+}
+
+def tests = testVersions.collect { v -> registerTest(v) }
+
+tasks.named('test').configure {
+    enabled = false
+}
+
+tasks.named('check').configure {
+    dependsOn tests
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}

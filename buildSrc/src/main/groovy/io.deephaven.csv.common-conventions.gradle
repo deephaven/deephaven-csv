@@ -1,0 +1,10 @@
+plugins {
+    id 'base'
+}
+
+group = 'io.deephaven'
+version = project.property('version')
+
+if (!name.startsWith('deephaven-csv')) {
+    archivesBaseName = "deephaven-csv-${name}"
+}

@@ -117,7 +117,7 @@ To depend on Deephaven CSV from Maven, add the following dependency(s) to your p
 To run the main tests:
 
 ```shell
-./gradlew test
+./gradlew check
 ```
 
 ## Building
