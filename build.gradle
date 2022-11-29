@@ -68,15 +68,12 @@ jmh {
 }
 
 def registerJmhTest = version -> {
-    project.tasks.register("jmhTestOn${version}", Test) {jmhTest ->
+    project.tasks.register("jmhTestOn${version}", Test) { jmhTest ->
         jmhTest.description = "Runs the JMH test suite with Java ${version}."
         jmhTest.group = 'verification'
-
         jmhTest.testClassesDirs = sourceSets.jmhTest.output.classesDirs
         jmhTest.classpath = sourceSets.jmhTest.runtimeClasspath
-
         jmhTest.maxHeapSize = '2g'
-
         jmhTest.javaLauncher.set javaToolchains.launcherFor {
             languageVersion = JavaLanguageVersion.of(version)
         }
