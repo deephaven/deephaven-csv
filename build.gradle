@@ -94,3 +94,5 @@ tasks.named('assemble').configure {
 tasks.withType(Test).configureEach {
     inputs.property('customDoubleParser', customDoubleParser)
 }
+
+apply plugin: 'io.deephaven.csv.java-publishing-conventions'

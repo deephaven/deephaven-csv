@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'io.deephaven.csv.common-conventions'
     id 'io.deephaven.csv.java-coding-conventions'
-    id 'io.deephaven.csv.java-publishing-conventions'
     id 'io.deephaven.csv.java-repository-conventions'
     id 'io.deephaven.csv.java-toolchain-conventions'
 }
