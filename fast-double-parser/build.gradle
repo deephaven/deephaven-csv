@@ -8,7 +8,7 @@ dependencies {
     api rootProject
 
     // Multi-release jar, 8+ compatible
-    implementation 'ch.randelshofer:fastdoubleparser:0.5.2'
+    implementation 'ch.randelshofer:fastdoubleparser:0.5.3'
 
     testImplementation 'org.assertj:assertj-core:3.23.1'
     testImplementation(platform('org.junit:junit-bom:5.9.1'))
