@@ -24,7 +24,7 @@ configurations {
 def customDoubleParser = project.findProperty('customDoubleParser') ?: 'fast-double-parser'
 
 dependencies {
-    compileOnly 'org.jetbrains:annotations:23.0.0'
+    compileOnly 'org.jetbrains:annotations:23.1.0'
 
     annotationProcessor 'org.immutables:value:2.9.2'
     compileOnly 'org.immutables:value-annotations:2.9.2'
