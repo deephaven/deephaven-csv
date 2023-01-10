@@ -88,3 +88,18 @@ signing {
         useInMemoryPgpKeys(signingKey, signingPassword)
     }
 }
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+                'Specification-Title': archivesBaseName,
+                'Specification-Version': project.version,
+                'Specification-Vendor': orgName,
+                'Implementation-Title': archivesBaseName,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': orgName,
+                'Implementation-Vendor-Id': project.group,
+                'Implementation-URL': projectUrl,
+                'Bundle-License': licenseUrl)
+    }
+}
