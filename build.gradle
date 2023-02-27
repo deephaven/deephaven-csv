@@ -43,7 +43,7 @@ dependencies {
     testCompileOnly 'org.jetbrains:annotations:24.0.0'
 
     testImplementation 'org.assertj:assertj-core:3.24.1'
-    testImplementation(platform('org.junit:junit-bom:5.9.1'))
+    testImplementation(platform('org.junit:junit-bom:5.9.2'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
     jmh 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.14.1'
