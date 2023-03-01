@@ -138,7 +138,7 @@ public final class DenseStorageWriter {
         // flow control is based on limiting the number of data queue blocks outstanding
         // (per DenseStorageConstants.MAX_UNOBSERVED_BLOCKS). We want to flush the control queue every
         // time we fill a block on the data queue, so the consumer has a chance to consume the data. If we
-        // did not do this, in some cases the data queue would run too far ahead, the flow control be invoked
+        // did not do this, in some cases the data queue would run too far ahead, the flow control would be invoked
         // to block the writer, but the reader would also be blocked because it is still waiting on control queue
         // notifications, which haven't arrived because the latest control queue block isn't full and hasn't
         // been flushed yet. See https://github.com/deephaven/deephaven-csv/issues/101.
