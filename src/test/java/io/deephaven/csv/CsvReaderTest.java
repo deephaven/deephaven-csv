@@ -141,7 +141,8 @@ public class CsvReaderTest {
     public void bug101() throws CsvReaderException {
         final int numCharsInBigCell = DenseStorageConstants.LARGE_THRESHOLD - 1;
         final int numStringsThatFitInAQueueBlock = DenseStorageConstants.PACKED_QUEUE_SIZE / numCharsInBigCell;
-        final int numRowsThatWillTriggerTheDeadlock = numStringsThatFitInAQueueBlock * (DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 1);
+        final int numRowsThatWillTriggerTheDeadlock =
+                numStringsThatFitInAQueueBlock * (DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 1);
 
         final StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numCharsInBigCell; ++i) {
