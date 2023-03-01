@@ -7,6 +7,7 @@ import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.list.array.TShortArrayList;
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.densestorage.DenseStorageConstants;
 import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.IteratorHolder;
 import io.deephaven.csv.parsers.Parser;
@@ -26,9 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -98,7 +97,7 @@ public class CsvReaderTest {
 
     /**
      * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/52">Deephaven CSV Issue #52</a>. When the
-     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the test succeeds.
+     * bug exists, the library hangs (and this test times out). When the bug is fixed, the test succeeds.
      */
     @Test
     @Timeout(value = 30)
@@ -132,6 +131,31 @@ public class CsvReaderTest {
                         Column.ofValues("Change", -49.00787612, -152.686844, -59.92650232, -102.3862566),
                         Column.ofRefs("Remark", null, "穿仓保证金补偿", null, null));
         invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+    }
+
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/101">Deephaven CSV Issue #101</a>. When the
+     * bug exists, the library deadlocks (and this test times out). When the bug is fixed, the test succeeds.
+     */
+    @Test
+    public void bug101() throws CsvReaderException {
+        final int numCharsInBigCell = DenseStorageConstants.LARGE_THRESHOLD - 1;
+        final int numStringsThatFitInAQueueBlock = DenseStorageConstants.PACKED_QUEUE_SIZE / numCharsInBigCell;
+        final int numRowsThatWillTriggerTheDeadlock = numStringsThatFitInAQueueBlock * (DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 1);
+
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < numCharsInBigCell; ++i) {
+            sb.append('X');
+        }
+        sb.append('\n');
+        final String bigCell = sb.toString();
+
+        final RepeatingInputStream inputStream =
+                new RepeatingInputStream("Col1\n", bigCell, numRowsThatWillTriggerTheDeadlock);
+        final CsvSpecs specs = defaultCsvBuilder()
+                .parsers(Collections.singletonList(Parsers.STRING))
+                .build();
+        CsvReader.read(specs, inputStream, makeMySinkFactory());
     }
 
     @Test

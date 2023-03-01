@@ -121,28 +121,38 @@ public final class DenseStorageWriter {
      * queues, depending on its size.
      */
     public void append(final ByteSlice bs) {
-        final boolean fctrl;
+        final boolean fctrl, fdata;
         final int size = bs.size();
         if (size >= DenseStorageConstants.LARGE_THRESHOLD) {
             final byte[] data = new byte[size];
             bs.copyTo(data, 0);
-            largeByteArrayWriter.addByteArray(data);
+            fdata = largeByteArrayWriter.addByteArray(data);
             fctrl = controlWriter.addInt(DenseStorageConstants.LARGE_BYTE_ARRAY_SENTINEL);
         } else {
-            byteWriter.addBytes(bs);
+            fdata = byteWriter.addBytes(bs);
             fctrl = controlWriter.addInt(size);
         }
-        // If the control queue flushed, then flush all the data queues, so the reader doesn't block for
-        // a long time waiting for some unflushed data queue. One might worry it s inefficient to flush
-        // a data queue that is not full, but (a) in practice it doesn't happen very often and (b) in
-        // our queue code, partially-filled blocks can share non-overlapping parts (slices) of their
-        // underlying storage array, so it's not particularly wasteful. Put another way, flushing an
-        // empty queue does nothing; flushing a partially-filled queue allocates a new QueueNode but
-        // not a new underlying data array; flushing a full queue will allocated a new QueueNode and
-        // (lazily deferred until the next write) a new underlying data array.
+        // If the control queue flushes, then flush the data queues, so the reader doesn't block for
+        // a long time waiting for some unflushed data queue. Conversely, if some data queue flushes, then
+        // flush the control queue for the same reasons. Importantly, we also want to do this because our
+        // flow control is based on limiting the number of data queue blocks outstanding
+        // (per DenseStorageConstants.MAX_UNOBSERVED_BLOCKS). We want to flush the control queue every
+        // time we fill a block on the data queue, so the consumer has a chance to consume the data. If we
+        // did not do this, in some cases the data queue would run too far ahead, the flow control be invoked
+        // to block the writer, but the reader would also be blocked because it is still waiting on control queue
+        // notifications, which haven't arrived because the latest control queue block isn't full and hasn't
+        // been flushed yet. See https://github.com/deephaven/deephaven-csv/issues/101.
+        // One might worry that it is inefficient to flush a queue that is not full, but (a) in practice it
+        // doesn't happen very often and (b) in our queue code, partially-filled blocks can share
+        // non-overlapping parts (slices) of their underlying storage array, so it's not particularly wasteful.
+        // Put another way, flushing an empty queue does nothing; flushing a partially-filled queue allocates
+        // a new QueueNode but not a new underlying data array; flushing a full queue will allocate a new
+        // QueueNode and a new underlying data array (btw, that allocation is lazily deferred until the next write).
         if (fctrl) {
             byteWriter.flush();
             largeByteArrayWriter.flush();
+        } else if (fdata) {
+            controlWriter.flush();
         }
     }
 
