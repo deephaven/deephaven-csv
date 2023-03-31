@@ -285,7 +285,7 @@ which allows them to support faster type inference at the cost of some additiona
 optimization allows the library to read data back from your collection rather than reparsing the input when it needs to
 widen the type. To implement it, the corresponding four adaptor classes (`MyByteSink`, `MyShortSink`, `MyIntSink`,
 `MyLongSink`) should implement the `Source<TARRAY>` interface as well. Because this is an optional optimization, you
-should only implement it if your data structure can easily support it. Also sote that this optimization only applies to
+should only implement it if your data structure can easily support it. Also note that this optimization only applies to
 those four types. There is no need to implement `Source<TARRAY>` for any of the other sink types (`double`, `String`,
 etc).
 
