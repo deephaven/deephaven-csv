@@ -13,32 +13,31 @@ public interface Sink<TARRAY> {
      * 
      * <pre>
      * {@code
-     *     if (appending) {
-     *         while (mycolumn.size() < destBegin) {
-     *             myColumn.addNull();
-     *         }
-     *         int srcIndex = 0;
-     *         for (long destIndex = destBegin; destIndex != destEnd; ++destIndex) {
-     *             if (isNull[srcIndex]) {
-     *                 myColumn.addNull();
-     *             } else {
-     *                 myColumn.add(src[srcIndex]);
-     *             }
-     *             ++srcIndex;
-     *         }
-     *     } else {
-     *         // replacing
-     *         int srcIndex = 0;
-     *         for (long destIndex = destBegin; destIndex != destEnd; ++destIndex) {
-     *             if (isNull[srcIndex]) {
-     *                 myColumn[destIndex] = myNullRepresentation;
-     *             } else {
-     *                 myColumn[destIndex] = src[srcIndex];
-     *             }
-     *             ++srcIndex;
-     *         }
-     *
+     * if (appending) {
+     *     while (mycolumn.size() < destBegin) {
+     *         myColumn.addNull();
      *     }
+     *     int srcIndex = 0;
+     *     for (long destIndex = destBegin; destIndex != destEnd; ++destIndex) {
+     *         if (isNull[srcIndex]) {
+     *             myColumn.addNull();
+     *         } else {
+     *             myColumn.add(src[srcIndex]);
+     *         }
+     *         ++srcIndex;
+     *     }
+     * } else {
+     *     // replacing
+     *     int srcIndex = 0;
+     *     for (long destIndex = destBegin; destIndex != destEnd; ++destIndex) {
+     *         if (isNull[srcIndex]) {
+     *             myColumn[destIndex] = myNullRepresentation;
+     *         } else {
+     *             myColumn[destIndex] = src[srcIndex];
+     *         }
+     *         ++srcIndex;
+     *     }
+     * }
      * }
      * </pre>
      *
