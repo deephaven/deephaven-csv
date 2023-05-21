@@ -165,9 +165,20 @@ public class CsvReaderTest {
                 + "quote is set to '€' but is required to be 7-bit ASCII, "
                 + "delimiter is set to '€' but is required to be 7-bit ASCII, "
                 + "skipRows is set to -2, but is required to be nonnegative, "
+                + "skipHeaderRows is set to -5, but is required to be nonnegative, "
                 + "numRows is set to -5, but is required to be nonnegative";
         Assertions
-                .assertThatThrownBy(() -> CsvSpecs.builder().numRows(-5).skipRows(-2).delimiter('€').quote('€').build())
+                .assertThatThrownBy(() -> CsvSpecs.builder().numRows(-5).skipHeaderRows(-5).skipRows(-2).delimiter('€')
+                        .quote('€').build())
+                .hasMessage(lengthyMessage);
+    }
+
+    @Test
+    public void validatesHeaderRowConsistency() {
+        final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
+                + "skipHeaderRows != 0 but hasHeaderRow is not set";
+        Assertions
+                .assertThatThrownBy(() -> CsvSpecs.builder().hasHeaderRow(false).skipHeaderRows(2).build())
                 .hasMessage(lengthyMessage);
     }
 
@@ -550,6 +561,28 @@ public class CsvReaderTest {
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 4, 5, 6, 7, 8, 9));
 
         invokeTest(defaultCsvBuilder().skipRows(3).build(), SKIPPED_INPUT, expected);
+    }
+
+    private static final String SKIPPED_HEADER_ROW_INPUT = ""
+            + "Abitrary,input,data\n"
+            + "\n"
+            + "X,Y,Z,1,2,3\n"
+            + "Values\n"
+            + "1\n"
+            + "2\n"
+            + "3\n"
+            + "4\n"
+            + "5\n"
+            + "6\n"
+            + "7\n"
+            + "8\n"
+            + "9\n";
+
+    @Test
+    public void skippedHeaderRows() throws CsvReaderException {
+        final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 7, 8, 9));
+
+        invokeTest(defaultCsvBuilder().skipHeaderRows(3).skipRows(6).build(), SKIPPED_HEADER_ROW_INPUT, expected);
     }
 
     private static final String MULTIPLE_NULLS_INPUT = ""

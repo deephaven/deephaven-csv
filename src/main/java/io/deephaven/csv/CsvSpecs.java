@@ -153,6 +153,12 @@ public abstract class CsvSpecs {
         Builder hasHeaderRow(boolean hasHeaderRow);
 
         /**
+         * Number of rows to skip before reading the header row from the input. Valid only if
+         * {@link Builder#hasHeaderRow} is true. 0 means the header row is the first line of the file.
+         */
+        Builder skipHeaderRows(long skipHeaderRows);
+
+        /**
          * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
          * Defaults to {code ','}.
          */
@@ -213,7 +219,11 @@ public abstract class CsvSpecs {
         check7BitAscii("quote", quote(), problems);
         check7BitAscii("delimiter", delimiter(), problems);
         checkNonnegative("skipRows", skipRows(), problems);
+        checkNonnegative("skipHeaderRows", skipHeaderRows(), problems);
         checkNonnegative("numRows", numRows(), problems);
+        if (!hasHeaderRow() && skipHeaderRows() > 0) {
+            problems.add("skipHeaderRows != 0 but hasHeaderRow is not set");
+        }
         if (problems.isEmpty()) {
             return;
         }
@@ -376,6 +386,14 @@ public abstract class CsvSpecs {
     @Default
     public boolean hasHeaderRow() {
         return true;
+    }
+
+    /**
+     * See {@link Builder#skipHeaderRows}.
+     */
+    @Default
+    public long skipHeaderRows() {
+        return 0;
     }
 
     /**

@@ -203,12 +203,20 @@ public final class CsvReader {
             throws CsvReaderException {
         String[] headersToUse = null;
         if (specs.hasHeaderRow()) {
-            final byte[][] firstRow = tryReadOneRow(grabber);
-            if (firstRow == null) {
-                throw new CsvReaderException(
-                        "Can't proceed because hasHeaders is set but input file is empty");
+            long skipCount = specs.skipHeaderRows();
+            byte[][] headerRow;
+            while (true) {
+                headerRow = tryReadOneRow(grabber);
+                if (headerRow == null) {
+                    throw new CsvReaderException(
+                            "Can't proceed because hasHeaders is set but input file is empty");
+                }
+                if (skipCount == 0) {
+                    break;
+                }
+                --skipCount;
             }
-            headersToUse = Arrays.stream(firstRow).map(String::new).toArray(String[]::new);
+            headersToUse = Arrays.stream(headerRow).map(String::new).toArray(String[]::new);
         }
 
         // Whether or not the input had headers, maybe override with client-specified headers.
@@ -216,7 +224,7 @@ public final class CsvReader {
             headersToUse = specs.headers().toArray(new String[0]);
         }
 
-        // If we still have nothing, try generate synthetic column headers (works only if the file is
+        // If we still have nothing, try to generate synthetic column headers (works only if the file is
         // non-empty, because we need to infer the column count).
         final byte[][] firstDataRow;
         if (headersToUse == null) {
