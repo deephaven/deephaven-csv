@@ -80,6 +80,7 @@ publishing {
 }
 
 signing {
+    required = "true" == findProperty('signingRequired')
     sign publishing.publications.mavenJava
     String signingKey = findProperty('signingKey')
     String signingPassword = findProperty('signingPassword')
