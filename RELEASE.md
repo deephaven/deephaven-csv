@@ -26,7 +26,7 @@ Ensure you are proceeding with a known release, and there aren't any blockers.
 ### 1. Repository prerequisites
 
 These release notes assume that the Deephaven CSV repository `git@github.com:deephaven/deephaven-csv.git` is referenced as the remote named `upstream`.
-Please ensure your local repository is setup as such, or that you replace any commands with the appropriately named remote:
+Please ensure your local repository is set up as such, or that you replace any commands with the appropriately named remote:
 
 ```shell
 $ git remote get-url upstream
@@ -89,19 +89,23 @@ $ git show vX.Y.Z
 $ git push upstream vX.Y.Z
 ```
 
-### 7. Update main
+### 7. Prepare next development iteration
 
 The main branch is explicitly updated (instead of going through a squash and merge PR process):
 
 ```shell
+$ git checkout main
+$ git merge --ff-only vX.Y.Z
 # edit gradle.properties, bump version, add -SNAPSHOT
 # Do a find and replace for old version, replace with new version (across READMEs)
+$ ...
 $ git add .
+$ git status -uno
 $ git commit -m "Version A.B.C-SNAPSHOT"
-$ git checkout main
-$ git merge --ff-only release/v0.X.Y.Z
-$ git push
+$ git push -u upstream main
 ```
+
+The release branch can be deleted locally and remotely.
 
 ### 8. GitHub release
 
