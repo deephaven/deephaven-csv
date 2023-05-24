@@ -128,7 +128,7 @@ To auto-format your code, you can run:
 If you are doing local development and want to consume `deephaven-csv` changes in other components, you can publish to maven local:
 
 ```shell
-./gradlew publishToMavenLocal -x signMavenJavaPublication
+./gradlew publishToMavenLocal
 ```
 
 ## Benchmarks
