@@ -101,6 +101,9 @@ public final class CellGrabber {
             }
         } else {
             processUnquotedMode(dest, lastInRow);
+            if (ignoreSurroundingSpaces) {
+                trimWhitespace(dest);
+            }
         }
         return true;
     }

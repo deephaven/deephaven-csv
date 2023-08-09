@@ -159,6 +159,29 @@ public class CsvReaderTest {
         CsvReader.read(specs, inputStream, makeMySinkFactory());
     }
 
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/133">Deephaven CSV Issue #133</a>.
+     * The library was not trimming trailing whitespace in unquoted strings when requested.
+     */
+    @Test
+    public void bug133() throws CsvReaderException {
+        final String input = "String1,String2\n" +
+                "hello   ,   there\n";
+
+        final ColumnSet includingSpaces =
+                ColumnSet.of(
+                        Column.ofRefs("String1", "hello   "),  // including surrounding spaces
+                        Column.ofRefs("String2", "   there"));
+
+        final ColumnSet ignoringSpaces =
+                ColumnSet.of(
+                        Column.ofRefs("String1", "hello"),   // ignoring surrounding spaces
+                        Column.ofRefs("String2", "there"));
+
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(false).build(), input, includingSpaces);
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(true).build(), input, ignoringSpaces);
+    }
+
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
