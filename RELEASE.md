@@ -39,7 +39,7 @@ Ensure you are up-to-date with `upstream/main`, or at the commit that you want t
 If you are unsure what commit to start from, please ask.
 Most of the time, the main branch will be referencing a `-SNAPSHOT` version, and we'll want to update this to a non-snapshot version.
 Please double-check you are on the version you expect to be releasing.
-The releases have so far proceeded with branches named `releave/vX.Y.Z`, where `X.Y.Z` is the version number (this isn't a technical requirement), please replace `X.Y.Z` with the appropriate version.
+The releases have so far proceeded with branches named `release/vX.Y.Z`, where `X.Y.Z` is the version number (this isn't a technical requirement), please replace `X.Y.Z` with the appropriate version.
 
 ```shell
 $ git fetch upstream
