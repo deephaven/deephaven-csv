@@ -160,8 +160,8 @@ public class CsvReaderTest {
     }
 
     /**
-     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/133">Deephaven CSV Issue #133</a>.
-     * The library was not trimming trailing whitespace in unquoted strings when requested.
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/133">Deephaven CSV Issue #133</a>. The
+     * library was not trimming trailing whitespace in unquoted strings when requested.
      */
     @Test
     public void bug133() throws CsvReaderException {
@@ -170,16 +170,18 @@ public class CsvReaderTest {
 
         final ColumnSet includingSpaces =
                 ColumnSet.of(
-                        Column.ofRefs("String1", "hello   "),  // including surrounding spaces
+                        Column.ofRefs("String1", "hello   "), // including surrounding spaces
                         Column.ofRefs("String2", "   there"));
 
         final ColumnSet ignoringSpaces =
                 ColumnSet.of(
-                        Column.ofRefs("String1", "hello"),   // ignoring surrounding spaces
+                        Column.ofRefs("String1", "hello"), // ignoring surrounding spaces
                         Column.ofRefs("String2", "there"));
 
-        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(false).build(), input, includingSpaces);
-        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(true).build(), input, ignoringSpaces);
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(false).build(), input,
+                includingSpaces);
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(true).build(), input,
+                ignoringSpaces);
     }
 
     @Test
