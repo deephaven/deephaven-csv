@@ -47,6 +47,8 @@ $ git checkout upstream/main
 $ git checkout -b release/vX.Y.Z
 $ # edit gradle.properties, remove -SNAPSHOT
 $ git add gradle.properties
+# Do a find and replace for old version, replace with new version (across READMEs)
+$ ...
 $ git commit -m "Bump to version X.Y.Z"
 ```
 
@@ -97,8 +99,7 @@ The main branch is explicitly updated (instead of going through a squash and mer
 $ git checkout main
 $ git merge --ff-only vX.Y.Z
 # edit gradle.properties, bump version, add -SNAPSHOT
-# Do a find and replace for old version, replace with new version (across READMEs)
-$ ...
+# for example v0.12.0 might become v0.13.0-SNAPSHOT
 $ git add .
 $ git status -uno
 $ git commit -m "Version A.B.C-SNAPSHOT"
