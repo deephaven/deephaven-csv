@@ -56,7 +56,7 @@ dependencies {
 }
 
 jmh {
-    jmhVersion = '1.36'
+    jmhVersion = '1.37'
     // -prof gc
     profilers = ['gc']
     // -rf JSON
