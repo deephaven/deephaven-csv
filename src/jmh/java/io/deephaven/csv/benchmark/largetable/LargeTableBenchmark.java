@@ -1,6 +1,5 @@
 package io.deephaven.csv.benchmark.largetable;
 
-import io.deephaven.csv.benchmark.doublecol.DoubleColumnBenchmark;
 import io.deephaven.csv.benchmark.util.Util;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
@@ -142,8 +141,14 @@ public class LargeTableBenchmark {
     }
 
     @Benchmark
+    public void deephavenSingle(InputProvider ip, final ReusableStorage storage, final Blackhole bh) throws Exception {
+        final Results results = LargeTableDeephaven.read(ip.makeStream(), storage.results, false);
+        bh.consume(results);
+    }
+
+    @Benchmark
     public void deephaven(InputProvider ip, final ReusableStorage storage, final Blackhole bh) throws Exception {
-        final Results results = LargeTableDeephaven.read(ip.makeStream(), storage.results);
+        final Results results = LargeTableDeephaven.read(ip.makeStream(), storage.results, true);
         bh.consume(results);
     }
 

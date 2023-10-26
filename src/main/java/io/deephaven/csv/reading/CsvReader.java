@@ -105,12 +105,15 @@ public final class CsvReader {
             dsrs.add(new Moveable<>(pair.second));
         }
 
-        // Select an Excecutor based on whether the user wants the code to run asynchronously
-        // or not.
-        final ExecutorService exec =
-                specs.concurrent()
-                        ? Executors.newFixedThreadPool(numOutputCols + 1)
-                        : Executors.newSingleThreadExecutor();
+        // Select an Excecutor based on whether the user wants the code to run asynchronously or not.
+        final Executor exec;
+        final ExecutorService executorService;
+        if (specs.concurrent()) {
+            exec = executorService = Executors.newFixedThreadPool(numOutputCols + 1);
+        } else {
+            exec = DirectExecutor.INSTANCE;
+            executorService = null;
+        }
         // We are generic on Object because we have a diversity of Future types (Long vs
         // ParseDenseStorageToColumn.Result)
         final ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<>(exec);
@@ -155,8 +158,10 @@ public final class CsvReader {
         } catch (Throwable throwable) {
             throw new CsvReaderException("Caught exception", throwable);
         } finally {
-            // Tear down everything (interrupting the threads if necessary).
-            exec.shutdownNow();
+            if (executorService != null) {
+                // Tear down everything (interrupting the threads if necessary).
+                executorService.shutdownNow();
+            }
         }
     }
 
@@ -367,6 +372,15 @@ public final class CsvReader {
          */
         public DataType dataType() {
             return dataType;
+        }
+    }
+
+    private enum DirectExecutor implements Executor {
+        INSTANCE;
+
+        @Override
+        public void execute(@NotNull Runnable command) {
+            command.run();
         }
     }
 }

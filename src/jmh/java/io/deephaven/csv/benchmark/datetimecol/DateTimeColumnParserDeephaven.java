@@ -12,11 +12,13 @@ import java.util.Arrays;
 import java.util.Collections;
 
 public final class DateTimeColumnParserDeephaven {
-    public static BenchmarkResult<long[]> read(final InputStream in, final long[][] storage) throws Exception {
+    public static BenchmarkResult<long[]> read(final InputStream in, final long[][] storage, boolean concurrent)
+            throws Exception {
         final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, null, null, null, null, storage);
         final CsvSpecs specs = CsvSpecs.builder()
                 .parsers(Collections.singleton(Parsers.DATETIME))
                 .hasHeaderRow(true)
+                .concurrent(concurrent)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final long[][] data = Arrays.stream(result.columns())

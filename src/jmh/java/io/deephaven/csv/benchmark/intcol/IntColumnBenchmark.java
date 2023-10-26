@@ -46,8 +46,15 @@ public class IntColumnBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<int[]> deephavenSingle(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return IntColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output, false);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<int[]> deephaven(final InputProvider input, final ReusableStorage storage) throws Exception {
-        return IntColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output);
+        return IntColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output, true);
     }
 
     @Benchmark

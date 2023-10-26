@@ -58,9 +58,16 @@ public class DateTimeColumnBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<long[]> deephavenSingle(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return DateTimeColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output, false);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<long[]> deephaven(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return DateTimeColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output);
+        return DateTimeColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output, true);
     }
 
     @Benchmark

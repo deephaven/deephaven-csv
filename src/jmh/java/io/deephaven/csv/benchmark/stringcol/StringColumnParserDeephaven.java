@@ -12,11 +12,13 @@ import java.util.Arrays;
 import java.util.Collections;
 
 public final class StringColumnParserDeephaven {
-    public static BenchmarkResult<String[]> read(final InputStream in, final String[][] storage) throws Exception {
+    public static BenchmarkResult<String[]> read(final InputStream in, final String[][] storage, boolean concurrent)
+            throws Exception {
         final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(null, null, null, null, storage, null);
         final CsvSpecs specs = CsvSpecs.builder()
                 .parsers(Collections.singleton(Parsers.STRING))
                 .hasHeaderRow(true)
+                .concurrent(concurrent)
                 .build();
         final CsvReader.Result result = CsvReader.read(specs, in, sinkFactory);
         final String[][] data = Arrays.stream(result.columns())

@@ -4,13 +4,12 @@ import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.benchmark.util.SinkFactories;
 import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.reading.CsvReader;
-import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
 
 import java.io.InputStream;
 
 public class LargeNumericOnlyDeephaven {
-    public static Results read(final InputStream in, final Results results) throws Exception {
+    public static Results read(final InputStream in, final Results results, boolean concurrent) throws Exception {
         final SinkFactory sinkFactory = SinkFactories.makeRecyclingSinkFactory(
                 null,
                 null,
@@ -21,6 +20,7 @@ public class LargeNumericOnlyDeephaven {
 
         final CsvSpecs specs = CsvSpecs.builder()
                 .hasHeaderRow(true)
+                .concurrent(concurrent)
                 .putParserForIndex(1, Parsers.LONG)
                 .putParserForIndex(2, Parsers.LONG)
                 .putParserForIndex(3, Parsers.LONG)
