@@ -64,6 +64,9 @@ $ git push -u upstream release/vX.Y.Z
 ### 4. Monitor release
 
 The release will proceed with [GitHub Actions](https://github.com/deephaven/deephaven-csv/actions/workflows/publish.yml).
+Upon completion, the publish workflow will upload the jars as artifacts. There should be 7 jars in total:
+`deephaven-csv`'s `.jar`, `-javadoc.jar`, `-sources.jar`, and `-jmh.jar`; `deephaven-csv-fast-double-parser`'s `.jar`,
+`-javadoc.jar`, and `-sources.jar`. Download these artifacts for later upload as part of the GitHub release.
 
 ### 5. Maven Central jars
 
@@ -113,5 +116,7 @@ The release branch can be deleted locally and remotely.
 Create a new [GitHub release](https://github.com/deephaven/deephaven-csv/releases/new) and use the `vX.Y.Z` tag as reference.
 
 The convention is to have the Release title of the form `vX.Y.Z` and to autogenerate the release notes in comparison to the previous release tag.
+
+Upload the 7 jar artifacts downloaded from the publish workflow as assets for the release. 
 
 Hit the GitHub "Publish release" button.
