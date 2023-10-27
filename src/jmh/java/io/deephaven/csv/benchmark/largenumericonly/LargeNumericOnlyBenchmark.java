@@ -117,8 +117,14 @@ public class LargeNumericOnlyBenchmark {
     }
 
     @Benchmark
+    public void deephavenSingle(InputProvider ip, final ReusableStorage storage, final Blackhole bh) throws Exception {
+        final Results results = LargeNumericOnlyDeephaven.read(ip.makeStream(), storage.results, false);
+        bh.consume(results);
+    }
+
+    @Benchmark
     public void deephaven(InputProvider ip, final ReusableStorage storage, final Blackhole bh) throws Exception {
-        final Results results = LargeNumericOnlyDeephaven.read(ip.makeStream(), storage.results);
+        final Results results = LargeNumericOnlyDeephaven.read(ip.makeStream(), storage.results, true);
         bh.consume(results);
     }
 }

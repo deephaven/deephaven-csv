@@ -69,9 +69,16 @@ public class StringColumnBenchmark {
 
     @Benchmark
     @OperationsPerInvocation(OPERATIONS)
+    public BenchmarkResult<String[]> deephavenSingle(final InputProvider input, final ReusableStorage storage)
+            throws Exception {
+        return StringColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output(), false);
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(OPERATIONS)
     public BenchmarkResult<String[]> deephaven(final InputProvider input, final ReusableStorage storage)
             throws Exception {
-        return StringColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output());
+        return StringColumnParserDeephaven.read(input.tableMaker.makeStream(), storage.output(), true);
     }
 
     @Benchmark
