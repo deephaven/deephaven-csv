@@ -38,10 +38,16 @@ jobs:
       - name: Publish
         # Note: even though we specify org.gradle.parallel=false in our CI gradle.properties, we want to be explicit
         # here about no parallelism to ensure we don't create disjointed staging repositories.
-        run: ./gradlew --no-parallel publish
+        run: ./gradlew --no-parallel assemble publish
         env:
           ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.CI_AT_DEEPHAVEN_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.CI_AT_DEEPHAVEN_PASSWORD }}
           ORG_GRADLE_PROJECT_signingRequired: true
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: |
+            **/build/libs/**
