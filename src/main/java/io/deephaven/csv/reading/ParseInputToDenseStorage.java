@@ -90,6 +90,7 @@ public class ParseInputToDenseStorage {
         private final int numCols;
         private final ByteSlice byteSlice;
         private final MutableBoolean lastInRow;
+        private final MutableBoolean endOfInput;
         private final byte[][] nullValueLiteralsAsUtf8;
 
         public RowAppender(final String[] columnHeaders, final byte[][] optionalFirstDataRow, final CellGrabber grabber,
@@ -109,6 +110,7 @@ public class ParseInputToDenseStorage {
             }
             byteSlice = new ByteSlice();
             lastInRow = new MutableBoolean();
+            endOfInput = new MutableBoolean();
             // Here we prepare ahead of time what we are going to do when we encounter a short row. Say the input looks
             // like:
             // 10,20,30,40,50
@@ -174,18 +176,15 @@ public class ParseInputToDenseStorage {
             int colNum = 0;
             for (colNum = 0; colNum < numCols; ++colNum) {
                 try {
-                    if (!grabber.grabNext(byteSlice, lastInRow)) {
-                        if (colNum == 0) {
-                            // Input exhausted
-                            return RowResult.END_OF_INPUT;
-                        }
-                        // Can't get here. If there is any data at all in the last row, and *then* the file
-                        // ends, grabNext() will return true, with lastInRow set.
-                        throw new RuntimeException("Logic error: uncaught short last row");
-                    }
+                    grabber.grabNext(byteSlice, lastInRow, endOfInput);
                     if (lastInRow.booleanValue()) {
-                        if (byteSlice.size() == 0 && colNum == 0 && specs.ignoreEmptyLines()) {
-                            return RowResult.IGNORED_EMPTY_ROW;
+                        if (colNum == 0 && byteSlice.size() == 0) {
+                            if (endOfInput.booleanValue()) {
+                                return RowResult.END_OF_INPUT;
+                            }
+                            if (specs.ignoreEmptyLines()) {
+                                return RowResult.IGNORED_EMPTY_ROW;
+                            }
                         }
                         appendToDenseStorageWriter(dsws[colNum], byteSlice, writeToConsumer);
                         ++colNum;
@@ -208,10 +207,7 @@ public class ParseInputToDenseStorage {
                 }
                 // Eat.
                 while (!lastInRow.booleanValue()) {
-                    if (!grabber.grabNext(byteSlice, lastInRow)) {
-                        // Can't happen. Won't get end of input while finishing excess row.
-                        throw new RuntimeException("Logic error: end of input while finishing excess row");
-                    }
+                    grabber.grabNext(byteSlice, lastInRow, endOfInput);
                 }
             }
 
@@ -226,7 +222,7 @@ public class ParseInputToDenseStorage {
                 throw new CsvReaderException(message);
             }
 
-            // Pad the row with a null vlaue literal appropriate for each column.
+            // Pad the row with a null value literal appropriate for each column.
             while (colNum < numCols) {
                 final byte[] nvl = nullValueLiteralsAsUtf8[colNum];
                 if (nvl == null) {

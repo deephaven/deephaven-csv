@@ -184,6 +184,25 @@ public class CsvReaderTest {
                 ignoringSpaces);
     }
 
+    /**
+     * Reported in <a href="https://github.com/deephaven/deephaven-csv/issues/162">Deephaven CSV Issue #162</a>. The
+     * library was throwing an internal error when the last cell is empty and the last line is not terminated with a
+     * newline.
+     */
+    @Test
+    public void bug162() throws CsvReaderException {
+        // Last cell is empty and the line is not terminated.
+        final String input = "A,B\n" +
+                "apple,banana\n" +
+                "cherry,";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("A", "apple", "cherry"),
+                        Column.ofRefs("B", "banana", null));
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+    }
+
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
