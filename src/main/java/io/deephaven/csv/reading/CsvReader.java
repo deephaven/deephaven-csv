@@ -287,7 +287,7 @@ public final class CsvReader {
     }
 
     /**
-     * Try to read one row from the input. Returns false if the input ends before one row has been read.
+     * Try to read one row from the input. Returns null if the input is empty
      *
      * @return The first row as a byte[][] or null if the input was exhausted.
      */
@@ -297,14 +297,16 @@ public final class CsvReader {
         // Grab the header
         final ByteSlice slice = new ByteSlice();
         final MutableBoolean lastInRow = new MutableBoolean();
+        final MutableBoolean endOfInput = new MutableBoolean();
         do {
-            if (!grabber.grabNext(slice, lastInRow)) {
-                return null;
-            }
+            grabber.grabNext(slice, lastInRow, endOfInput);
             final byte[] item = new byte[slice.size()];
             slice.copyTo(item, 0);
             headers.add(item);
         } while (!lastInRow.booleanValue());
+        if (headers.size() == 1 && headers.get(0).length == 0 && endOfInput.booleanValue()) {
+            return null;
+        }
         return headers.toArray(new byte[0][]);
     }
 

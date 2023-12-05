@@ -75,37 +75,33 @@ public final class CellGrabber {
      * trimming.
      *
      * @param dest The result, as a {@link ByteSlice}. The ByteSlice is invalidated by the next call to grabNext.
-     * @param lastInRow An out parameter whose contents are only specified if this method returns true. Its contents
-     *        will be set to true if the cell just read was the last cell in the row, otherwise they will be set to
-     *        false.
-     * @return true if a cell was read; false if at end of input.
+     * @param lastInRow An out parameter which will be set to true if the cell just read was the last cell in the row,
+     *        otherwise it will be set to false.
+     * @param endOfInput An out parameter which will be set to true if the cell just read encountered the end of the
+     *        input, otherwise it will be set to false.
      */
-    public boolean grabNext(final ByteSlice dest, final MutableBoolean lastInRow)
-            throws CsvReaderException {
+    public void grabNext(final ByteSlice dest, final MutableBoolean lastInRow,
+            final MutableBoolean endOfInput) throws CsvReaderException {
         spillBuffer.clear();
         startOffset = offset;
 
         if (ignoreSurroundingSpaces) {
             skipWhitespace();
         }
-        if (!tryEnsureMore()) {
-            return false;
-        }
 
         // Is first char the quote char?
-        if (buffer[offset] == quoteChar) {
+        if (tryEnsureMore() && buffer[offset] == quoteChar) {
             ++offset;
-            processQuotedMode(dest, lastInRow);
+            processQuotedMode(dest, lastInRow, endOfInput);
             if (trim) {
                 trimWhitespace(dest);
             }
         } else {
-            processUnquotedMode(dest, lastInRow);
+            processUnquotedMode(dest, lastInRow, endOfInput);
             if (ignoreSurroundingSpaces) {
                 trimWhitespace(dest);
             }
         }
-        return true;
     }
 
     /**
@@ -114,8 +110,8 @@ public final class CellGrabber {
      * @param lastInRow An out parameter. Its contents will be set to true if the cell just read was the last cell in
      *        the row, otherwise the contents will be set to false.
      */
-    private void processQuotedMode(final ByteSlice dest, final MutableBoolean lastInRow)
-            throws CsvReaderException {
+    private void processQuotedMode(final ByteSlice dest, final MutableBoolean lastInRow,
+            final MutableBoolean endOfInput) throws CsvReaderException {
         startOffset = offset;
         boolean prevCharWasCarriageReturn = false;
         while (true) {
@@ -162,7 +158,7 @@ public final class CellGrabber {
         // We got out of the quoted string. Consume any trailing matter after the quote and before the
         // field
         // delimiter. Hopefully that trailing matter is just whitespace, but we shall see.
-        finishField(dest, lastInRow);
+        finishField(dest, lastInRow, endOfInput);
 
         // From this point on, note that dest is a slice that may point to the underlying input buffer
         // or the spill buffer. Take care from this point on to not disturb the input (e.g. by reading
@@ -183,10 +179,10 @@ public final class CellGrabber {
     /**
      * Process characters in "unquoted mode". This is easy: eat characters until the next field or line delimiter.
      */
-    private void processUnquotedMode(final ByteSlice dest, final MutableBoolean lastInRow)
-            throws CsvReaderException {
+    private void processUnquotedMode(final ByteSlice dest, final MutableBoolean lastInRow,
+            final MutableBoolean endOfInput) throws CsvReaderException {
         startOffset = offset;
-        finishField(dest, lastInRow);
+        finishField(dest, lastInRow, endOfInput);
     }
 
     /** Skip whitespace but do not consider the field delimiter to be whitespace. */
@@ -211,28 +207,30 @@ public final class CellGrabber {
      * @param lastInRow An out parameter. Its contents are set to true if the cell was the last one in the row.
      *        Otherwise, its contents are set to false.
      */
-    private void finishField(final ByteSlice dest, final MutableBoolean lastInRow)
+    private void finishField(final ByteSlice dest, final MutableBoolean lastInRow,
+            final MutableBoolean endOfInput)
             throws CsvReaderException {
         while (true) {
-            if (offset == size) {
-                if (!tryEnsureMore()) {
-                    finish(dest);
-                    // End of file sets last in row.
-                    lastInRow.setValue(true);
-                    return;
-                }
+            if (!tryEnsureMore()) {
+                finish(dest);
+                // End of input sets both flags.
+                lastInRow.setValue(true);
+                endOfInput.setValue(true);
+                return;
             }
             final byte ch = buffer[offset];
             if (ch == fieldDelimiter) {
                 finish(dest);
                 ++offset; // ... and skip over the field delimiter.
                 lastInRow.setValue(false);
+                endOfInput.setValue(false);
                 return;
             }
             if (ch == '\n') {
                 finish(dest);
                 ++offset;
                 lastInRow.setValue(true);
+                endOfInput.setValue(false);
                 ++physicalRowNum;
                 return;
             }
@@ -252,6 +250,7 @@ public final class CellGrabber {
                 finish(dest);
                 dest.reset(dest.data(), dest.begin(), dest.end() - excess);
                 lastInRow.setValue(true);
+                endOfInput.setValue(false);
                 ++physicalRowNum;
                 return;
             }
