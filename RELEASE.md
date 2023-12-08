@@ -67,6 +67,7 @@ The release will proceed with [GitHub Actions](https://github.com/deephaven/deep
 Upon completion, the publish workflow will upload the jars as artifacts. There should be 7 jars in total:
 `deephaven-csv`'s `.jar`, `-javadoc.jar`, `-sources.jar`, and `-jmh.jar`; `deephaven-csv-fast-double-parser`'s `.jar`,
 `-javadoc.jar`, and `-sources.jar`. Download these artifacts for later upload as part of the GitHub release.
+There will be an 8th jar, buildSrc.jar, which does not need to be included in the release.
 
 ### 5. Maven Central jars
 
@@ -102,7 +103,7 @@ The main branch is explicitly updated (instead of going through a squash and mer
 $ git checkout main
 $ git merge --ff-only vX.Y.Z
 # edit gradle.properties, bump version, add -SNAPSHOT
-# for example v0.12.0 might become v0.13.0-SNAPSHOT
+# for example "version=0.12.0" might become "version=0.13.0-SNAPSHOT"
 $ git add .
 $ git status -uno
 $ git commit -m "Version A.B.C-SNAPSHOT"
@@ -117,6 +118,7 @@ Create a new [GitHub release](https://github.com/deephaven/deephaven-csv/release
 
 The convention is to have the Release title of the form `vX.Y.Z` and to autogenerate the release notes in comparison to the previous release tag.
 
-Upload the 7 jar artifacts downloaded from the publish workflow as assets for the release. 
+Upload the 7 jar artifacts downloaded from the publish workflow as assets for the release. As a reminder, the 8th jar, buildSrc.jar, does not
+need to be uploaded to the release.
 
 Hit the GitHub "Publish release" button.
