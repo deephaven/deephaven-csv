@@ -103,7 +103,7 @@ The main branch is explicitly updated (instead of going through a squash and mer
 $ git checkout main
 $ git merge --ff-only vX.Y.Z
 # edit gradle.properties, bump version, add -SNAPSHOT
-# for example "VERSION=0.12.0" might become "VERSION=0.13.0-SNAPSHOT"
+# for example "version=0.12.0" might become "version=0.13.0-SNAPSHOT"
 $ git add .
 $ git status -uno
 $ git commit -m "Version A.B.C-SNAPSHOT"
