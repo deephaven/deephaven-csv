@@ -27,7 +27,7 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:24.1.0'
 
     annotationProcessor 'org.immutables:value:2.10.0'
-    compileOnly 'org.immutables:value-annotations:2.10.0'
+    compileOnly 'org.immutables:value-annotations:2.10.1'
 
     if (customDoubleParser == 'fast-double-parser') {
         // By default, use the fast double parser for tests and JMH
