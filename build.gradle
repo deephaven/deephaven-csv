@@ -39,7 +39,7 @@ dependencies {
     }
 
     testImplementation 'net.sf.trove4j:trove4j:3.0.3'
-    testImplementation 'commons-io:commons-io:2.15.1'
+    testImplementation 'commons-io:commons-io:2.16.1'
     testCompileOnly 'org.jetbrains:annotations:24.1.0'
 
     testImplementation 'org.assertj:assertj-core:3.25.3'
