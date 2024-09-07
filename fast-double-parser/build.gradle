@@ -10,7 +10,7 @@ dependencies {
     // Multi-release jar, 8+ compatible
     implementation 'ch.randelshofer:fastdoubleparser:1.0.0'
 
-    testImplementation 'org.assertj:assertj-core:3.25.3'
+    testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation(platform('org.junit:junit-bom:5.11.0'))
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
