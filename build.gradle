@@ -52,7 +52,7 @@ dependencies {
     jmh 'de.siegmar:fastcsv:2.2.2'
     jmh 'net.sf.supercsv:super-csv:2.4.0'
     jmh 'org.apache.commons:commons-csv:1.12.0'
-    jmh 'org.simpleflatmapper:sfm-csv:8.2.3'
+    jmh 'org.simpleflatmapper:sfm-csv:9.0.2'
 }
 
 jmh {
