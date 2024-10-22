@@ -49,7 +49,7 @@ dependencies {
     jmh 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.18.0'
     jmh 'com.opencsv:opencsv:5.9'
     jmh 'com.univocity:univocity-parsers:2.9.1'
-    jmh 'de.siegmar:fastcsv:2.2.2'
+    jmh 'de.siegmar:fastcsv:3.3.1'
     jmh 'net.sf.supercsv:super-csv:2.4.0'
     jmh 'org.apache.commons:commons-csv:1.12.0'
     jmh 'org.simpleflatmapper:sfm-csv:8.2.3'
