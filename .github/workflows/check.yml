@@ -53,7 +53,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '23'
-          cache: 'gradle'
 
       - name: Set JAVA_HOME
         run: echo "JAVA_HOME=${{ steps.setup-java-21.outputs.path }}" >> $GITHUB_ENV
