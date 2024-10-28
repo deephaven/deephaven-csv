@@ -25,7 +25,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
-          cache: 'gradle'
 
       - name: Setup JDK 11
         id: setup-java-11
@@ -33,7 +32,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11'
-          cache: 'gradle'
 
       - name: Setup JDK 17
         id: setup-java-17
@@ -41,7 +39,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Setup JDK 21
         id: setup-java-21
@@ -49,7 +46,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-          cache: 'gradle'
 
       - name: Setup JDK 23
         id: setup-java-23
@@ -57,10 +53,12 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '23'
-          cache: 'gradle'
 
       - name: Set JAVA_HOME
         run: echo "JAVA_HOME=${{ steps.setup-java-21.outputs.path }}" >> $GITHUB_ENV
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Setup gradle properties
         run: |
