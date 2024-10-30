@@ -1,7 +1,8 @@
-package io.deephaven.csv.reading;
+package io.deephaven.csv.reading.cells;
 
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.containers.GrowableByteBuffer;
+import io.deephaven.csv.reading.ReaderUtil;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
@@ -13,7 +14,7 @@ import java.io.InputStream;
  * This class is used to traverse over text from a Reader, understanding both field and line delimiters, as well as the
  * CSV quoting convention, and breaking the text into cells for use by the calling code.
  */
-public final class CellGrabber {
+public final class DelimitedCellGrabber implements CellGrabber {
     /** Size of chunks to read from the {@link InputStream}. */
     public static final int BUFFER_SIZE = 65536;
     /** The {@link InputStream} for the input. */
@@ -51,7 +52,7 @@ public final class CellGrabber {
     private int physicalRowNum;
 
     /** Constructor. */
-    public CellGrabber(
+    public DelimitedCellGrabber(
             final InputStream inputStream,
             final byte quoteChar,
             final byte fieldDelimiter,
@@ -70,16 +71,7 @@ public final class CellGrabber {
         this.physicalRowNum = 0;
     }
 
-    /**
-     * Try to grab the next cell from the input, being aware of field delimiters, line delimiters, quoting, and
-     * trimming.
-     *
-     * @param dest The result, as a {@link ByteSlice}. The ByteSlice is invalidated by the next call to grabNext.
-     * @param lastInRow An out parameter which will be set to true if the cell just read was the last cell in the row,
-     *        otherwise it will be set to false.
-     * @param endOfInput An out parameter which will be set to true if the cell just read encountered the end of the
-     *        input, otherwise it will be set to false.
-     */
+    @Override
     public void grabNext(final ByteSlice dest, final MutableBoolean lastInRow,
             final MutableBoolean endOfInput) throws CsvReaderException {
         spillBuffer.clear();
@@ -94,12 +86,12 @@ public final class CellGrabber {
             ++offset;
             processQuotedMode(dest, lastInRow, endOfInput);
             if (trim) {
-                trimWhitespace(dest);
+                ReaderUtil.trimWhitespace(dest);
             }
         } else {
             processUnquotedMode(dest, lastInRow, endOfInput);
             if (ignoreSurroundingSpaces) {
-                trimWhitespace(dest);
+                ReaderUtil.trimWhitespace(dest);
             }
         }
     }
@@ -314,23 +306,5 @@ public final class CellGrabber {
 
     public int physicalRowNum() {
         return physicalRowNum;
-    }
-
-    /**
-     * Trim whitespace from the front and back of the slice.
-     *
-     * @param cs The slice, modified in-place to have whitespace (if any) removed.
-     */
-    private static void trimWhitespace(final ByteSlice cs) {
-        final byte[] data = cs.data();
-        int begin = cs.begin();
-        int end = cs.end();
-        while (begin != end && RangeTests.isSpaceOrTab(data[begin])) {
-            ++begin;
-        }
-        while (begin != end && RangeTests.isSpaceOrTab(data[end - 1])) {
-            --end;
-        }
-        cs.reset(data, begin, end);
     }
 }

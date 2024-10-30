@@ -110,6 +110,20 @@ public final class ByteSlice implements CharSequence {
         return new ByteSlice(data, newBegin, newEnd);
     }
 
+    /**
+     * Trim the padding bytes from the front and back of the slice.
+     *
+     * @param padding The padding byte.
+     */
+    public void trimPadding(byte padding) {
+        while (begin != end && data[begin] == padding) {
+            ++begin;
+        }
+        while (begin != end && data[end - 1] == padding) {
+            --end;
+        }
+    }
+
     @Override
     @NotNull
     public String toString() {
