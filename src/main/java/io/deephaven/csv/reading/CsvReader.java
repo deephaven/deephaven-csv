@@ -7,7 +7,9 @@ import io.deephaven.csv.parsers.DataType;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.reading.cells.CellGrabber;
 import io.deephaven.csv.reading.cells.DelimitedCellGrabber;
+import io.deephaven.csv.reading.cells.FixedCellGrabber;
 import io.deephaven.csv.reading.headers.DelimitedHeaderFinder;
+import io.deephaven.csv.reading.headers.FixedHeaderFinder;
 import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.SinkFactory;
 import io.deephaven.csv.util.*;
@@ -63,7 +65,8 @@ public final class CsvReader {
      */
     public static Result read(final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory)
             throws CsvReaderException {
-        return delimitedReadLogic(specs, stream, sinkFactory);
+        return specs.hasFixedWidthColumns() ? fixedReadLogic(specs, stream, sinkFactory)
+                : delimitedReadLogic(specs, stream, sinkFactory);
     }
 
     private static Result delimitedReadLogic(
@@ -97,6 +100,16 @@ public final class CsvReader {
         return commonReadLogic(specs, grabber, firstDataRow, numInputCols, numOutputCols, headersToUse, sinkFactory);
     }
 
+    private static Result fixedReadLogic(
+            final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory) throws CsvReaderException {
+        final CellGrabber lineGrabber = FixedCellGrabber.makeLineGrabber(stream);
+        MutableObject<int[]> columnWidths = new MutableObject<>();
+        final String[] headers = FixedHeaderFinder.determineHeadersToUse(specs, lineGrabber, columnWidths);
+        final int numCols = headers.length;
+        final CellGrabber grabber = new FixedCellGrabber(lineGrabber, columnWidths.getValue(),
+                specs.ignoreSurroundingSpaces(), specs.useUtf32CountingConvention());
+        return commonReadLogic(specs, grabber, null, numCols, numCols, headers, sinkFactory);
+    }
 
     private static Result commonReadLogic(final CsvSpecs specs, CellGrabber grabber, byte[][] optionalFirstDataRow,
             int numInputCols, int numOutputCols,

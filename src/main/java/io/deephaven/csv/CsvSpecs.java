@@ -118,6 +118,34 @@ public abstract class CsvSpecs {
         Builder headerValidator(Predicate<String> headerValidator);
 
         /**
+         * True if the input is organized into fixed width columns rather than delimited by a delimiter.
+         */
+        Builder hasFixedWidthColumns(boolean hasFixedWidthColumns);
+
+        /**
+         * When {@link #hasFixedWidthColumns} is set, the library either determines the column widths from the header
+         * row (provided {@link #hasHeaderRow} is set), or the column widths can be specified explictly by the caller.
+         * If the caller wants to specify them explicitly, they can use this method.
+         * 
+         * @param fixedColumnWidths The caller-specified widths of the columns.
+         */
+        Builder fixedColumnWidths(Iterable<Integer> fixedColumnWidths);
+
+        /**
+         * This setting controls what units fixed width columns are measured in. When true, fixed width columns are
+         * measured in Unicode code points. When false, fixed width columns are measured in UTF-16 units (aka Java
+         * chars). The difference arises when encountering characters outside the Unicode Basic Multilingual Plane. For
+         * example, the Unicode code point 💔 (U+1F494) is one Unicode code point, but takes two Java chars to
+         * represent. Along these lines, the string 💔💔💔 would fit in a column of width 3 when utf32CountingMode is
+         * true, but would require a column width of at least 6 when utf32CountingMode is false.
+         *
+         * The default setting of true is arguably more natural for users (the number of characters they see matches the
+         * visual width of the column). But some programs may want the value of false because they are counting Java
+         * chars.
+         */
+        Builder useUtf32CountingConvention(boolean useUtf32CountingConvention);
+
+        /**
          * Number of data rows to skip before processing data. This is useful when you want to parse data in chunks.
          * Typically used together with {@link Builder#numRows}. Defaults to 0.
          */
@@ -338,6 +366,30 @@ public abstract class CsvSpecs {
     @Default
     public Predicate<String> headerValidator() {
         return c -> true;
+    }
+
+    /**
+     * See {@link Builder#hasFixedWidthColumns}.
+     */
+    @Default
+    public boolean hasFixedWidthColumns() {
+        return false;
+    }
+
+    /**
+     * See {@link Builder#fixedColumnWidths}.
+     */
+    @Default
+    public List<Integer> fixedColumnWidths() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * See {@link Builder#useUtf32CountingConvention}.
+     */
+    @Default
+    public boolean useUtf32CountingConvention() {
+        return true;
     }
 
     /**
