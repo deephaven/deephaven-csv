@@ -86,12 +86,12 @@ public final class DelimitedCellGrabber implements CellGrabber {
             ++offset;
             processQuotedMode(dest, lastInRow, endOfInput);
             if (trim) {
-                ReaderUtil.trimWhitespace(dest);
+                ReaderUtil.trimSpacesAndTabs(dest);
             }
         } else {
             processUnquotedMode(dest, lastInRow, endOfInput);
             if (ignoreSurroundingSpaces) {
-                ReaderUtil.trimWhitespace(dest);
+                ReaderUtil.trimSpacesAndTabs(dest);
             }
         }
     }

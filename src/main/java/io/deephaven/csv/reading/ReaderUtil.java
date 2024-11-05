@@ -14,11 +14,11 @@ public class ReaderUtil {
     }
 
     /**
-     * Trim whitespace from the front and back of the slice.
+     * Trim spaces and tabs from the front and back of the slice.
      *
-     * @param cs The slice, modified in-place to have whitespace (if any) removed.
+     * @param cs The slice, modified in-place to have spaces and tabs (if any) removed.
      */
-    public static void trimWhitespace(final ByteSlice cs) {
+    public static void trimSpacesAndTabs(final ByteSlice cs) {
         final byte[] data = cs.data();
         int begin = cs.begin();
         int end = cs.end();

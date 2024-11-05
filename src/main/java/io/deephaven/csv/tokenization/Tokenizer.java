@@ -227,7 +227,7 @@ public class Tokenizer {
          * @param bs Modified in place to remove leading and trailing whitespace, if any.
          */
         public static void trim(final ByteSlice bs) {
-            ReaderUtil.trimWhitespace(bs);
+            ReaderUtil.trimSpacesAndTabs(bs);
         }
 
         /**

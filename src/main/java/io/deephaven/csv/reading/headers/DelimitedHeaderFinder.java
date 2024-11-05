@@ -2,6 +2,7 @@ package io.deephaven.csv.reading.headers;
 
 import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.containers.ByteSlice;
+import io.deephaven.csv.reading.ReaderUtil;
 import io.deephaven.csv.reading.cells.CellGrabber;
 import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
@@ -52,10 +53,7 @@ public class DelimitedHeaderFinder {
                 throw new CsvReaderException(
                         "Can't proceed because input file is empty and client has not specified headers");
             }
-            headersToUse = new String[firstDataRow.length];
-            for (int ii = 0; ii < headersToUse.length; ++ii) {
-                headersToUse[ii] = "Column" + (ii + 1);
-            }
+            headersToUse = ReaderUtil.makeSyntheticHeaders(firstDataRow.length);
         } else {
             firstDataRow = null;
         }
