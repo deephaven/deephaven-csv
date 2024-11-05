@@ -4,6 +4,7 @@ import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
+import io.deephaven.csv.reading.cells.CellGrabber;
 import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
 
