@@ -24,7 +24,7 @@ import java.util.function.Predicate;
 public abstract class CsvSpecs {
     public interface Builder {
         /**
-         * Copy all of the parameters from {@code specs} into {@code this} builder.
+         * Copy all the parameters from {@code specs} into {@code this} builder.
          */
         Builder from(CsvSpecs specs);
 
@@ -124,10 +124,11 @@ public abstract class CsvSpecs {
 
         /**
          * When {@link #hasFixedWidthColumns} is set, the library either determines the column widths from the header
-         * row (provided {@link #hasHeaderRow} is set), or the column widths can be specified explictly by the caller.
-         * If the caller wants to specify them explicitly, they can use this method.
-         * 
-         * @param fixedColumnWidths The caller-specified widths of the columns.
+         * row (provided {@link #hasHeaderRow} is set), or the column widths can be specified explicitly by the caller.
+         * If the caller wants to specify them explicitly, they can use this method. It is an error to set this
+         * parameter if {@link #hasFixedWidthColumns} is false. Note that because the library is tolerant of the last
+         * cell being shorter or wider than expected, the value specified here for the width of the last column is
+         * simply a placeholder; its value is ignored.
          */
         Builder fixedColumnWidths(Iterable<Integer> fixedColumnWidths);
 
@@ -137,11 +138,10 @@ public abstract class CsvSpecs {
          * chars). The difference arises when encountering characters outside the Unicode Basic Multilingual Plane. For
          * example, the Unicode code point 💔 (U+1F494) is one Unicode code point, but takes two Java chars to
          * represent. Along these lines, the string 💔💔💔 would fit in a column of width 3 when utf32CountingMode is
-         * true, but would require a column width of at least 6 when utf32CountingMode is false.
-         *
-         * The default setting of true is arguably more natural for users (the number of characters they see matches the
-         * visual width of the column). But some programs may want the value of false because they are counting Java
-         * chars.
+         * true, but would require a column width of at least 6 when utf32CountingMode is false. The default setting of
+         * true is arguably more natural for users (the number of characters they see matches the visual width of the
+         * column). But some programs may want the value of false because they are counting Java chars. It is an error
+         * to set this parameter if {@link #hasFixedWidthColumns} is false.
          */
         Builder useUtf32CountingConvention(boolean useUtf32CountingConvention);
 
@@ -188,7 +188,7 @@ public abstract class CsvSpecs {
 
         /**
          * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
-         * Defaults to {code ','}.
+         * Defaults to {code ','}. It is an error to set this parameter if {@link #hasFixedWidthColumns} is true.
          */
         Builder delimiter(char delimiter);
 
@@ -207,6 +207,8 @@ public abstract class CsvSpecs {
          * <li>hello, there
          * <li>456
          * </ul>
+         *
+         * It is an error to set this parameter if {@link #hasFixedWidthColumns} is true.
          */
         Builder quote(char quote);
 
@@ -216,7 +218,8 @@ public abstract class CsvSpecs {
         Builder ignoreSurroundingSpaces(boolean ignoreSurroundingSpaces);
 
         /**
-         * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}.
+         * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}. It is an
+         * error to set this parameter if {@link #hasFixedWidthColumns} is true.
          */
         Builder trim(boolean trim);
 
@@ -251,6 +254,38 @@ public abstract class CsvSpecs {
         checkNonnegative("numRows", numRows(), problems);
         if (!hasHeaderRow() && skipHeaderRows() > 0) {
             problems.add("skipHeaderRows != 0 but hasHeaderRow is not set");
+        }
+
+        for (final Integer colWidth : fixedColumnWidths()) {
+            if (colWidth < 1) {
+                problems.add(String.format("Fixed column width %d is invalid", colWidth));
+            }
+        }
+
+        // Certain items must not be set in fixed-width column mode. Other items must not be set in delimited column
+        // mode.
+        if (hasFixedWidthColumns()) {
+            final String format = "Incompatible parameters: can't set %s when hasFixedWidthColumns is true";
+            if (quote() != defaultQuote) {
+                problems.add(String.format(format, "quote"));
+            }
+
+            if (delimiter() != defaultDelimiter) {
+                problems.add(String.format(format, "delimiter"));
+            }
+
+            if (trim() != defaultTrim) {
+                problems.add(String.format(format, "trim"));
+            }
+        } else {
+            final String format = "Incompatible parameters: can't set %s when hasFixedWidthColumns is false";
+            if (fixedColumnWidths().size() != 0) {
+                problems.add(String.format(format, "fixedColumnWidths"));
+            }
+
+            if (useUtf32CountingConvention() != defaultUtf32CountingConvention) {
+                problems.add(String.format(format, "useUtf32CountingConvention"));
+            }
         }
         if (problems.isEmpty()) {
             return;
@@ -384,12 +419,14 @@ public abstract class CsvSpecs {
         return Collections.emptyList();
     }
 
+    private static final boolean defaultUtf32CountingConvention = true;
+
     /**
      * See {@link Builder#useUtf32CountingConvention}.
      */
     @Default
     public boolean useUtf32CountingConvention() {
-        return true;
+        return defaultUtf32CountingConvention;
     }
 
     /**
@@ -448,20 +485,25 @@ public abstract class CsvSpecs {
         return 0;
     }
 
+    private final char defaultDelimiter = ',';
+
     /**
      * See {@link Builder#delimiter}.
      */
     @Default
     public char delimiter() {
-        return ',';
+        return defaultDelimiter;
     }
+
+
+    private static final char defaultQuote = '"';
 
     /**
      * See {@link Builder#quote}.
      */
     @Default
     public char quote() {
-        return '"';
+        return defaultQuote;
     }
 
     /**
@@ -472,12 +514,14 @@ public abstract class CsvSpecs {
         return true;
     }
 
+    private static boolean defaultTrim = false;
+
     /**
      * See {@link Builder#trim}.
      */
     @Default
     public boolean trim() {
-        return false;
+        return defaultTrim;
     }
 
     /**
