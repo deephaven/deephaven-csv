@@ -26,6 +26,9 @@ import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -1853,12 +1856,6 @@ public class CsvReaderTest {
     public void colnumPassedThrough() throws CsvReaderException {
         final String input = "" + "Col1,Col2,Col3\n" + "1,2,3\n" + "4,5,6\n" + "7,8,9\n";
 
-        final ColumnSet expected =
-                ColumnSet.of(
-                        Column.ofValues("Col1", 1, 4, 7),
-                        Column.ofValues("Col2", 2, 5, 8),
-                        Column.ofValues("Col3", 3, 6, 9));
-
         final InputStream inputStream = toInputStream(input);
         final CsvSpecs specs = defaultCsvSpecs();
         final SinkFactory sinkFactory = makeBlackholeSinkFactory();
@@ -1871,6 +1868,523 @@ public class CsvReaderTest {
         Assertions.assertThat(bh0Num).isEqualTo(0);
         Assertions.assertThat(bh1Num).isEqualTo(1);
         Assertions.assertThat(bh2Num).isEqualTo(2);
+    }
+
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/212"> A user requested that the library be
+     * able to read files like this.
+     */
+    @Test
+    public void bug212() throws CsvReaderException {
+        final String input =
+                ""
+                        + "NAME                     STATUS       AGE      LABELS\n"
+                        + "argo-events              Not Active   2y77d    app.kubernetes.io/instance=argo-events,kubernetes.io/metadata.name=argo-events\n"
+                        + "argo-workflows           Active       2y77d    app.kubernetes.io/instance=argo-workflows,kubernetes.io/metadata.name=argo-workflows\n"
+                        + "argocd                   Active       5y18d    kubernetes.io/metadata.name=argocd\n"
+                        + "beta                     Not Active   4y235d   kubernetes.io/metadata.name=beta\n";
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true).build();
+
+        final ColumnSet expected = ColumnSet.of(
+                Column.ofRefs("NAME", "argo-events", "argo-workflows", "argocd", "beta"),
+                Column.ofRefs("STATUS", "Not Active", "Active", "Active", "Not Active"),
+                Column.ofRefs("AGE", "2y77d", "2y77d", "5y18d", "4y235d"),
+                Column.ofRefs("LABELS",
+                        "app.kubernetes.io/instance=argo-events,kubernetes.io/metadata.name=argo-events",
+                        "app.kubernetes.io/instance=argo-workflows,kubernetes.io/metadata.name=argo-workflows",
+                        "kubernetes.io/metadata.name=argocd",
+                        "kubernetes.io/metadata.name=beta"));
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * A basic test of fixed-width column support.
+     */
+    @Test
+    public void simpleFixedColumnWidths() throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Dividend 0.18    500\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "GOOG", "T", "Z"),
+                        Column.ofRefs("Type", "Dividend", "Dividend", "Dividend"),
+                        Column.ofValues("Price", 0.25, 0.15, 0.18),
+                        Column.ofValues("SecurityId", 200, 300, 500));
+
+        final CsvSpecs specs =
+                defaultCsvBuilder().hasFixedWidthColumns(true).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * We allow fixed-width data fields to fill the whole cell, without a padding character.
+     */
+    @Test
+    public void fixedColumnWidthsFullCell() throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOGLEDividend!0.25    200\n"
+                        + "T     Dividend 0.15    300\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "GOOGLE", "T"),
+                        Column.ofRefs("Type", "Dividend!", "Dividend"),
+                        Column.ofValues("Price", 0.25, 0.15),
+                        Column.ofValues("SecurityId", 200, 300));
+
+        final CsvSpecs specs =
+                defaultCsvBuilder().hasFixedWidthColumns(true).build();
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Fixed-width cells can keep their padding characters or trim them, via {@link CsvSpecs#ignoreSurroundingSpaces}
+     * Note that column headers themselves are always trimmed.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void fixedColumnsMayIncludeOrExcludeSurroundingSpaces(boolean ignoreSurroundingSpaces)
+            throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Coupon   0.18    500\n";
+
+        final String[] symData =
+                ignoreSurroundingSpaces ? new String[] {"GOOG", "T", "Z"} : new String[] {"GOOG  ", "T     ", "Z     "};
+
+        final String[] typeData = ignoreSurroundingSpaces ? new String[] {"Dividend", "Dividend", "Coupon"}
+                : new String[] {"Dividend ", "Dividend ", "Coupon   "};
+
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", symData),
+                        Column.ofRefs("Type", typeData),
+                        Column.ofValues("Price", 0.25, 0.15, 0.18),
+                        Column.ofValues("SecurityId", 200, 300, 500));
+
+        final CsvSpecs specs =
+                defaultCsvBuilder().hasFixedWidthColumns(true).ignoreSurroundingSpaces(ignoreSurroundingSpaces).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Like delimited mode, fixed-width mode allows header rows to be skipped.
+     */
+    @Test
+    public void fixedColumnWidthsSkipHeaderRows() throws CsvReaderException {
+        final String input =
+                ""
+                        + "front matter\n"
+                        + "ignore me\n"
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Dividend 0.18    500\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "GOOG", "T", "Z"),
+                        Column.ofRefs("Type", "Dividend", "Dividend", "Dividend"),
+                        Column.ofValues("Price", 0.25, 0.15, 0.18),
+                        Column.ofValues("SecurityId", 200, 300, 500));
+
+        final CsvSpecs specs =
+                defaultCsvBuilder().hasFixedWidthColumns(true).skipHeaderRows(2).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Like delimited mode, fixed-width mode allows data rows to be skipped.
+     */
+    @Test
+    public void fixedColumnWidthsSkipDataRows() throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "XYZ1  Coupon   0.18    500\n"
+                        + "XYZ2  Coupon   0.37    900\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "T", "XYZ1"),
+                        Column.ofRefs("Type", "Dividend", "Coupon"),
+                        Column.ofValues("Price", 0.15, 0.18),
+                        Column.ofValues("SecurityId", 300, 500));
+
+        // Skip 1 data row, take 2 data rows
+        final CsvSpecs specs =
+                defaultCsvBuilder().hasFixedWidthColumns(true).skipRows(1).numRows(2).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Like delimited mode, fixed-width mode allows rows to be short.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void fixedColumnWidthsShortRows(boolean allowMissingColumns) throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Dividend 0.18    500\n"
+                        + "QQQ   Coupon\n";
+
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "GOOG", "T", "Z", "QQQ"),
+                        Column.ofRefs("Type", null, "Dividend", "Dividend", "Coupon"),
+                        Column.ofValues("Price", Sentinels.NULL_DOUBLE, 0.15, 0.18, Sentinels.NULL_DOUBLE),
+                        Column.ofValues("SecurityId", Sentinels.NULL_INT, 300, 500, Sentinels.NULL_INT));
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .allowMissingColumns(allowMissingColumns).build();
+
+        if (allowMissingColumns) {
+            invokeTest(specs, input, expected);
+        } else {
+            Assertions.assertThatThrownBy(() -> invokeTest(specs, input, expected))
+                    .hasRootCauseMessage("Row 2 has too few columns (expected 4)");
+        }
+    }
+
+    /**
+     * Like delimited mode, fixed-width mode allows ignoring empty lines.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void fixedColumnWidthsIgnoreEmptyLines(boolean ignoreEmptyLines) throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "\n"
+                        + "\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "\n"
+                        + "Z     Dividend 0.18    500\n";
+
+
+
+        final ColumnSet expected;
+
+        if (ignoreEmptyLines) {
+            expected = ColumnSet.of(
+                    Column.ofRefs("Sym", "GOOG", "T", "Z"),
+                    Column.ofRefs("Type", "Dividend", "Dividend", "Dividend"),
+                    Column.ofValues("Price", 0.25, 0.15, 0.18),
+                    Column.ofValues("SecurityId", 200, 300, 500));
+        } else {
+            expected = ColumnSet.of(
+                    Column.ofRefs("Sym", "GOOG", null, null, "T", null, "Z"),
+                    Column.ofRefs("Type", "Dividend", null, null, "Dividend", null, "Dividend"),
+                    Column.ofValues("Price", 0.25, Sentinels.NULL_DOUBLE, Sentinels.NULL_DOUBLE, 0.15,
+                            Sentinels.NULL_DOUBLE, 0.18),
+                    Column.ofValues("SecurityId", 200, Sentinels.NULL_INT, Sentinels.NULL_INT, 300, Sentinels.NULL_INT,
+                            500));
+        }
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .ignoreEmptyLines(ignoreEmptyLines).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * In fixed width mode, if there is no header row, the caller needs to specify column widths.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void noHeaderRowRequiresFixColumnWidthsSpecified(boolean specifyColumnWidths) throws CsvReaderException {
+        final String input =
+                ""
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Coupon   0.18    500\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Column1", "GOOG", "T", "Z"),
+                        Column.ofRefs("Column2", "Dividend", "Dividend", "Coupon"),
+                        Column.ofValues("Column3", 0.25, 0.15, 0.18),
+                        Column.ofValues("Column4", 200, 300, 500));
+
+        final CsvSpecs.Builder specsBase = defaultCsvBuilder().hasFixedWidthColumns(true).hasHeaderRow(false);
+
+        if (specifyColumnWidths) {
+            final CsvSpecs specs = specsBase.fixedColumnWidths(Arrays.asList(6, 9, 8, 3)).build();
+            invokeTest(specs, input, expected);
+        } else {
+            final CsvSpecs specs = specsBase.build();
+            Assertions.assertThatThrownBy(() -> invokeTest(specs, input, expected))
+                    .hasMessage("Can't proceed because hasHeaderRow is false but fixedColumnWidths is unspecified");
+        }
+    }
+
+    /**
+     * Because the library is tolerant of the last cell being shorter or wider than expected, the final entry in
+     * fixedColumnWidths is just a placeholder.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {1, 5000, 34_000_000})
+    public void finalFixedColumnWidthEntryIsPlaceholder(int finalEntry) throws CsvReaderException {
+        final String input =
+                ""
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Coupon   0.18    500\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Column1", "GOOG", "T", "Z"),
+                        Column.ofRefs("Column2", "Dividend", "Dividend", "Coupon"),
+                        Column.ofValues("Column3", 0.25, 0.15, 0.18),
+                        Column.ofValues("Column4", 200, 300, 500));
+
+        final CsvSpecs.Builder specsBase = defaultCsvBuilder().hasFixedWidthColumns(true).hasHeaderRow(false);
+
+        final CsvSpecs specs = specsBase.fixedColumnWidths(Arrays.asList(6, 9, 8, finalEntry)).build();
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Test all the parameters incompatible with delimited mode, all at the same time.
+     */
+    @Test
+    public void checkParametersIncompatibleWithDelimitedMode() {
+        final String expectedMessage =
+                "CsvSpecs failed validation for the following reasons: " +
+                        "Incompatible parameters: can't set fixedColumnWidths when hasFixedWidthColumns is false, " +
+                        "Incompatible parameters: can't set useUtf32CountingConvention when hasFixedWidthColumns is false";
+
+        Assertions.assertThatThrownBy(() -> defaultCsvBuilder().hasFixedWidthColumns(false)
+                .useUtf32CountingConvention(false)
+                .fixedColumnWidths(Arrays.asList(1, 2, 3, 4)).build()).hasMessage(expectedMessage);
+    }
+
+    /**
+     * Test all the parameters incompatible with fixed-width mode, all at the same time.
+     */
+    @Test
+    public void checkParametersIncompatibleWithFixedWidthMode() {
+        final String expectedMessage =
+                "CsvSpecs failed validation for the following reasons: " +
+                        "Incompatible parameters: can't set quote when hasFixedWidthColumns is true, " +
+                        "Incompatible parameters: can't set delimiter when hasFixedWidthColumns is true, " +
+                        "Incompatible parameters: can't set trim when hasFixedWidthColumns is true";
+
+        Assertions.assertThatThrownBy(() -> defaultCsvBuilder().hasFixedWidthColumns(true)
+                .quote('X').delimiter('Y').trim(true).build()).hasMessage(expectedMessage);
+    }
+
+
+    /**
+     * Test all the parameters incompatible with fixed-width mode, all at the same time.
+     */
+    @Test
+    public void validateFixedWidthModeParameters() {
+        final String expectedMessage =
+                "CsvSpecs failed validation for the following reasons: " +
+                        "Fixed column width -5 is invalid";
+
+        Assertions.assertThatThrownBy(
+                () -> defaultCsvBuilder().hasFixedWidthColumns(true).fixedColumnWidths(Arrays.asList(-5, 3, 8))
+                        .build())
+                .hasMessage(expectedMessage);
+    }
+
+    /**
+     * In fixed width mode (as is also true in delimited mode), if there is no header row, the caller may specify column
+     * names. If they don't, synthetic column names will be generated.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void columnNamesMayBeSpecified(boolean specifyColumnNames) throws CsvReaderException {
+        final String input =
+                ""
+                        + "GOOG  Dividend 0.25    200\n"
+                        + "T     Dividend 0.15    300\n"
+                        + "Z     Coupon   0.18    500\n";
+
+        final String[] expectedColumnNames = specifyColumnNames ? new String[] {"Sym", "Type", "Price", "SecurityId"}
+                : new String[] {"Column1", "Column2", "Column3", "Column4"};
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs(expectedColumnNames[0], "GOOG", "T", "Z"),
+                        Column.ofRefs(expectedColumnNames[1], "Dividend", "Dividend", "Coupon"),
+                        Column.ofValues(expectedColumnNames[2], 0.25, 0.15, 0.18),
+                        Column.ofValues(expectedColumnNames[3], 200, 300, 500));
+
+        CsvSpecs.Builder specsBuilder = defaultCsvBuilder().hasFixedWidthColumns(true).hasHeaderRow(false)
+                .fixedColumnWidths(Arrays.asList(6, 9, 8, 3));
+
+        if (specifyColumnNames) {
+            specsBuilder = specsBuilder.headers(Arrays.asList(expectedColumnNames));
+        }
+
+        invokeTest(specsBuilder.build(), input, expected);
+    }
+
+    /**
+     * A counting convention test relevant to fixed-width mode. All six Unicode characters ♡♥❥❦◑╳ are in the Basic
+     * Multilingual Plane and can all be represented with a single Java char. Therefore, they are counted the same with
+     * both counting conventions.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void countsBMPCharactersTheSame(boolean useUtf32CountingConvention) throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type     Price   SecurityId\n"
+                        + "♡♥❥❦◑╳Dividend 0.15    300\n"
+                        + "Z     Dividend 0.18    500\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Sym", "♡♥❥❦◑╳", "Z"),
+                        Column.ofRefs("Type", "Dividend", "Dividend"),
+                        Column.ofValues("Price", 0.15, 0.18),
+                        Column.ofValues("SecurityId", 300, 500));
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .useUtf32CountingConvention(useUtf32CountingConvention).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * A counting convention test relevant to fixed-width mode. All six Unicode characters 🥰😻🧡💓💕💖 are _outside_
+     * the Basic Multilingual Plane and all are represented with two Java chars. The Sym column has a width of six. They
+     * will fit in the "Sym" column if the caller uses the UTF-32 counting convention. They will not fit in the column
+     * if the caller uses the UTF-16 counting convention (because it takes 12 Java chars to express them).
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void countsNonBMPCharactersDifferently(boolean useUtf32CountingConvention) throws CsvReaderException {
+        final String input =
+                ""
+                        + "Sym   Type\n"
+                        + "🥰😻🧡💓💕💖Dividend\n"
+                        + "Z     Dividend\n";
+
+        final ColumnSet expected;
+
+        if (useUtf32CountingConvention) {
+            expected = ColumnSet.of(
+                    Column.ofRefs("Sym", "🥰😻🧡💓💕💖", "Z"),
+                    Column.ofRefs("Type", "Dividend", "Dividend"));
+        } else {
+            expected = ColumnSet.of(
+                    Column.ofRefs("Sym", "🥰😻🧡", "Z"),
+                    Column.ofRefs("Type", "💓💕💖Dividend", "Dividend"));
+        }
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .useUtf32CountingConvention(useUtf32CountingConvention).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * Using Unicode characters as column headers in fixed-width mode. We give one column a header with characters from
+     * outside the BMP, and one with characters inside the BMP and show how the behavior differs depending on the
+     * useUtf32CountingConvention flag. The header 🥰😻🧡 plus trailing space will be counted as width 4 in the UTF-32
+     * counting convention, but width 7 in the UTF-16 column convention. Meanwhile, the header ╔═╤═╗ is counted as width
+     * 5 in both conventions.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void unicodeColumnHeaders(boolean useUtf32CountingConvention) throws CsvReaderException {
+        // In the UTF-32 counting convention, this is a column of width 4 (three Unicode characters plus the space)
+        // followed by a column of width 5. The first cell of the data would therefore be "abc", and the next cell
+        // would be "def".
+
+        // In the UTF-16 counting convention, this is a column of width 7 (six UTF-16 units plus the space)
+        // followed by a column of width 5. The first cell of the data would therefore be "abc def" and the next
+        // cell woult be "gh".
+        final String input =
+                ""
+                        + "🥰😻🧡 ╔═╤═╗\n"
+                        + "abc defgh\n";
+
+        final ColumnSet expected;
+
+        if (useUtf32CountingConvention) {
+            expected = ColumnSet.of(
+                    Column.ofRefs("🥰😻🧡", "abc"),
+                    Column.ofRefs("╔═╤═╗", "defgh"));
+        } else {
+            expected = ColumnSet.of(
+                    Column.ofRefs("🥰😻🧡", "abc def"),
+                    Column.ofRefs("╔═╤═╗", "gh"));
+        }
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .useUtf32CountingConvention(useUtf32CountingConvention).build();
+
+        invokeTest(specs, input, expected);
+    }
+
+    /**
+     * In fixed-width mode, if the library is configured for the UTF-16 counting convention, and there is only one unit
+     * of space left in the field, and the next character is a character outside the Basic Multilingual Plane that
+     * requires two units, the library will include that character in the next field rather than this one.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void brokenSurrogatePair(boolean useUtf32CountingConvention) throws CsvReaderException {
+        // This test has a column of width 3 (three characters plus the space)
+        // followed by a column of width 2.
+        //
+        // In the UTF-32 counting convention, the first column will get "🥰😻 " and the second column will
+        // get "🧡💓". We turn off ignoreSurroundingSpaces to highlight how this is counted.
+        //
+        // In the UTF-16 counting convention, the first column will get 🥰 (because 🥰😻 uses characters
+        // outside the Basic Multilingual Plane and takes four units to represent, but the first field
+        // only has space for three). The next column will get "😻 🧡💓" (the rest of the row).
+        final String input =
+                ""
+                        + "C1 C2\n"
+                        + "🥰😻 🧡💓\n";
+
+        final ColumnSet expected;
+
+        if (useUtf32CountingConvention) {
+            expected = ColumnSet.of(
+                    Column.ofRefs("C1", "🥰😻 "),
+                    Column.ofRefs("C2", "🧡💓"));
+        } else {
+            expected = ColumnSet.of(
+                    Column.ofRefs("C1", "🥰"),
+                    Column.ofRefs("C2", "😻 🧡💓"));
+        }
+
+        final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
+                .ignoreSurroundingSpaces(false).useUtf32CountingConvention(useUtf32CountingConvention).build();
+
+        invokeTest(specs, input, expected);
     }
 
     private static final class RepeatingInputStream extends InputStream {
