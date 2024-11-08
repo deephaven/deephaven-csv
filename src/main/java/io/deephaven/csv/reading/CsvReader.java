@@ -95,9 +95,7 @@ public final class CsvReader {
             headersTemp2 = headersTemp;
         }
         final int numOutputCols = headersTemp2.length;
-        final String[] headersToUse = canonicalizeHeaders(specs, headersTemp2);
-
-        return commonReadLogic(specs, grabber, firstDataRow, numInputCols, numOutputCols, headersToUse, sinkFactory);
+        return commonReadLogic(specs, grabber, firstDataRow, numInputCols, numOutputCols, headersTemp2, sinkFactory);
     }
 
     private static Result fixedReadLogic(
@@ -113,13 +111,16 @@ public final class CsvReader {
 
     private static Result commonReadLogic(final CsvSpecs specs, CellGrabber grabber, byte[][] optionalFirstDataRow,
             int numInputCols, int numOutputCols,
-            String[] headersToUse, final SinkFactory sinkFactory)
+            String[] headersBeforeLegalization, final SinkFactory sinkFactory)
             throws CsvReaderException {
+
         final String[][] nullValueLiteralsToUse = new String[numOutputCols][];
         for (int ii = 0; ii < numOutputCols; ++ii) {
             nullValueLiteralsToUse[ii] =
-                    calcNullValueLiteralsToUse(specs, headersToUse[ii], ii).toArray(new String[0]);
+                    calcNullValueLiteralsToUse(specs, headersBeforeLegalization[ii], ii).toArray(new String[0]);
         }
+
+        final String[] headersToUse = canonicalizeHeaders(specs, headersBeforeLegalization);
 
         // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to
         // "numOutputCols". The remaining (numInputCols - numOutputCols) are set to null. The code in
@@ -156,7 +157,7 @@ public final class CsvReader {
         final ArrayList<Future<Object>> sinkFutures = new ArrayList<>();
         try {
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersToUse[ii], ii);
+                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersBeforeLegalization[ii], ii);
 
                 final int iiCopy = ii;
                 final Future<Object> fcb = ecs.submit(
@@ -230,7 +231,8 @@ public final class CsvReader {
     }
 
     private static String[] canonicalizeHeaders(CsvSpecs specs, final String[] headers) throws CsvReaderException {
-        final String[] legalized = specs.headerLegalizer().apply(headers);
+        // legalizer is allowed to mutate the input in-place, so we clone it before passing it.
+        final String[] legalized = specs.headerLegalizer().apply(headers.clone());
         final Set<String> unique = new HashSet<>();
         final List<String> repeats = new ArrayList<>();
         final List<String> invalidNames = new ArrayList<>();
