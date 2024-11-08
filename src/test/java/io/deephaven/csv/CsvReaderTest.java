@@ -2099,8 +2099,10 @@ public class CsvReaderTest {
             expected = ColumnSet.of(
                     Column.ofRefs("Sym", "GOOG", null, null, "T", null, "Z"),
                     Column.ofRefs("Type", "Dividend", null, null, "Dividend", null, "Dividend"),
-                    Column.ofValues("Price", 0.25, Sentinels.NULL_DOUBLE, Sentinels.NULL_DOUBLE, 0.15, Sentinels.NULL_DOUBLE, 0.18),
-                    Column.ofValues("SecurityId", 200, Sentinels.NULL_INT, Sentinels.NULL_INT, 300, Sentinels.NULL_INT, 500));
+                    Column.ofValues("Price", 0.25, Sentinels.NULL_DOUBLE, Sentinels.NULL_DOUBLE, 0.15,
+                            Sentinels.NULL_DOUBLE, 0.18),
+                    Column.ofValues("SecurityId", 200, Sentinels.NULL_INT, Sentinels.NULL_INT, 300, Sentinels.NULL_INT,
+                            500));
         }
 
         final CsvSpecs specs = defaultCsvBuilder().hasFixedWidthColumns(true)
