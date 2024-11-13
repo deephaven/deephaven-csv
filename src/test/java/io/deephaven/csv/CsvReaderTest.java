@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -204,6 +205,70 @@ public class CsvReaderTest {
                         Column.ofRefs("A", "apple", "cherry"),
                         Column.ofRefs("B", "banana", null));
         invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+    }
+
+    /**
+     * Reported in <a href="https://github.com/deephaven/deephaven-csv/issues/190">Deephaven CSV Issue #190</a>. That
+     * issue report misidentifies the root cause as having to do with reserved keywords. This is not correct because the
+     * library doesn't care whether a column header is a reserved keyword. The actual root cause is an interaction
+     * between the user-supplied "legalizer" and user-specified parsers or null literals that are specified by column
+     * names. Specifically the question is whether column names mentioned in {@link CsvSpecs.Builder#putParserForName}
+     * and {@link CsvSpecs.Builder#putNullValueLiteralsForName} should refer to the name that the column had *before* it
+     * was transformed by the legalizer, or *after*. The expected behavior is "before", but prior to this fix the
+     * library was doing the "after" behavior. This is a parameterized test that invokes the behavior for {delimited,
+     * fixed columns} x {without and with a legalizer}.
+     */
+    @ParameterizedTest
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    public void bug190(boolean hasFixedWidthColumns, boolean invokeLegalizer) throws CsvReaderException {
+        // +++ is the null value literal for Col1
+        // *** is the null value literal for Col2
+        // ??? is the null value literal for Col3
+
+        final String input;
+
+        if (!hasFixedWidthColumns) {
+            input = "Col1,Col2,Col3\n" +
+                    "+++,20,30\n" +
+                    "100,***,300\n" +
+                    "1000,2000,???\n";
+        } else {
+            input = "Col1 Col2 Col3\n" +
+                    "+++  20   30\n" +
+                    "100  ***  300\n" +
+                    "1000 2000 ???\n";
+        }
+
+        final String[] expectedColumnNames = !invokeLegalizer ? new String[] {"Col1", "Col2", "Col3"}
+                : new String[] {"xyzCol1", "xyzCol2", "xyzCol3"};
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues(expectedColumnNames[0], Sentinels.NULL_LONG, (long) 100, (long) 1000),
+                        Column.ofValues(expectedColumnNames[1], (double) 20, Sentinels.NULL_DOUBLE, (double) 2000),
+                        Column.ofRefs(expectedColumnNames[2], "30", "300", null));
+
+        Function<String[], String[]> legalizer = in -> {
+            for (int i = 0; i != in.length; ++i) {
+                // e.g. transform Col1 to xyzCol1
+                in[i] = "xyz" + in[i];
+            }
+            return in;
+        };
+
+        CsvSpecs.Builder specsBase =
+                defaultCsvBuilder().hasFixedWidthColumns(hasFixedWidthColumns).parsers(Parsers.DEFAULT)
+                        .putParserForName("Col1", Parsers.LONG).putParserForName("Col2", Parsers.DOUBLE)
+                        .putParserForName("Col3", Parsers.STRING)
+                        .putNullValueLiteralsForName("Col1", Collections.singletonList("+++"))
+                        .putNullValueLiteralsForName("Col2", Collections.singletonList("***"))
+                        .putNullValueLiteralsForName("Col3", Collections.singletonList("???"));
+
+        if (invokeLegalizer) {
+            specsBase = specsBase.headerLegalizer(legalizer);
+        }
+
+        invokeTest(specsBase.build(), input, expected);
     }
 
     @Test

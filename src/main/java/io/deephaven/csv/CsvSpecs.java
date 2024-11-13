@@ -105,9 +105,12 @@ public abstract class CsvSpecs {
         Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
 
         /**
-         * An optional legalizer for column headers. The legalizer is a function that takes column names (as a
-         * {@code String[]}) names and returns legal column names (as a {@code String[]}). The legalizer function is
-         * permitted to reuse its input data structure. Defaults to {@code Function#identity()}.
+         * An optional legalizer for column headers. The legalizer is a function that takes the column names from the
+         * input (as a {@code String[]}) and returns "legal" column names (as a {@code String[]}). What constitutes
+         * "legal" is entirely up to the caller. For example, some applications cannot tolerate punctuation characters
+         * in column names and need to remove them. The CSV library itself has no limitations with regard to column
+         * names. The legalizer function is permitted to return the input array (perhaps with some elements modified) as
+         * the return value. Defaults to {@code Function#identity()}.
          */
         Builder headerLegalizer(Function<String[], String[]> headerLegalizer);
 
