@@ -1,6 +1,6 @@
 [versions]
 assertj = "3.27.3"
-commons = "1.12.0"
+commons = "1.14.0"
 commons-io = "2.19.0"
 fastcsv = "2.2.2"
 fastdoubleparser = "2.0.1"
