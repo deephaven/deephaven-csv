@@ -18,6 +18,7 @@ sourceSets {
 configurations {
     // Ensure jmhTest picks up the same dependencies as testImplementation / jmh
     jmhTestImplementation.extendsFrom testImplementation
+    jmhTestRuntimeOnly.extendsFrom testRuntimeOnly
     jmhTestRuntimeOnly.extendsFrom jmh
 }
 
@@ -45,6 +46,7 @@ dependencies {
     testImplementation libs.assertj
     testImplementation(platform(libs.junit.bom))
     testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.jupiter.engine
     testRuntimeOnly libs.junit.platform.launcher
 
     jmh libs.jackson.dataformat.csv
