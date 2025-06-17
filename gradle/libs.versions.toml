@@ -1,0 +1,37 @@
+[versions]
+assertj = "3.27.3"
+commons = "1.12.0"
+commons-io = "2.17.0"
+fastcsv = "2.2.2"
+fastdoubleparser = "2.0.1"
+immutables = "2.10.1"
+jackson = "2.18.1"
+jetbrains = "26.0.1"
+jmh = "1.37"
+junit = "5.11.3"
+opencsv = "5.9"
+simpleflatmapper = "8.2.3"
+supercsv = "2.4.0"
+trove = "3.0.3"
+univocity = "2.9.1"
+
+[libraries]
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+commons-csv = { module = "org.apache.commons:commons-csv", version.ref = "commons" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+fastcsv = { module = "de.siegmar:fastcsv", version.ref = "fastcsv" }
+fast-double-parser = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdoubleparser"}
+immutables-value = { module = "org.immutables:value", version.ref = "immutables" }
+immutables-value-annotations = { module = "org.immutables:value-annotations", version.ref = "immutables" }
+jackson-dataformat-csv = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-csv", version.ref = "jackson" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine" }
+opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
+simpleflatemapper-csv = { module = "org.simpleflatmapper:sfm-csv", version.ref = "simpleflatmapper" }
+super-csv = { module = "net.sf.supercsv:super-csv", version.ref = "supercsv" }
+trove4j = { module = "net.sf.trove4j:trove4j", version.ref = "trove" }
+univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity" }
