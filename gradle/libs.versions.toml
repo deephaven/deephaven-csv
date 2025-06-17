@@ -2,7 +2,7 @@
 assertj = "3.27.3"
 commons = "1.12.0"
 commons-io = "2.19.0"
-fastcsv = "2.2.2"
+fastcsv = "3.7.0"
 fastdoubleparser = "2.0.1"
 immutables = "2.10.1"
 jackson = "2.19.1"
