@@ -8,7 +8,7 @@ immutables = "2.10.1"
 jackson = "2.19.1"
 jetbrains = "26.0.1"
 jmh = "1.37"
-junit = "5.11.3"
+junit = "5.13.1"
 opencsv = "5.9"
 simpleflatmapper = "8.2.3"
 supercsv = "2.4.0"
@@ -27,9 +27,7 @@ jackson-dataformat-csv = { module = "com.fasterxml.jackson.dataformat:jackson-da
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine" }
 opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
 simpleflatemapper-csv = { module = "org.simpleflatmapper:sfm-csv", version.ref = "simpleflatmapper" }
 super-csv = { module = "net.sf.supercsv:super-csv", version.ref = "supercsv" }

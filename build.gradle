@@ -45,6 +45,7 @@ dependencies {
     testImplementation libs.assertj
     testImplementation(platform(libs.junit.bom))
     testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.platform.launcher
 
     jmh libs.jackson.dataformat.csv
     jmh libs.opencsv
