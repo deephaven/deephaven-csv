@@ -74,10 +74,10 @@ This project produces two JARs:
 To depend on Deephaven CSV from Gradle, add the following dependency(s) to your build.gradle file:
 
 ```groovy
-implementation 'io.deephaven:deephaven-csv:0.15.0'
+implementation 'io.deephaven:deephaven-csv:0.16.0'
 
 // Optional dependency for faster double parsing
-// runtimeOnly 'io.deephaven:deephaven-csv-fast-double-parser:0.15.0'
+// runtimeOnly 'io.deephaven:deephaven-csv-fast-double-parser:0.16.0'
 ```
 
 ### Maven
@@ -88,14 +88,14 @@ To depend on Deephaven CSV from Maven, add the following dependency(s) to your p
 <dependency>
     <groupId>io.deephaven</groupId>
     <artifactId>deephaven-csv</artifactId>
-    <version>0.15.0</version>
+    <version>0.16.0</version>
 </dependency>
 
 <!-- Optional dependency for faster double parsing -->
 <!--<dependency>-->
 <!--    <groupId>io.deephaven</groupId>-->
 <!--    <artifactId>deephaven-csv-fast-double-parser</artifactId>-->
-<!--    <version>0.15.0</version>-->
+<!--    <version>0.16.0</version>-->
 <!--    <scope>runtime</scope>-->
 <!--</dependency>-->
 ```
