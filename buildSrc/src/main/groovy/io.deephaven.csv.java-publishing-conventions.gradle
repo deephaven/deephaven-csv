@@ -1,12 +1,13 @@
 plugins {
     id 'java'
     id 'signing'
-    id 'maven-publish'
+    id 'com.vanniktech.maven.publish'
 }
 
 java {
-    withJavadocJar()
-    withSourcesJar()
+    // https://github.com/vanniktech/gradle-maven-publish-plugin/issues/1028
+    // withSourcesJar()
+    // withJavadocJar()
 }
 
 def developerId = 'deephaven'
@@ -27,61 +28,48 @@ def scmUrl = 'https://github.com/deephaven/deephaven-csv'
 def scmConnection = 'scm:git:git://github.com/deephaven/deephaven-csv.git'
 def scmDevConnection = 'scm:git:ssh://github.com/deephaven/deephaven-csv.git'
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-            artifactId = archivesBaseName
-            pom {
-                name = archivesBaseName
-                description = project.description
-                url = projectUrl
-                organization {
-                    name = orgName
-                    url = orgUrl
-                }
-                licenses {
-                    license {
-                        name = licenseName
-                        url = licenseUrl
-                    }
-                }
-                scm {
-                    url = scmUrl
-                    connection = scmConnection
-                    developerConnection = scmDevConnection
-                }
-                issueManagement {
-                    system = issuesSystem
-                    url = issuesUrl
-                }
-                developers {
-                    developer {
-                        id = developerId
-                        name = developerName
-                        email = developerEmail
-                        organization = orgName
-                        organizationUrl = orgUrl
-                    }
-                }
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+    // We only need to override artifactId; groupId (1st argument), version (3rd argument) will be inferred
+    coordinates(null, archivesBaseName, null)
+    pom {
+        name = archivesBaseName
+        description = project.description
+        url = projectUrl
+        organization {
+            name = orgName
+            url = orgUrl
+        }
+        licenses {
+            license {
+                name = licenseName
+                url = licenseUrl
             }
         }
-    }
-    repositories {
-        maven {
-            name = 'ossrh'
-            // ossrhUsername, ossrhPassword
-            credentials(PasswordCredentials)
-            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        scm {
+            url = scmUrl
+            connection = scmConnection
+            developerConnection = scmDevConnection
+        }
+        issueManagement {
+            system = issuesSystem
+            url = issuesUrl
+        }
+        developers {
+            developer {
+                id = developerId
+                name = developerName
+                email = developerEmail
+                organization = orgName
+                organizationUrl = orgUrl
+            }
         }
     }
 }
 
 signing {
     required = "true" == findProperty('signingRequired')
-    sign publishing.publications.mavenJava
     String signingKey = findProperty('signingKey')
     String signingPassword = findProperty('signingPassword')
     if (signingKey != null && signingPassword != null) {
