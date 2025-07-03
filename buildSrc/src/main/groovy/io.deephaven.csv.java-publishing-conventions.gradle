@@ -1,13 +1,12 @@
 plugins {
     id 'java'
     id 'signing'
-    id 'com.vanniktech.maven.publish'
+    id 'com.vanniktech.maven.publish.base'
 }
 
 java {
-    // https://github.com/vanniktech/gradle-maven-publish-plugin/issues/1028
-    // withSourcesJar()
-    // withJavadocJar()
+     withSourcesJar()
+     withJavadocJar()
 }
 
 def developerId = 'deephaven'
@@ -27,6 +26,14 @@ def issuesUrl = 'https://github.com/deephaven/deephaven-csv/issues'
 def scmUrl = 'https://github.com/deephaven/deephaven-csv'
 def scmConnection = 'scm:git:git://github.com/deephaven/deephaven-csv.git'
 def scmDevConnection = 'scm:git:ssh://github.com/deephaven/deephaven-csv.git'
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
 
 mavenPublishing {
     publishToMavenCentral()
