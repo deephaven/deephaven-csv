@@ -136,51 +136,78 @@ public final class CsvReader {
             dsrs.add(new Moveable<>(pair.second));
         }
 
-        // Select an Excecutor based on whether the user wants the code to run asynchronously or not.
-        final Executor exec;
-        final ExecutorService executorService;
-        if (specs.concurrent()) {
-            exec = executorService = Executors.newFixedThreadPool(numOutputCols + 1);
-        } else {
-            exec = DirectExecutor.INSTANCE;
-            executorService = null;
+        // Create a lambda for the writer
+        final Callable<Long> writerLambda = () -> ParseInputToDenseStorage.doit(headersToUse,
+                optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
+
+        // Create lambdas for the readers, taking care to not hold a reference to the DenseStorageReader.
+        // This is important in the concurrent case so the garbage collector can clean up queue blocks that no
+        // reader is looking at anymore.
+        final ArrayList<Callable<ParseDenseStorageToColumn.Result>> readerLambdas = new ArrayList<>();
+        for (int ii = 0; ii < numOutputCols; ++ii) {
+            final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersBeforeLegalization[ii], ii);
+
+            final int iiCopy = ii;
+            final Moveable<DenseStorageReader> movedDsr = dsrs.get(ii).move();
+            final String[] nvls = nullValueLiteralsToUse[ii];
+
+            readerLambdas.add(() -> ParseDenseStorageToColumn.doit(
+                    iiCopy, // 0-based column numbers
+                    movedDsr,
+                    parsersToUse,
+                    specs,
+                    nvls,
+                    sinkFactory));
         }
-        // We are generic on Object because we have a diversity of Future types (Long vs
-        // ParseDenseStorageToColumn.Result)
-        final ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<>(exec);
 
-        // Start the writer.
-        final Future<Object> numRowsFuture = ecs.submit(() -> ParseInputToDenseStorage.doit(headersToUse,
-                optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws));
-
-        // Start the readers, taking care to not hold a reference to the DenseStorageReader.
-        final ArrayList<Future<Object>> sinkFutures = new ArrayList<>();
         try {
-            for (int ii = 0; ii < numOutputCols; ++ii) {
-                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersBeforeLegalization[ii], ii);
+            // The writer result.
+            final long numRows;
+            // The reader results.
+            final ArrayList<ParseDenseStorageToColumn.Result> readerResults = new ArrayList<>();
 
-                final int iiCopy = ii;
-                final Future<Object> fcb = ecs.submit(
-                        () -> ParseDenseStorageToColumn.doit(
-                                iiCopy, // 0-based column numbers
-                                dsrs.get(iiCopy).move(),
-                                parsersToUse,
-                                specs,
-                                nullValueLiteralsToUse[iiCopy],
-                                sinkFactory));
-                sinkFutures.add(fcb);
+            // If the user wants concurrency, create an executor to run the above lambdas concurrently. Otherwise,
+            // the above lambdas will be run sequentially.
+            if (specs.concurrent()) {
+                final ExecutorService executorService = Executors.newFixedThreadPool(numOutputCols + 1);
+                // Our CompletionService unfortunately has type Object because of the diversity of lambdas
+                // we submit to it (the writer has type Long and the readers have type ParseDenseStorageToColumn.Result)
+                final CompletionService<Object> ecs = new ExecutorCompletionService<>(executorService);
+                try {
+                    final Future<Object> writerFuture = ecs.submit(writerLambda::call);
+
+                    final ArrayList<Future<Object>> readerFutures = new ArrayList<>();
+                    for (Callable<ParseDenseStorageToColumn.Result> readerLambda : readerLambdas) {
+                        readerFutures.add(ecs.submit(readerLambda::call));
+                    }
+
+                    // Observe (but ignore) the results as they asynchronously come back from the CompletionService.
+                    // In this way, anyone that throws an exception rethrows here, which will cause our finally block
+                    // to shut down the CompletionService, which will in turn shut down still-running work.
+                    // +1 because we have submitted one writer as well as all the readers.
+                    for (int ii = 0; ii < readerLambdas.size() + 1; ++ii) {
+                        Object ignored = ecs.take().get();
+                    }
+
+                    // If we get here, all the futures have completed successfully. Pull out their values.
+                    numRows = (long) writerFuture.get();
+                    for (Future<Object> readerFuture : readerFutures) {
+                        readerResults.add((ParseDenseStorageToColumn.Result) readerFuture.get());
+                    }
+                } finally {
+                    executorService.shutdownNow();
+                }
+            } else {
+                // Sequentially run the writer, then each reader.
+                numRows = writerLambda.call();
+                for (Callable<ParseDenseStorageToColumn.Result> readerLambda : readerLambdas) {
+                    readerResults.add(readerLambda.call());
+                }
             }
 
-            // Get each task as it finishes. If a task finishes with an exception, we will throw here.
-            for (int ii = 0; ii < numOutputCols + 1; ++ii) {
-                ecs.take().get();
-            }
-
-            final long numRows = (long) numRowsFuture.get();
             final ResultColumn[] resultColumns = new ResultColumn[numOutputCols];
             for (int ii = 0; ii < numOutputCols; ++ii) {
-                final ParseDenseStorageToColumn.Result result =
-                        (ParseDenseStorageToColumn.Result) sinkFutures.get(ii).get();
+                final ParseDenseStorageToColumn.Result result = readerResults.get(ii);
                 final Object data = result.sink().getUnderlying();
                 final DataType dataType = result.dataType();
                 resultColumns[ii] = new ResultColumn(headersToUse[ii], data, dataType);
@@ -188,11 +215,6 @@ public final class CsvReader {
             return new Result(numRows, resultColumns);
         } catch (Throwable throwable) {
             throw new CsvReaderException("Caught exception", throwable);
-        } finally {
-            if (executorService != null) {
-                // Tear down everything (interrupting the threads if necessary).
-                executorService.shutdownNow();
-            }
         }
     }
 
