@@ -271,6 +271,60 @@ public class CsvReaderTest {
         invokeTest(specsBase.build(), input, expected);
     }
 
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/249">Deephaven CSV Issue #249</a>. When the
+     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the read finishes quickly.
+     */
+    @Test
+    @Timeout(value = 10)
+    public void bug249() throws CsvReaderException {
+        assert(DenseStorageConstants.LARGE_THRESHOLD > 10);
+
+        final StringBuilder smallStringBuilder = new StringBuilder();
+        final StringBuilder bigStringBuilder = new StringBuilder();
+
+        // Make a string small enough that the DenseStorageWriter will write it to the normal byteWriter
+        // -10 for a little less
+        for (int i = 0; i != DenseStorageConstants.LARGE_THRESHOLD - 10; ++i) {
+            smallStringBuilder.append('s');
+        }
+
+        // Make a string large enough that the DenseStorageWriter has to write it to the largeByteArrayWriter queue.
+        // +10 for a little extra
+        for (int i = 0; i != DenseStorageConstants.LARGE_THRESHOLD + 10; ++i) {
+            bigStringBuilder.append('L');
+        }
+
+        final String smallString = smallStringBuilder.toString();
+        final String bigString = bigStringBuilder.toString();
+
+        // approximate number of small strings that will fill a block. +10 for a little extra
+        final int numSmallStringsThatWillFillABlock = DenseStorageConstants.PACKED_QUEUE_SIZE / smallString.length() + 10;
+
+        // Multiply by the number of blocks needed to trigger a deadlock. +10 for a little extra
+        final int numSmallStrings = numSmallStringsThatWillFillABlock * DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 10;
+
+        // Dynamically build the column
+        List<String> colData = new ArrayList<>();
+        // Put something first, because the way the DenseStorageWriter flush code is written,
+        // the bug is not triggered if bigString is the first string.
+        colData.add("first");
+        colData.add(bigString);
+        for (int i = 0; i != numSmallStrings; ++i) {
+            colData.add(smallString);
+        }
+
+        // Dynamically build the input from the column data
+        String input = "ColName\n" + String.join("\n", colData) + "\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("ColName", colData.toArray(new String[0])));
+
+        invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+    }
+
+
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "

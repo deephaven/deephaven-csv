@@ -517,7 +517,7 @@ public abstract class CsvSpecs {
         return true;
     }
 
-    private static boolean defaultTrim = false;
+    private static final boolean defaultTrim = false;
 
     /**
      * See {@link Builder#trim}.

@@ -132,26 +132,25 @@ public final class DenseStorageWriter {
             fdata = byteWriter.addBytes(bs);
             fctrl = controlWriter.addInt(size);
         }
-        // If the control queue flushes, then flush the data queues, so the reader doesn't block for
-        // a long time waiting for some unflushed data queue. Conversely, if some data queue flushes, then
-        // flush the control queue for the same reasons. Importantly, we also want to do this because our
-        // flow control is based on limiting the number of data queue blocks outstanding
-        // (per DenseStorageConstants.MAX_UNOBSERVED_BLOCKS). We want to flush the control queue every
-        // time we fill a block on the data queue, so the consumer has a chance to consume the data. If we
-        // did not do this, in some cases the data queue would run too far ahead, the flow control would be invoked
-        // to block the writer, but the reader would also be blocked because it is still waiting on control queue
-        // notifications, which haven't arrived because the latest control queue block isn't full and hasn't
-        // been flushed yet. See https://github.com/deephaven/deephaven-csv/issues/101.
-        // One might worry that it is inefficient to flush a queue that is not full, but (a) in practice it
+        // If any queue has flushed, flush the others as well, so the reader doesn't hang or deadlock. We want
+        // to do this because our flow control is based on limiting the number of queue blocks outstanding
+        // (per DenseStorageConstants.MAX_UNOBSERVED_BLOCKS). If our activity caused a flush on either data
+        // queue, we want to also flush the control queue so the reader has a chance to consume and the data
+        // queues doesn't get too far ahead. Likewise, if our activity caused a flush on the control queue,
+        // we flush for similar reasons (so the control queue doesn't get too far ahead).
+        // See https://github.com/deephaven/deephaven-csv/issues/101 and
+        // https://github.com/deephaven/deephaven-csv/issues/249.
+        // One might worry that it is inefficient to flush a queue whose block is not full, but (a) in practice it
         // doesn't happen very often and (b) in our queue code, partially-filled blocks can share
         // non-overlapping parts (slices) of their underlying storage array, so it's not particularly wasteful.
-        // Put another way, flushing an empty queue does nothing; flushing a partially-filled queue allocates
-        // a new QueueNode but not a new underlying data array; flushing a full queue will allocate a new
-        // QueueNode and a new underlying data array (btw, that allocation is lazily deferred until the next write).
-        if (fctrl) {
+        // Put another way, flushing a queue with an empty block does nothing; otherwise it allocates a new QueueNode
+        // sharing the same underlying data array but starting at the unwritten part of the array. (In the case that the
+        // block was just written was full, the array is still shared, but the slice representing the "unwritten part of
+        // the array" has length zero.) In any case, processing proceeds and a new array is allocated on demand once the
+        // current block becomes full.
+        if (fctrl || fdata) {
             byteWriter.flush();
             largeByteArrayWriter.flush();
-        } else if (fdata) {
             controlWriter.flush();
         }
     }
