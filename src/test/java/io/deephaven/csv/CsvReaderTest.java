@@ -278,12 +278,12 @@ public class CsvReaderTest {
     @Test
     @Timeout(value = 10)
     public void bug249() throws CsvReaderException {
-        assert(DenseStorageConstants.LARGE_THRESHOLD > 10);
+        assert (DenseStorageConstants.LARGE_THRESHOLD > 10);
 
         final StringBuilder smallStringBuilder = new StringBuilder();
         final StringBuilder bigStringBuilder = new StringBuilder();
 
-        // Make a string small enough that the DenseStorageWriter will write it to the normal byteWriter
+        // Make a string small enough that the DenseStorageWriter will write it to the normal byteWriter.
         // -10 for a little less
         for (int i = 0; i != DenseStorageConstants.LARGE_THRESHOLD - 10; ++i) {
             smallStringBuilder.append('s');
@@ -299,10 +299,12 @@ public class CsvReaderTest {
         final String bigString = bigStringBuilder.toString();
 
         // approximate number of small strings that will fill a block. +10 for a little extra
-        final int numSmallStringsThatWillFillABlock = DenseStorageConstants.PACKED_QUEUE_SIZE / smallString.length() + 10;
+        final int numSmallStringsThatWillFillABlock =
+                DenseStorageConstants.PACKED_QUEUE_SIZE / smallString.length() + 10;
 
         // Multiply by the number of blocks needed to trigger a deadlock. +10 for a little extra
-        final int numSmallStrings = numSmallStringsThatWillFillABlock * DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 10;
+        final int numSmallStrings =
+                numSmallStringsThatWillFillABlock * DenseStorageConstants.MAX_UNOBSERVED_BLOCKS + 10;
 
         // Dynamically build the column
         List<String> colData = new ArrayList<>();
