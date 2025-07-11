@@ -326,7 +326,6 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
-
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
