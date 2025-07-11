@@ -326,6 +326,26 @@ public class CsvReaderTest {
         invokeTest(defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
+    /**
+     * Addresses <a href="https://github.com/deephaven/deephaven-csv/issues/251">Deephaven CSV Issue #251</a>. When the
+     * bug exists, the library hangs (and this tests times out). When the bug is fixed, the exception (due to missing
+     * closing quote) throws quickly.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    @Timeout(value = 10)
+    public void bug251(boolean concurrent) {
+        final String input = "Col\n" +
+                "\"Unterminated string\n";
+
+        Assertions
+                .assertThatThrownBy(
+                        () -> invokeTest(defaultCsvBuilder().concurrent(concurrent).build(),
+                                input,
+                                ColumnSet.NONE))
+                .hasRootCauseMessage("Cell did not have closing quote character");
+    }
+
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
@@ -1791,7 +1811,6 @@ public class CsvReaderTest {
                         + largeCellEscaped
                         + "\n";
 
-        System.out.println(input);
         final ColumnSet expected =
                 ColumnSet.of(
                         Column.ofRefs(

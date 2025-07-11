@@ -113,7 +113,7 @@ public final class DelimitedCellGrabber implements CellGrabber {
                 }
             }
             final byte ch = buffer[offset++];
-            // Maintain a correct row number. This is somehat tricky.
+            // Maintain a correct row number. This is somewhat tricky.
             if (ch == '\r') {
                 ++physicalRowNum;
                 prevCharWasCarriageReturn = true;
