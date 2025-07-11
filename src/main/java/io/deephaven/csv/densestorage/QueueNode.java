@@ -24,7 +24,7 @@ public final class QueueNode<TARRAY> {
     /** Readers and writers of this field have arranged to synchronize with each other. */
     public QueueNode<TARRAY> next;
     /**
-     * Whether a reader has already observed the {@link QueueNode#next} field transitioning from non-null to null.
+     * Whether a reader has already observed the {@link QueueNode#next} field transitioning from null to non-null.
      */
     private boolean observed;
 
