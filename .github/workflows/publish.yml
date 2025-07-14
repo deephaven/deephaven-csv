@@ -39,9 +39,7 @@ jobs:
         # Note: even though we specify org.gradle.parallel=false in our CI gradle.properties, we want to be explicit
         # here about no parallelism to ensure we don't create disjointed staging repositories.
         # Edit: unclear if above note is still possible with the new portal API / plugin implementation.
-        # Note: --no-configuration-cache is documented as necessary due https://github.com/gradle/gradle/issues/22779
-        # from https://vanniktech.github.io/gradle-maven-publish-plugin/central/#uploading-with-automatic-publishing
-        run: ./gradlew --no-parallel --no-configuration-cache assemble publishToMavenCentral
+        run: ./gradlew --no-parallel assemble publishToMavenCentral
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
