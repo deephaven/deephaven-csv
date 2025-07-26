@@ -62,6 +62,7 @@ public final class CsvReader {
      *        must be thread safe.
      * @return A CsvReader.Result containing the column names, the number of columns, and the final set of
      *         fully-populated Sinks.
+     * @throws CsvReaderException if an error occurred while reading the input
      */
     public static Result read(final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory)
             throws CsvReaderException {
@@ -289,22 +290,40 @@ public final class CsvReader {
         private final long numRows;
         private final ResultColumn[] columns;
 
+        /**
+         * Constructor.
+         * 
+         * @param numRows Number of rows in the result.
+         * @param columns The columns comprising the result.
+         */
         public Result(long numRows, ResultColumn[] columns) {
             this.numRows = numRows;
             this.columns = columns;
         }
 
-        /** Number of rows in the input. */
+        /**
+         * Number of rows in the input.
+         * 
+         * @return The number of rows in the input
+         */
         public long numRows() {
             return numRows;
         }
 
-        /** The number of columns. */
+        /**
+         * The number of columns.
+         * 
+         * @return The number of columns in the input
+         */
         public int numCols() {
             return columns.length;
         }
 
-        /** The columns. */
+        /**
+         * The columns.
+         * 
+         * @return The columns of the input, parses as an array of ResultColumn
+         */
         public ResultColumn[] columns() {
             return columns;
         }
@@ -324,13 +343,24 @@ public final class CsvReader {
         private final Object data;
         private final DataType dataType;
 
+        /**
+         * Constructor.
+         * 
+         * @param name The name of the column.
+         * @param data The column data.
+         * @param dataType The type of the column.
+         */
         public ResultColumn(String name, Object data, DataType dataType) {
             this.name = name;
             this.data = data;
             this.dataType = dataType;
         }
 
-        /** The column name. */
+        /**
+         * The column name.
+         * 
+         * @return The name
+         */
         public String name() {
             return name;
         }
@@ -338,6 +368,8 @@ public final class CsvReader {
         /**
          * The data for the column. Obtained by invoking {@link Sink#getUnderlying} on the {@link Sink} that built the
          * column, after all processing is done.
+         * 
+         * @return The data.
          */
         public Object data() {
             return data;
@@ -345,6 +377,8 @@ public final class CsvReader {
 
         /**
          * The data type of the column.
+         * 
+         * @return The data type.
          */
         public DataType dataType() {
             return dataType;

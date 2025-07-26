@@ -13,9 +13,13 @@ import org.jetbrains.annotations.NotNull;
  * The Parser interface to the CsvReader. This is implemented by all the built-in parsers {@link IntParser},
  * {@link DoubleParser}, etc, as well as user-defined custom parsers.
  *
- * @param <TARRAY>
+ * @param <TARRAY> The underlying type being parsed, represented as an array of that type. e.g. for int, TARRAY would be
+ *        int[].
  */
 public interface Parser<TARRAY> {
+    /**
+     * The reusable data chunk size that we use for our parsers.
+     */
     int CHUNK_SIZE = 65536 * 4;
 
     /**
@@ -64,6 +68,7 @@ public interface Parser<TARRAY> {
      *        {@link Sink} or replacing previously-written pad values in the {@link Sink}. This value is simply passed
      *        on to {@link Sink#write} which may use it as a hint to slightly simplify its logic.
      * @return The end range (exclusive) of the values parsed. Returns {@code begin} if no values were parsed.
+     * @throws CsvReaderException if the parse is not successful
      */
     long tryParse(
             GlobalContext gctx,
@@ -74,6 +79,10 @@ public interface Parser<TARRAY> {
             boolean appending)
             throws CsvReaderException;
 
+    /**
+     * Per-parser context used for parsing state as the processing progresses. Each Parser has access to one of these,
+     * plus a type-specific ParseContext that it creates itself.
+     */
     class GlobalContext {
         /**
          * The 0-based column number that the parser is working on.
@@ -98,6 +107,14 @@ public interface Parser<TARRAY> {
         /** An "isNull" chunk */
         private final boolean[] nullChunk;
 
+        /**
+         * Constructor.
+         * 
+         * @param colNum The column number we are working with
+         * @param tokenizer A Tokenizer to help with tokenizing the input
+         * @param sinkFactory Caller-specified interface for making the various Sink objects
+         * @param nullValueLiterals The null value literals appropriate for this column.
+         */
         public GlobalContext(final int colNum, final Tokenizer tokenizer, final SinkFactory sinkFactory,
                 final String[] nullValueLiterals) {
             this.colNum = colNum;
@@ -117,6 +134,7 @@ public interface Parser<TARRAY> {
          * Determines whether the iterator's current text contains the null value literal. The notion of "null value
          * literal" is user-configurable on a per-column basis, but is typically the empty string.
          *
+         * @param ih The IteratorHolder
          * @return whether the iterator's current text contains the null cell.
          */
         public boolean isNullCell(final IteratorHolder ih) {
@@ -134,30 +152,63 @@ public interface Parser<TARRAY> {
             return false;
         }
 
+        /**
+         * Gets the column number
+         * 
+         * @return The Column number
+         */
         public int colNum() {
             return colNum;
         }
 
+        /**
+         * Gets the Tokenizer
+         * 
+         * @return The Tokenizer
+         */
         public Tokenizer tokenizer() {
             return tokenizer;
         }
 
+        /**
+         * Gets the SinkFactory
+         * 
+         * @return The SinkFactory
+         */
         public SinkFactory sinkFactory() {
             return sinkFactory;
         }
 
+        /**
+         * Gets the isNullOrWidthOneSoFar flag
+         * 
+         * @return The isNullOrWidthOneSoFar flag
+         */
         public boolean isNullOrWidthOneSoFar() {
             return isNullOrWidthOneSoFar;
         }
 
+        /**
+         * Clear the "isNullOrWidthOneSoFar" flag.
+         */
         public void clearIsNullOrWidthOneSoFar() {
             isNullOrWidthOneSoFar = false;
         }
 
+        /**
+         * Gets the set (an array) of null sentinels, each of which is a byte array of UTF-8 bytes.
+         * 
+         * @return The set (an array) of null sentinels
+         */
         public byte[][] nullSentinelsAsBytes() {
             return nullSentinelsAsBytes;
         }
 
+        /**
+         * Gets the reusable nullChunk data structure.
+         * 
+         * @return The reusable nullChunk data structure.
+         */
         public boolean[] nullChunk() {
             return nullChunk;
         }
@@ -178,12 +229,27 @@ public interface Parser<TARRAY> {
         }
     }
 
+    /**
+     * This is per-parser context which is both created and consumed by individual parsers. It is basically the local
+     * state of the Parser. This is needed because our internal parsers are all stateless (each of them has a singleton
+     * INSTANCE variable). They use this class to store their state.
+     * 
+     * @param <TARRAY> The underlying array type of the parser.
+     */
     class ParserContext<TARRAY> {
         private final Sink<TARRAY> sink;
         private final Source<TARRAY> source;
         private final DataType dataType;
         private final TARRAY valueChunk;
 
+        /**
+         * Constructor
+         * 
+         * @param sink The Parser's Sink object
+         * @param source The Parser's Source object
+         * @param dataType The Parser's DataType
+         * @param valueChunk The reusable value chunk for the Parser to store chunks of data.
+         */
         public ParserContext(final Sink<TARRAY> sink, final Source<TARRAY> source,
                 final DataType dataType, final TARRAY valueChunk) {
             this.sink = sink;
@@ -192,18 +258,38 @@ public interface Parser<TARRAY> {
             this.valueChunk = valueChunk;
         }
 
+        /**
+         * Gets the Sink object
+         * 
+         * @return The Sink object
+         */
         public Sink<TARRAY> sink() {
             return sink;
         }
 
+        /**
+         * Gets the Source object
+         * 
+         * @return The Source object
+         */
         public Source<TARRAY> source() {
             return source;
         }
 
+        /**
+         * Gets the DataType
+         * 
+         * @return The DataType
+         */
         public DataType dataType() {
             return dataType;
         }
 
+        /**
+         * Gets the reusable data chunk object
+         * 
+         * @return The reusable data chunk object
+         */
         public TARRAY valueChunk() {
             return valueChunk;
         }

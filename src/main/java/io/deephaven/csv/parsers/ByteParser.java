@@ -11,6 +11,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the byte type. */
 public final class ByteParser implements Parser<byte[]> {
+    /**
+     * Singleton instance.
+     */
     public static final ByteParser INSTANCE = new ByteParser();
 
     private ByteParser() {}

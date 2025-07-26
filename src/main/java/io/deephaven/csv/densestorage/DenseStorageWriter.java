@@ -132,7 +132,14 @@ import java.util.concurrent.Semaphore;
  * purpose.
  */
 public final class DenseStorageWriter {
-    /** Constructor */
+    /**
+     * Factory methods. Builds a DenseStorageWriter.
+     * 
+     * @param concurrent If the Writer is meant to be used concurrently (in which case it will limit outstanding unread
+     *        queue blocks
+     * @return A cooperating pair of objects: (DenseStorageWriter, DenseStorageReader). If the caller needs more readers
+     *         it can call DenseStorageReader#copy().
+     */
     public static Pair<DenseStorageWriter, DenseStorageReader> create(final boolean concurrent) {
         final int maxUnobservedBlocks = concurrent ? DenseStorageConstants.MAX_UNOBSERVED_BLOCKS : Integer.MAX_VALUE;
         final Object syncRoot = new Object();
@@ -158,7 +165,7 @@ public final class DenseStorageWriter {
 
     private final ByteSlice controlWordByteSlice = new ByteSlice(new byte[4], 0, 4);
 
-    public DenseStorageWriter(Object syncRoot, Semaphore semaphore, QueueNode tail) {
+    private DenseStorageWriter(Object syncRoot, Semaphore semaphore, QueueNode tail) {
         this.syncRoot = syncRoot;
         this.semaphore = semaphore;
         this.tail = tail;
@@ -167,6 +174,8 @@ public final class DenseStorageWriter {
     /**
      * Append a {@link ByteSlice} to the queue. The data will be diverted to one of the two specialized underlying
      * queues, depending on its size.
+     * 
+     * @param bs The data to append.
      */
     public void append(final ByteSlice bs) {
         final int size = bs.size();

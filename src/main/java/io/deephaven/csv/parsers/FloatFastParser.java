@@ -15,6 +15,9 @@ import org.jetbrains.annotations.NotNull;
  * should use {@link FloatStrictParser}.
  */
 public final class FloatFastParser implements Parser<float[]> {
+    /**
+     * The singleton instance.
+     */
     public static final FloatFastParser INSTANCE = new FloatFastParser();
 
     private FloatFastParser() {}

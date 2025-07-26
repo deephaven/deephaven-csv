@@ -22,20 +22,33 @@ import java.util.function.Predicate;
 @Immutable
 @BuildableStyle
 public abstract class CsvSpecs {
+    /**
+     * The Builder for the CsvSpecs class.
+     */
     public interface Builder {
         /**
          * Copy all the parameters from {@code specs} into {@code this} builder.
+         * 
+         * @param specs The source object
+         * @return self after copying over all the properties.
          */
         Builder from(CsvSpecs specs);
 
         /**
          * Client-specified headers that can be used to override the existing headers in the input (if
          * {@link #hasHeaderRow()} is true), or to provide absent headers (if {@link #hasHeaderRow()} is false).
+         * 
+         * @param elements The client-specified headers
+         * @return self after modifying the headers property.
          */
         Builder headers(Iterable<String> elements);
 
         /**
          * Override a specific column header by 0-based column index. This is applied after {@link #headers()}.
+         * 
+         * @param index The column index
+         * @param header The column header
+         * @return self after modifying the header property for the given column index.
          */
         Builder putHeaderForIndex(int index, String header);
 
@@ -48,20 +61,29 @@ public abstract class CsvSpecs {
          * <li>All specified system parsers will be run before any specified custom parsers.</li>
          * <li>Custom parsers will be run in the order they are specified here.</li>
          * </ol>
-         *
-         * @return the parsers
+         * 
+         * @param elements The parsers
+         * @return self after modifying the parsers property.
          */
         Builder parsers(Iterable<? extends Parser<?>> elements);
 
         /**
          * Used to force a specific parser for a specific column, specified by column name. Specifying a parser forgoes
          * column inference for that column.
+         * 
+         * @param columnName The column name
+         * @param parser The parser
+         * @return self after modifying the parser property for the given columnName.
          */
         Builder putParserForName(String columnName, Parser<?> parser);
 
         /**
          * Used to force a specific parser for a specific column, specified by 0-based column index. Specifying a parser
          * forgoes column inference for that column.
+         * 
+         * @param index The column index
+         * @param parser The parser
+         * @return self after modifying the parser property for the given column index.
          */
         Builder putParserForIndex(int index, Parser<?> parser);
 
@@ -71,29 +93,46 @@ public abstract class CsvSpecs {
          * specified for that column. Default value is a single-element list containing the empty string. If the
          * configured sink data structures do not support nulls, the caller can set this to the empty list so that
          * nothing will be parsed as null.
+         * 
+         * @param nullValueLiterals The collection of null value literal strings
+         * @return self after modifying the nullValueLiterals property.
          */
         Builder nullValueLiterals(Iterable<String> nullValueLiterals);
 
         /**
          * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
          * column overrides the value in {@link #nullValueLiterals()}.
+         * 
+         * @param columnName The column name
+         * @param nullValueLiteral The collection of null value literal strings
+         * @return self after modifying the nullValueLiteral property for the specified columnName.
          */
         Builder putNullValueLiteralsForName(String columnName, List<String> nullValueLiteral);
 
         /**
          * The null value literal for specific columns, specified by 0-based column index. Specifying a null value
          * literal for a column overrides the value in {@link #nullValueLiterals()}.
+         * 
+         * @param index The column index
+         * @param nullValueLiteral The collection of null value literal strings
+         * @return self after modifying the nullValueLiteral property for the specified column index.
          */
         Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
 
         /**
          * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
+         * 
+         * @param parser The parser
+         * @return self after modifying the parser property.
          */
         Builder nullParser(Parser<?> parser);
 
         /**
          * The custom double parser. If not explicitly set, it will default to {@link CustomDoubleParser#load()} if
          * present, otherwise {@link JdkDoubleParser#INSTANCE}.
+         * 
+         * @param customDoubleParser The custom double parser
+         * @return self after modifying the customDoubleParser property.
          */
         Builder customDoubleParser(Tokenizer.CustomDoubleParser customDoubleParser);
 
@@ -101,6 +140,9 @@ public abstract class CsvSpecs {
          * An optional low-level "timezone parser" that understands custom time zone strings. For example the Deephaven
          * system allows special timezones like " NY" and " MN" as in "2020-03-01T12:34:56 NY" (note also the explicit
          * space). The timezone parser must be reentrant.
+         * 
+         * @param customTimeZoneParser The custom timezone parser.
+         * @return self after modifying the customTimeZoneParser property.
          */
         Builder customTimeZoneParser(Tokenizer.CustomTimeZoneParser customTimeZoneParser);
 
@@ -111,17 +153,26 @@ public abstract class CsvSpecs {
          * in column names and need to remove them. The CSV library itself has no limitations with regard to column
          * names. The legalizer function is permitted to return the input array (perhaps with some elements modified) as
          * the return value. Defaults to {@code Function#identity()}.
+         * 
+         * @param headerLegalizer The custom header legalizer.
+         * @return self after modifying the headerLegalizer property.
          */
         Builder headerLegalizer(Function<String[], String[]> headerLegalizer);
 
         /**
          * An optional validator for column headers. The validator is a {@link Predicate} function that takes a column
          * name and returns a true if it is a legal column name, false otherwise. Defaults to {@code c -> true}.
+         * 
+         * @param headerValidator The custom header validator.
+         * @return self after modifying the headerValidator property.
          */
         Builder headerValidator(Predicate<String> headerValidator);
 
         /**
          * True if the input is organized into fixed width columns rather than delimited by a delimiter.
+         * 
+         * @param hasFixedWidthColumns The fixed width columns property
+         * @return self after modifying the hasFixedWidthColumns property.
          */
         Builder hasFixedWidthColumns(boolean hasFixedWidthColumns);
 
@@ -132,6 +183,9 @@ public abstract class CsvSpecs {
          * parameter if {@link #hasFixedWidthColumns} is false. Note that because the library is tolerant of the last
          * cell being shorter or wider than expected, the value specified here for the width of the last column is
          * simply a placeholder; its value is ignored.
+         * 
+         * @param fixedColumnWidths A collection of fixed column widths
+         * @return self after modifying the fixedColumnWidths property.
          */
         Builder fixedColumnWidths(Iterable<Integer> fixedColumnWidths);
 
@@ -145,23 +199,35 @@ public abstract class CsvSpecs {
          * true is arguably more natural for users (the number of characters they see matches the visual width of the
          * column). But some programs may want the value of false because they are counting Java chars. It is an error
          * to set this parameter if {@link #hasFixedWidthColumns} is false.
+         * 
+         * @param useUtf32CountingConvention The useUtf32CountingConvention property.
+         * @return self after modifying the useUtf32CountingConvention property.
          */
         Builder useUtf32CountingConvention(boolean useUtf32CountingConvention);
 
         /**
          * Number of data rows to skip before processing data. This is useful when you want to parse data in chunks.
          * Typically used together with {@link Builder#numRows}. Defaults to 0.
+         * 
+         * @param skipRows The skipRows property
+         * @return self after modifying the skipRows property.
          */
         Builder skipRows(long skipRows);
 
         /**
          * Max number of rows to process. This is useful when you want to parse data in chunks. Typically used together
          * with {@link Builder#skipRows}. Defaults to {@link Long#MAX_VALUE}.
+         * 
+         * @param numRows The numRows property
+         * @return self after modifying the numRows property.
          */
         Builder numRows(long numRows);
 
         /**
          * Whether the library should skip over empty lines in the input. Defaults to false.
+         * 
+         * @param ignoreEmptyLines the ignoreEmptyLines property
+         * @return self after modifying the ignoreEmptyLines property.
          */
         Builder ignoreEmptyLines(boolean ignoreEmptyLines);
 
@@ -169,29 +235,44 @@ public abstract class CsvSpecs {
          * Whether the library should allow missing columns in the input. If this flag is set, then rows that are too
          * short (that have fewer columns than the header row) will be interpreted as if the missing columns contained
          * the empty string. Defaults to false.
+         * 
+         * @param allowMissingColumns The allowMissingColumns property
+         * @return self after modifying the allowMissingColumns property
          */
         Builder allowMissingColumns(boolean allowMissingColumns);
 
         /**
          * Whether the library should allow excess columns in the input. If this flag is set, then rows that are too
          * long (that have more columns than the header row) will have those excess columns dropped. Defaults to false.
+         * 
+         * @param ignoreExcessColumns The ignoreExcessColumns property
+         * @return self after modifying the ignoreExcessColumns parameter
          */
         Builder ignoreExcessColumns(boolean ignoreExcessColumns);
 
         /**
          * Whether the input file has a header row. Defaults to true.
+         * 
+         * @param hasHeaderRow The hasHeaderRow property
+         * @return self after modifying the hasHeaderRow property.
          */
         Builder hasHeaderRow(boolean hasHeaderRow);
 
         /**
          * Number of rows to skip before reading the header row from the input. Valid only if
          * {@link Builder#hasHeaderRow} is true. 0 means the header row is the first line of the file.
+         * 
+         * @param skipHeaderRows The skipHeaderRows property.
+         * @return self after modifying the skipHeaderRows property.
          */
         Builder skipHeaderRows(long skipHeaderRows);
 
         /**
          * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
          * Defaults to {code ','}. It is an error to set this parameter if {@link #hasFixedWidthColumns} is true.
+         * 
+         * @param delimiter The deliminter property.
+         * @return self after modifying the delimiter property.
          */
         Builder delimiter(char delimiter);
 
@@ -212,17 +293,26 @@ public abstract class CsvSpecs {
          * </ul>
          *
          * It is an error to set this parameter if {@link #hasFixedWidthColumns} is true.
+         * 
+         * @param quote The quote property.
+         * @return self after modifying the quote property.
          */
         Builder quote(char quote);
 
         /**
          * Whether to trim leading and trailing blanks from non-quoted values. Defaults to {@code true}.
+         * 
+         * @param ignoreSurroundingSpaces The ignoreSurroundingSpaces property.
+         * @return self after modifying the ignoreSurroundingSpaces property.
          */
         Builder ignoreSurroundingSpaces(boolean ignoreSurroundingSpaces);
 
         /**
          * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}. It is an
          * error to set this parameter if {@link #hasFixedWidthColumns} is true.
+         * 
+         * @param trim The trim property.
+         * @return self after modifying the trim property.
          */
         Builder trim(boolean trim);
 
@@ -230,14 +320,24 @@ public abstract class CsvSpecs {
          * Whether to run concurrently. In particular, the operation that reads the raw file, breaks it into columns,
          * and stores that column text in memory can run in parallel with the column parsers, and the parsers can run in
          * parallel with each other.
+         * 
+         * @param async The async property.
+         * @return self after modifiying the concurrent property.
          */
         Builder concurrent(boolean async);
 
+        /**
+         * Build the CsvSpecs object.
+         * 
+         * @return The built object.
+         */
         CsvSpecs build();
     }
 
     /**
      * Creates a builder for {@link CsvSpecs}.
+     * 
+     * @return The builder.
      */
     public static Builder builder() {
         return ImmutableCsvSpecs.builder();
@@ -299,6 +399,8 @@ public abstract class CsvSpecs {
 
     /**
      * A comma-separated-value delimited format.
+     * 
+     * @return The CsvSpecs for the specified format.
      */
     public static CsvSpecs csv() {
         return builder().build();
@@ -306,6 +408,8 @@ public abstract class CsvSpecs {
 
     /**
      * A tab-separated-value delimited format. Equivalent to {@code builder().delimiter('\t').build()}.
+     * 
+     * @return The CsvSpecs for the specified format.
      */
     public static CsvSpecs tsv() {
         return builder().delimiter('\t').build();
@@ -313,6 +417,8 @@ public abstract class CsvSpecs {
 
     /**
      * A header-less, CSV format. Equivalent to {@code builder().hasHeaderRow(false).build()}.
+     * 
+     * @return The CsvSpecs for the specified format.
      */
     public static CsvSpecs headerless() {
         return builder().hasHeaderRow(false).build();
@@ -320,16 +426,22 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#headers}.
+     * 
+     * @return The client-specified headers
      */
     public abstract List<String> headers();
 
     /**
      * See {@link Builder#putHeaderForIndex}
+     * 
+     * @return The client-specified header for a given index.
      */
     public abstract Map<Integer, String> headerForIndex();
 
     /**
      * See {@link Builder#parsers}.
+     * 
+     * @return The set of configured parsers.
      */
     @Default
     public List<Parser<?>> parsers() {
@@ -338,16 +450,22 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#putParserForName}.
+     * 
+     * @return A map of the client-specified parsers, keyed by column name.
      */
     public abstract Map<String, Parser<?>> parserForName();
 
     /**
      * See {@link Builder#putParserForIndex}.
+     * 
+     * @return A map of the client-specified parsers, keyed by column index.
      */
     public abstract Map<Integer, Parser<?>> parserForIndex();
 
     /**
      * See {@link Builder#nullValueLiterals}.
+     * 
+     * @return The collection of strings that mean "null value".
      */
     @Default
     public List<String> nullValueLiterals() {
@@ -356,16 +474,22 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#nullValueLiterals}.
+     * 
+     * @return The collection of strings that mean "null value", on a per-column-name basis.
      */
     public abstract Map<String, List<String>> nullValueLiteralsForName();
 
     /**
      * See {@link Builder#putNullValueLiteralsForIndex}.
+     * 
+     * @return The collection of strings that mean "null value", on a per-column-index basis.
      */
     public abstract Map<Integer, List<String>> nullValueLiteralsForIndex();
 
     /**
      * See {@link Builder#nullParser}.
+     * 
+     * @return The parser to use when all values in the column are null.
      */
     @Default
     @Nullable
@@ -375,6 +499,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#customDoubleParser}.
+     * 
+     * @return The parser to use to parse doubles.
      */
     @Default
     public Tokenizer.CustomDoubleParser customDoubleParser() {
@@ -383,6 +509,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#customTimeZoneParser}.
+     * 
+     * @return The user-specified parser that understands additional time zone formats.
      */
     @Default
     @Nullable
@@ -392,6 +520,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#headerLegalizer}.
+     * 
+     * @return The user-specified function that converts column names into an acceptable form.
      */
     @Default
     public Function<String[], String[]> headerLegalizer() {
@@ -400,6 +530,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#headerValidator}.
+     * 
+     * @return The user-specified function that determines whether a column name is acceptable.
      */
     @Default
     public Predicate<String> headerValidator() {
@@ -408,6 +540,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#hasFixedWidthColumns}.
+     * 
+     * @return Whether the caller has configured fixed width columns
      */
     @Default
     public boolean hasFixedWidthColumns() {
@@ -416,6 +550,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#fixedColumnWidths}.
+     * 
+     * @return Caller-specified fixed column widths.
      */
     @Default
     public List<Integer> fixedColumnWidths() {
@@ -426,6 +562,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#useUtf32CountingConvention}.
+     * 
+     * @return Whether the caller specified the UTF-32 counting convention.
      */
     @Default
     public boolean useUtf32CountingConvention() {
@@ -434,6 +572,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#skipRows}.
+     * 
+     * @return Whether the caller specified skipping rows
      */
     @Default
     public long skipRows() {
@@ -442,6 +582,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#numRows}.
+     * 
+     * @return Whether the caller specified consuming a max number of rows.
      */
     @Default
     public long numRows() {
@@ -450,6 +592,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#ignoreEmptyLines}.
+     * 
+     * @return Whether the caller specified ignoring empty lines.
      */
     @Default
     public boolean ignoreEmptyLines() {
@@ -458,6 +602,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#allowMissingColumns}.
+     * 
+     * @return Whether the caller specified to allow missing columns
      */
     @Default
     public boolean allowMissingColumns() {
@@ -466,6 +612,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#ignoreExcessColumns}.
+     * 
+     * @return Whether the caller specified to ignore excess columns.
      */
     @Default
     public boolean ignoreExcessColumns() {
@@ -474,6 +622,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#hasHeaderRow}.
+     * 
+     * @return Whether the caller specified that the input has a header row.
      */
     @Default
     public boolean hasHeaderRow() {
@@ -482,6 +632,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#skipHeaderRows}.
+     * 
+     * @return Whether the caller specified to skip some number of header rows.
      */
     @Default
     public long skipHeaderRows() {
@@ -492,6 +644,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#delimiter}.
+     * 
+     * @return The caller-specified delimiter.
      */
     @Default
     public char delimiter() {
@@ -503,6 +657,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#quote}.
+     * 
+     * @return The caller-specified quote character.
      */
     @Default
     public char quote() {
@@ -511,6 +667,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#ignoreSurroundingSpaces}.
+     * 
+     * @return Whether the caller specified to ignore surrounding spaces.
      */
     @Default
     public boolean ignoreSurroundingSpaces() {
@@ -521,6 +679,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#trim}.
+     * 
+     * @return Whether the caller specified to trim.
      */
     @Default
     public boolean trim() {
@@ -529,6 +689,8 @@ public abstract class CsvSpecs {
 
     /**
      * See {@link Builder#concurrent}.
+     * 
+     * @return Whether the caller specified to run concurrently.
      */
     @Default
     public boolean concurrent() {

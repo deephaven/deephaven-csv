@@ -7,20 +7,65 @@ import java.util.List;
 
 /** Standard system parsers for the {@link io.deephaven.csv.reading.CsvReader}. */
 public class Parsers {
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> BOOLEAN = BooleanAsByteParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> BYTE = ByteParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> SHORT = ShortParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> INT = IntParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> LONG = LongParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> FLOAT_FAST = FloatFastParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> FLOAT_STRICT = FloatStrictParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> DOUBLE = DoubleParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> DATETIME = DateTimeAsLongParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> CHAR = CharParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> STRING = StringParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> TIMESTAMP_SECONDS = TimestampSecondsParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> TIMESTAMP_MILLIS = TimestampMillisParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> TIMESTAMP_MICROS = TimestampMicrosParser.INSTANCE;
+    /**
+     * Singleton instance
+     */
     public static final Parser<?> TIMESTAMP_NANOS = TimestampNanosParser.INSTANCE;
 
     /**

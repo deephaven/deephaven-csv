@@ -29,12 +29,14 @@ public class ParseInputToDenseStorage {
      * @param optionalFirstDataRow If not null, this is the first row of data from the file, which the caller had to
      *        peek at in order to know the number of columns in the file.
      * @param grabber The {@link CellGrabber} which does all the CSV format handling (delimiters, quotes, etc).
+     * @param specs The {@link CsvSpecs} which control how the CSV file is interpreted.
+     * @param nullValueLiteralsToUse The set of null value literals to use, on a per-column basis.
      * @param dsws The array of {@link DenseStorageWriter}s, one for each column. As a special case, if a given
      *        {@link DenseStorageWriter} is null, then instead of passing data to it, we confirm that the data is the
      *        empty string and then just drop the data. This is used to handle input files that have a trailing empty
      *        column on the right.
-     * @param specs The {@link CsvSpecs} which control how the CSV file is interpreted.
      * @return The number of data rows in the input (i.e. not including headers or strings split across multiple lines).
+     * @throws CsvReaderException If there is an error processing the input.
      */
     public static long doit(final String[] columnHeaders,
             final byte[][] optionalFirstDataRow,

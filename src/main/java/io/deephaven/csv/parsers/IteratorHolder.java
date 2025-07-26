@@ -23,7 +23,11 @@ public final class IteratorHolder {
     /** Valid anytime after the first call to tryMoveNext(), but not before. */
     private boolean isExhausted = false;
 
-    /** Constructor. */
+    /**
+     * Constructor.
+     * 
+     * @param dsr The DenseStorageReader providing the input text.
+     */
     public IteratorHolder(DenseStorageReader dsr) {
         this.dsr = dsr;
     }
@@ -32,6 +36,7 @@ public final class IteratorHolder {
      * Try to advance to the next (or very first) item.
      *
      * @return true if we were able to advance, and set {@link IteratorHolder#bs} to valid text. Otherwise false.
+     * @throws CsvReaderException if the reader fails to advance
      */
     public boolean tryMoveNext() throws CsvReaderException {
         isExhausted = !dsr.tryGetNextSlice(bs);
@@ -42,7 +47,11 @@ public final class IteratorHolder {
         return true;
     }
 
-    /** Getter for the byte slice. */
+    /**
+     * Getter for the byte slice.
+     * 
+     * @return the byte slice
+     */
     public ByteSlice bs() {
         return bs;
     }

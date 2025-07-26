@@ -2,6 +2,9 @@ package io.deephaven.csv.parsers;
 
 /** The parser for "seconds since Unix epoch". */
 public final class TimestampSecondsParser extends TimestampParserBase {
+    /**
+     * Singleton instance.
+     */
     public static final TimestampSecondsParser INSTANCE = new TimestampSecondsParser();
 
     private TimestampSecondsParser() {

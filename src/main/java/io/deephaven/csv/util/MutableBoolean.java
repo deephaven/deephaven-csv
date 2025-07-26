@@ -6,10 +6,20 @@ package io.deephaven.csv.util;
 public final class MutableBoolean {
     private boolean value;
 
+    /**
+     * Sets the contained value.
+     * 
+     * @param newValue The new value.
+     */
     public void setValue(boolean newValue) {
         value = newValue;
     }
 
+    /**
+     * Reads the contained value.
+     * 
+     * @return The contained value.
+     */
     public boolean booleanValue() {
         return value;
     }

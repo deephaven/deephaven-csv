@@ -6,23 +6,41 @@ package io.deephaven.csv.util;
  * error to leave a reference lying around that prevents it from doing so. This class makes it somewhat convenient to
  * have single-owner and "move" semantics, so it's a little easier to not leak references.
  * 
- * @param <T>
+ * @param <T> The type of the underlying object.
  */
 public final class Moveable<T> {
     private T obj;
 
+    /**
+     * Constructor.
+     * 
+     * @param obj The underlying object to manage.
+     */
     public Moveable(T obj) {
         this.obj = obj;
     }
 
+    /**
+     * Gets the underlying object.
+     * 
+     * @return The underlying object.
+     */
     public T get() {
         return obj;
     }
 
+    /**
+     * Resets the Moveable (releases the underlying object).
+     */
     public void reset() {
         obj = null;
     }
 
+    /**
+     * "Moves" the underlying object to a new Moveable. Resets this object.
+     * 
+     * @return the new Moveable
+     */
     public Moveable<T> move() {
         final Moveable<T> result = new Moveable<>(obj);
         obj = null;

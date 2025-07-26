@@ -13,10 +13,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A static class which contains one method: "determineHeadersToUse", which looks at the specs and the input and
+ * determines what should constitute the header row (perhaps caller-supplied, perhaps present in the input, etc.)
+ */
 public class DelimitedHeaderFinder {
     /**
      * Determine which headers to use. The result comes from either the first row of the file or the user-specified
      * overrides.
+     * 
+     * @param specs The CsvSpecs
+     * @param grabber The CellGrabber
+     * @param firstDataRowHolder An output parameter where we store the first data row. We need this because we might
+     *        have eagerly read the first row, so we have to give it to the caller to subsequently process as data.
+     * @return The headers to use.
+     * @throws CsvReaderException if the input is malformed
      */
     public static String[] determineHeadersToUse(final CsvSpecs specs,
             final CellGrabber grabber, final MutableObject<byte[][]> firstDataRowHolder)
@@ -69,7 +80,8 @@ public class DelimitedHeaderFinder {
 
     /**
      * Try to read one row from the input. Returns null if the input is empty
-     *
+     * 
+     * @param grabber The CellGrabber
      * @return The first row as a byte[][] or null if the input was exhausted.
      */
     private static byte[][] tryReadOneRow(final CellGrabber grabber) throws CsvReaderException {

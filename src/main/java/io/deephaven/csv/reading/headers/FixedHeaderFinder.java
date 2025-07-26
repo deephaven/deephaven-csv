@@ -14,10 +14,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A static class which contains one method: "determineHeadersToUse", which looks at the specs and the input and
+ * determines what should constitute the header row (perhaps caller-supplied, perhaps present in the input, etc.)
+ */
 public class FixedHeaderFinder {
     /**
      * Determine which headers to use. The result comes from either the first row of the file or the user-specified
      * overrides.
+     * 
+     * @param specs The CsvSpecs
+     * @param lineGrabber The CellGrabber configured as a line grabber
+     * @param columnWidthsResult An out parameter storing our determined column widths.
+     * @return The headers to use
+     * @throws CsvReaderException If there is an error processing the input
      */
     public static String[] determineHeadersToUse(
             final CsvSpecs specs,

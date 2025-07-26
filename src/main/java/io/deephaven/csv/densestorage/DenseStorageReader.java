@@ -2,7 +2,6 @@ package io.deephaven.csv.densestorage;
 
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.util.CsvReaderException;
-import io.deephaven.csv.util.MutableInt;
 
 import java.util.concurrent.Semaphore;
 
@@ -20,7 +19,13 @@ public final class DenseStorageReader {
     private int largeArrayCurrent = 0;
     private int largeArrayEnd = 0;
 
-    /** Constructor. */
+    /**
+     * Constructor.
+     * 
+     * @param syncRoot The shared synchronization object
+     * @param semaphore The Semaphore that allows the writer to not get too far ahead of the readers
+     * @param head The head of the queue
+     */
     public DenseStorageReader(Object syncRoot, Semaphore semaphore, QueueNode head) {
         this.syncRoot = syncRoot;
         this.semaphore = semaphore;
@@ -44,6 +49,11 @@ public final class DenseStorageReader {
         this.largeArrayEnd = other.largeArrayEnd;
     }
 
+    /**
+     * Make a new DenseStorageReader derived from this.
+     * 
+     * @return The new DenseStorageReader
+     */
     public DenseStorageReader copy() {
         return new DenseStorageReader(this);
     }
@@ -59,6 +69,7 @@ public final class DenseStorageReader {
      * 
      * @param bs If the method returns true, the contents of this parameter will be updated.
      * @return true if there is more data, and the ByteSlice has been populated. Otherwise, false.
+     * @throws CsvReaderException if there is an error pulling data from the queue.
      */
     public boolean tryGetNextSlice(final ByteSlice bs) throws CsvReaderException {
         final int control = getControlWord(bs);
