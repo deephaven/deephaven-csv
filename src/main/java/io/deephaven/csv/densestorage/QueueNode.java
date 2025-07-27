@@ -1,84 +1,47 @@
 package io.deephaven.csv.densestorage;
 
-import java.util.concurrent.Semaphore;
-
 /**
- * Linked list node that holds data for a {@link DenseStorageWriter} or {@link DenseStorageReader}. All fields are
- * immutable except the "next" field. Synchronization for reading/writing the "next" field is managed by the
- * {@link DenseStorageWriter} and {@link DenseStorageReader}.
+ * Linked list node that holds data for the communication between a {@link DenseStorageWriter} and
+ * {@link DenseStorageReader}. All fields are immutable except the "next" and "appendHasBeenObserved" fields.
+ * Synchronization for reading/writing the "next" field is managed by the {@link DenseStorageWriter} and
+ * {@link DenseStorageReader}.
  */
-public final class QueueNode<TARRAY> {
-    public static <TARRAY> QueueNode<TARRAY> createInitial(int maxUnobservedBlocks) {
-        final Semaphore semaphore = new Semaphore(maxUnobservedBlocks);
-        return new QueueNode<>(semaphore, null, 0, 0, false);
-    }
+public final class QueueNode {
+    /**
+     * Represents a slice of packed bytes in the packed buffer. It is the contract of the code that bytes in this slice
+     * are immutable.
+     */
+    public final byte[] packedBuffer;
+    public final int packedBegin;
+    public final int packedEnd;
 
     /**
-     * The shared semaphore which prevents the writer from getting too far ahead of the reader.
+     * Represents a slice of byte[] references in the large array buffer. It is the contract of the code that the byte[]
+     * references in this interval (and the bytes they point to) are immutable.
      */
-    public final Semaphore semaphore;
-    public final TARRAY data;
-    public final int begin;
-    public final int end;
-    public final boolean isLast;
-    /** Readers and writers of this field have arranged to synchronize with each other. */
-    public QueueNode<TARRAY> next;
-    /**
-     * Whether a reader has already observed the {@link QueueNode#next} field transitioning from null to non-null.
-     */
-    private boolean observed;
+    public final byte[][] largeArrayBuffer;
+    public final int largeArrayBegin;
+    public final int largeArrayEnd;
+
+    public QueueNode next = null;
 
     /**
-     * Constructor. Sets this queue node to represent the half-open interval ['begin','end') of the array 'data'.
+     * Whether at least one reader has observed the {@link QueueNode#next} field transitioning from null to non-null.
+     * This is used for flow control, so that the writer doesn't get too far ahead of the reader.
      */
-    private QueueNode(final Semaphore semaphore, TARRAY data, int begin, int end, boolean isLast) {
-        this.semaphore = semaphore;
-        this.data = data;
-        this.begin = begin;
-        this.end = end;
-        this.isLast = isLast;
-        this.next = null;
-    }
-
-    public QueueNode<TARRAY> appendNextMaybeWait(TARRAY data, int begin, int end, boolean isLast) {
-        try {
-            semaphore.acquire(1);
-        } catch (InterruptedException ie) {
-            throw new RuntimeException("Thread interrupted", ie);
-        }
-        synchronized (this) {
-            if (next != null) {
-                throw new RuntimeException("next is already set");
-            }
-            // New node sharing the same semaphore.
-            next = new QueueNode<>(semaphore, data, begin, end, isLast);
-            notifyAll();
-            return next;
-        }
-    }
+    public boolean appendHasBeenObserved = false;
 
     /**
-     * Get a non-null 'next' field. Will block until the next field is non-null. If this is the first time
-     *
-     * @return True if this call was the first to observe the {@link QueueNode#next} field going from null to non-null.
-     *         Otherwise returns false.
+     * Constructor. Sets this queue node to represent the passed-in slices.
      */
-    public QueueNode<TARRAY> waitForNext() {
-        boolean needsRelease;
-        synchronized (this) {
-            while (next == null) {
-                try {
-                    wait();
-                } catch (InterruptedException ie) {
-                    throw new RuntimeException("Thread interrupted", ie);
-                }
-            }
-            needsRelease = !observed;
-            observed = true;
-        }
-        if (needsRelease) {
-            semaphore.release();
-        }
-        return next;
+    public QueueNode(byte[] packedBuffer, int packedBegin, int packedEnd, byte[][] largeArrayBuffer,
+            int largeArrayBegin,
+            int largeArrayEnd) {
+        this.packedBuffer = packedBuffer;
+        this.packedBegin = packedBegin;
+        this.packedEnd = packedEnd;
+        this.largeArrayBuffer = largeArrayBuffer;
+        this.largeArrayBegin = largeArrayBegin;
+        this.largeArrayEnd = largeArrayEnd;
     }
 }
