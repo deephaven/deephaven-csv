@@ -49,14 +49,14 @@ public final class DenseStorageReader {
     }
 
     /**
-     * Tries to get the next slice. To do this, it fetches a 'control word' from the 'packed' subqueue.
-     * This control word indicates one of three things:
+     * Tries to get the next slice. To do this, it fetches a 'control word' from the 'packed' subqueue. This control
+     * word indicates one of three things:
      * <ol>
      * <li>End of stream</li>
-     * <li>That the data for the slice is immediately following on the same subqueue, namely
-     * the 'packed' subqueue</li>
+     * <li>That the data for the slice is immediately following on the same subqueue, namely the 'packed' subqueue</li>
      * <li>That the data for the slice is on the other subqueue, namely the 'largeArray' subqueue.</li>
      * </ol>
+     * 
      * @param bs If the method returns true, the contents of this parameter will be updated.
      * @return true if there is more data, and the ByteSlice has been populated. Otherwise, false.
      */

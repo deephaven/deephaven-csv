@@ -106,32 +106,30 @@ import java.util.concurrent.Semaphore;
  * The buffer {@link DenseStorageWriter#largeArrayBuffer} follows the same rules as the above.
  *
  * <p>
- * A further note on synchronization. There is one DenseStorageWriter and potentially several
- * DenseStorageReaders in the system. A DenseStorageWriter has arrays (for its packed subqueue and its
- * largeArray subqueue) that are private to it, that it fills up at its leisure. It has a representation
- * for what "slice" of these subqueues it uniquely owns and can freely write to without synchronization.
- * Initially, that slice represents the whole array, but successive prefixes of that slice are repeatedly
- * given away to the DenseStorageReaders (via the QueueNode) as time goes on. The agreement beetween
- * the DenseStorageWriters and DenseStorageReaders is the DenseStorageWriter can do whatever it
- * wants to the slice it owns; meanwhile the DenseStorageReaders can do whatever *read-only* operation
- * they want on the slices they receive.
+ * A further note on synchronization. There is one DenseStorageWriter and potentially several DenseStorageReaders in the
+ * system. A DenseStorageWriter has arrays (for its packed subqueue and its largeArray subqueue) that are private to it,
+ * that it fills up at its leisure. It has a representation for what "slice" of these subqueues it uniquely owns and can
+ * freely write to without synchronization. Initially, that slice represents the whole array, but successive prefixes of
+ * that slice are repeatedly given away to the DenseStorageReaders (via the QueueNode) as time goes on. The agreement
+ * beetween the DenseStorageWriters and DenseStorageReaders is the DenseStorageWriter can do whatever it wants to the
+ * slice it owns; meanwhile the DenseStorageReaders can do whatever *read-only* operation they want on the slices they
+ * receive.
  *
  * <p>
  * At some point, according to its logic, the DenseStorageWriter will have partially or completely filled up its slices
- * in these two subqueues, and will want to share these slices with all the DenseStorageReaders.
- * In this case it removes a prefix from its slice for the packedArray subqueue and its slice for the
- * largeArray subqueu, and transmits those prefixes to the DenseStorageReaders. Once the DenseStorageWriter
- * has given away its whole array in this slicewise fashion, it allocates a fresh array for itself and
- * starts over.
+ * in these two subqueues, and will want to share these slices with all the DenseStorageReaders. In this case it removes
+ * a prefix from its slice for the packedArray subqueue and its slice for the largeArray subqueu, and transmits those
+ * prefixes to the DenseStorageReaders. Once the DenseStorageWriter has given away its whole array in this slicewise
+ * fashion, it allocates a fresh array for itself and starts over.
  *
  * <p>
- * Conceptually these slices that have been shared are now under a shared ownership model: no one is allowed to write to them
- * ever again (this is enforced by convention). The slices are communicated via a QueueNode, which has
- * mostly final fields, again indicating that this is a shared, read-only structure.
- * However, there are two fields in the QueueNode that are mutable and hence controlled by synchronization.
- * Those fields are {@link QueueNode#next} and {@link QueueNode#appendHasBeenObserved}. Anyone
- * reading or writing those fields needs to do so under synchronization. The DenseStorageWriter
- * and all the DenseStorageReaders share an object called "syncRoot" that is used for this purpose.
+ * Conceptually these slices that have been shared are now under a shared ownership model: no one is allowed to write to
+ * them ever again (this is enforced by convention). The slices are communicated via a QueueNode, which has mostly final
+ * fields, again indicating that this is a shared, read-only structure. However, there are two fields in the QueueNode
+ * that are mutable and hence controlled by synchronization. Those fields are {@link QueueNode#next} and
+ * {@link QueueNode#appendHasBeenObserved}. Anyone reading or writing those fields needs to do so under synchronization.
+ * The DenseStorageWriter and all the DenseStorageReaders share an object called "syncRoot" that is used for this
+ * purpose.
  */
 public final class DenseStorageWriter {
     /** Constructor */
