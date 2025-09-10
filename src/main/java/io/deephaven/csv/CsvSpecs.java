@@ -69,7 +69,8 @@ public abstract class CsvSpecs {
 
         /**
          * Used to force a specific parser for a specific column, specified by column name. Specifying a parser forgoes
-         * column inference for that column.
+         * column inference for that column. If {@link #putParserForName} and {@link #putParserForIndex} both refer to
+         * the same column, {@link #putParserForName} takes priority.
          * 
          * @param columnName The column name
          * @param parser The parser
@@ -79,7 +80,8 @@ public abstract class CsvSpecs {
 
         /**
          * Used to force a specific parser for a specific column, specified by 0-based column index. Specifying a parser
-         * forgoes column inference for that column.
+         * forgoes column inference for that column. If {@link #putParserForName} and {@link #putParserForIndex} both
+         * refer to the same column, {@link #putParserForName} takes priority.
          * 
          * @param index The column index
          * @param parser The parser
@@ -101,7 +103,9 @@ public abstract class CsvSpecs {
 
         /**
          * The null value literal for specific columns, specified by column name. Specifying a null value literal for a
-         * column overrides the value in {@link #nullValueLiterals()}.
+         * column overrides the value in {@link #nullValueLiterals()}. If {@link #putNullValueLiteralsForName} and
+         * {@link #putNullValueLiteralsForIndex} both refer to the same column, {@link #putNullValueLiteralsForName}
+         * takes priority.
          * 
          * @param columnName The column name
          * @param nullValueLiteral The collection of null value literal strings
@@ -111,7 +115,9 @@ public abstract class CsvSpecs {
 
         /**
          * The null value literal for specific columns, specified by 0-based column index. Specifying a null value
-         * literal for a column overrides the value in {@link #nullValueLiterals()}.
+         * literal for a column overrides the value in {@link #nullValueLiterals()}. If
+         * {@link #putNullValueLiteralsForName} and {@link #putNullValueLiteralsForIndex} both refer to the same column,
+         * {@link #putNullValueLiteralsForName} takes priority.
          * 
          * @param index The column index
          * @param nullValueLiteral The collection of null value literal strings

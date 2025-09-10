@@ -6,7 +6,8 @@ import java.lang.reflect.Array;
 import java.util.function.IntFunction;
 
 /**
- * Factory for simple array sinks. This is useful if you are coding up something quickly and just want a
+ * Factory for simple array sinks. This is useful if you are coding up something quickly and just want a set of simple
+ * Sink implementations that store your data in arrays of the appropriate types.
  */
 public class ArraySinkFactory implements SinkFactory {
     private final Byte byteSentinel;
