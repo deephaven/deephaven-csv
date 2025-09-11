@@ -18,6 +18,7 @@ public interface CellGrabber {
      *        otherwise it will be set to false.
      * @param endOfInput An out parameter which will be set to true if the cell just read encountered the end of the
      *        input, otherwise it will be set to false.
+     * @throws CsvReaderException If the cell is malformed
      */
     void grabNext(final ByteSlice dest, final MutableBoolean lastInRow,
             final MutableBoolean endOfInput) throws CsvReaderException;
@@ -26,6 +27,8 @@ public interface CellGrabber {
      * Returns the "physical" row number, that is the row number of the input file. This differs from the "logical" row
      * number, which is the row number of the CSV data being processed. The difference arises when, due to quotation
      * marks, a single CSV row can span multiple lines of input.
+     * 
+     * @return the "physical" row number
      */
     int physicalRowNum();
 }

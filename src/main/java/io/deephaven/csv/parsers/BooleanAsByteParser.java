@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the boolean (as byte) type. */
 public final class BooleanAsByteParser implements Parser<byte[]> {
+    /**
+     * Singleton
+     */
     public static BooleanAsByteParser INSTANCE = new BooleanAsByteParser();
 
     private BooleanAsByteParser() {}

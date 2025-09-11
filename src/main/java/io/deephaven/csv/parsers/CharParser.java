@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the char type. */
 public final class CharParser implements Parser<char[]> {
+    /**
+     * Singleton instance.
+     */
     public static final CharParser INSTANCE = new CharParser();
 
     private CharParser() {}

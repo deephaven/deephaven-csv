@@ -36,7 +36,14 @@ public class FixedCellGrabber implements CellGrabber {
     private final MutableBoolean dummy1;
     private final MutableInt dummy2;
 
-    /** Constructor. */
+    /**
+     * Constructor.
+     * 
+     * @param lineGrabber The underlying CellGrabber, configured to return whole lines
+     * @param columnWidths The fixed column widths
+     * @param ignoreSurroundingSpaces Whether to ignore surrounding spaces
+     * @param utf32CountingMode How we are counting characters: as UTF-32 or UTF-16
+     */
     public FixedCellGrabber(final CellGrabber lineGrabber, final int[] columnWidths, boolean ignoreSurroundingSpaces,
             boolean utf32CountingMode) {
         this.lineGrabber = lineGrabber;

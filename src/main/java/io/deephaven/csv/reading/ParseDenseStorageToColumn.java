@@ -18,14 +18,16 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class ParseDenseStorageToColumn {
     /**
+     * @param colNum The column number being parsed. Some custom sinks use this for their own information.
      * @param dsr A reader for the input.
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
      * @param specs The CsvSpecs which control how the column is interpreted.
      * @param nullValueLiteralsToUse If a cell text is equal to any of the values in this array, the cell will be
      *        interpreted as the null value. Typically set to a one-element array containing the empty string.
-     * @param sinkFactory Factory that makes all of the Sinks of various types, used to consume the data we produce.
+     * @param sinkFactory Factory that makes all the Sinks of various types, used to consume the data we produce.
      * @return The {@link Sink}, provided by the caller's {@link SinkFactory}, that was selected to hold the column
      *         data.
+     * @throws CsvReaderException If there is an error processing the input.
      */
     public static Result doit(
             final int colNum,
@@ -340,19 +342,39 @@ public final class ParseDenseStorageToColumn {
         return result;
     }
 
+    /**
+     * The result type, containing the Sink that was chosen to hold the data, and the DataType indicating the type of
+     * that data.
+     */
     public static class Result {
         private final Sink<?> sink;
         private final DataType dataType;
 
+        /**
+         * Constructor.
+         * 
+         * @param sink The Sink that was chosen to hold the data.
+         * @param dataType The DataType of the data.
+         */
         public Result(Sink<?> sink, DataType dataType) {
             this.sink = sink;
             this.dataType = dataType;
         }
 
+        /**
+         * Gets the Sink that was chosen to hold the data
+         * 
+         * @return The Sink
+         */
         public Sink<?> sink() {
             return sink;
         }
 
+        /**
+         * Gets the DataType of the data.
+         * 
+         * @return The DataType of the data.
+         */
         public DataType dataType() {
             return dataType;
         }

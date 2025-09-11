@@ -11,6 +11,7 @@ public class Renderer {
      * Render the items in {@code items} using the separator ", " and renderer {@link Object#toString}.
      *
      * @param items The items.
+     * @param <T> The element type of the items
      * @return The items rendered as a {@link String}, separated by {@code separator}.
      */
     public static <T> String renderList(Iterable<T> items) {
@@ -22,6 +23,7 @@ public class Renderer {
      *
      * @param items The items.
      * @param separator The separator.
+     * @param <T> The element type of the items.
      * @return The items rendered as a {@link String}, separated by {@code separator}.
      */
     public static <T> String renderList(Iterable<T> items, String separator) {
@@ -34,6 +36,7 @@ public class Renderer {
      * @param items The items.
      * @param separator The separator.
      * @param renderer The renderer.
+     * @param <T> The element type of the items.
      * @return The items rendered as a {@link String}, separated by {@code separator}.
      */
     public static <T> String renderList(

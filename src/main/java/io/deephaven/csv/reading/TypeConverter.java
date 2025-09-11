@@ -4,6 +4,9 @@ import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.sinks.Source;
 import java.lang.reflect.Array;
 
+/**
+ * A class used to copy data chunks of one numeric type to data chunks of another numeric type
+ */
 public class TypeConverter {
     private static final int BYTE = 1;
     private static final int SHORT = 2;
@@ -12,6 +15,27 @@ public class TypeConverter {
     private static final int FLOAT = 5;
     private static final int DOUBLE = 6;
 
+    /**
+     * Copies a slice of data from the Source at the half-open interval [srcBegin,srcEnd) to the Sink, starting at
+     * destBegin, using data chunks as intermediaries and doing value conversion. Basically the algorithm is: For each
+     * chunk of data:
+     * <ul>
+     * <li>read a chunk into srcChunk from source</li>
+     * <li>copy the data, doing value conversions, from srcChunk to destChunk</li>
+     * <li>write a chunk of data from destChunk to dest</li>
+     * </ul>
+     *
+     * @param source A Source holding the source data
+     * @param dest A Sink holding the destination data
+     * @param srcBegin The inclusive start position of the source data
+     * @param srcEnd The exclusive end position of the source data
+     * @param destBegin The inclusive start position of the destination data
+     * @param srcChunk A temporary array of appropriate type to use to hold a chunk of source data
+     * @param destChunk A temporary array of appropriate type to use to hold a chunk of dest data
+     * @param isNullChunk A temporary array of bool to use to hold a chunk of "isNull" data
+     * @param <TARRAY> The array type of the source data
+     * @param <UARRAY> The array type of the destination data
+     */
     public static <TARRAY, UARRAY> void copy(
             final Source<TARRAY> source,
             final Sink<UARRAY> dest,
@@ -20,13 +44,13 @@ public class TypeConverter {
             final long destBegin,
             final TARRAY srcChunk,
             final UARRAY destChunk,
-            final boolean[] isNull) {
+            final boolean[] isNullChunk) {
         if (srcBegin == srcEnd) {
             return;
         }
         final int srcChunkSize = Array.getLength(srcChunk);
         final int destChunkSize = Array.getLength(destChunk);
-        final int isNullChunkSize = isNull.length;
+        final int isNullChunkSize = isNullChunk.length;
         if (srcChunkSize != destChunkSize || srcChunkSize != isNullChunkSize) {
             final String message =
                     String.format(
@@ -43,9 +67,9 @@ public class TypeConverter {
             final long srcEndToUse = Math.min(srcCurrent + srcChunkSize, srcEnd);
             final int copySize = Math.toIntExact(srcEndToUse - srcCurrent);
             final long destEndToUse = destCurrent + copySize;
-            source.read(srcChunk, isNull, srcCurrent, srcEndToUse);
+            source.read(srcChunk, isNullChunk, srcCurrent, srcEndToUse);
             performCopy.accept(srcChunk, destChunk, copySize);
-            dest.write(destChunk, isNull, destCurrent, destEndToUse, false);
+            dest.write(destChunk, isNullChunk, destCurrent, destEndToUse, false);
             srcCurrent = srcEndToUse;
             destCurrent = destEndToUse;
         }

@@ -19,7 +19,13 @@ public final class GrowableByteBuffer {
     /** Current size of the data. */
     private int size = 0;
 
-    /** Appends 'srcSize' characters from 'src', starting at 'srcOffset'. */
+    /**
+     * Appends 'srcSize' characters from 'src', starting at 'srcOffset'.
+     * 
+     * @param src The source characters
+     * @param srcOffset The starting offset within 'src'
+     * @param srcSize the number of characters to copy
+     */
     public void append(byte[] src, int srcOffset, int srcSize) {
         ensure(srcSize);
         System.arraycopy(src, srcOffset, data, size, srcSize);
@@ -46,12 +52,20 @@ public final class GrowableByteBuffer {
         size = 0;
     }
 
-    /** Access the underlying data array. */
+    /**
+     * Access the underlying data array.
+     * 
+     * @return The underlying data array.
+     */
     public byte[] data() {
         return data;
     }
 
-    /** The current size. */
+    /**
+     * The current size.
+     * 
+     * @return The number of valid bytes in the underlying data array.
+     */
     public int size() {
         return size;
     }

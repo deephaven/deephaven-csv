@@ -13,6 +13,9 @@ import org.jetbrains.annotations.NotNull;
  * {@code Float.parseFloat(input)} differs slightly from {@code (float)Double.parseDouble(input)}.
  */
 public final class FloatStrictParser implements Parser<float[]> {
+    /**
+     * The singleton instance.
+     */
     public static final FloatStrictParser INSTANCE = new FloatStrictParser();
 
     private FloatStrictParser() {}

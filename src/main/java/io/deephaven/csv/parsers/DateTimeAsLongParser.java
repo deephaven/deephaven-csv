@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the Deephaven DateTime (represented as long) type. */
 public final class DateTimeAsLongParser implements Parser<long[]> {
+    /**
+     * Singleton object for this class.
+     */
     public static final DateTimeAsLongParser INSTANCE = new DateTimeAsLongParser();
 
     private DateTimeAsLongParser() {}

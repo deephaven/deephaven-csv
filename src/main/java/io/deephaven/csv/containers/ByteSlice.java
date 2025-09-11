@@ -20,6 +20,10 @@ public final class ByteSlice implements CharSequence {
 
     /**
      * Constructs a ByteSlice from the half-open interval [{@code begin}, {@code end}) of the array {@code data}.
+     * 
+     * @param data the underlying buffer
+     * @param begin The inclusive start index of the data
+     * @param end The exclusive end index of the data
      */
     public ByteSlice(final byte[] data, final int begin, final int end) {
         reset(data, begin, end);
@@ -28,6 +32,10 @@ public final class ByteSlice implements CharSequence {
     /**
      * Reset the ByteSlice to the half-open interval [{@code begin}, {@code end}) of the array {@code
      * data}.
+     * 
+     * @param data the underlying buffer
+     * @param begin The inclusive start index of the data
+     * @param end The exclusive end index of the data
      */
     public void reset(final byte[] data, final int begin, final int end) {
         this.data = data;
@@ -35,47 +43,84 @@ public final class ByteSlice implements CharSequence {
         this.end = end;
     }
 
-    /** Copies the slice to the destination array, starting at the specified destination position. */
+    /**
+     * Copies the slice to the destination array, starting at the specified destination position.
+     * 
+     * @param dest The target array
+     * @param destOffset The starting position in the target
+     */
     public void copyTo(byte[] dest, int destOffset) {
         System.arraycopy(data, begin, dest, destOffset, end - begin);
     }
 
-    /** Gets the 'begin' field of the slice */
+    /**
+     * Gets the 'begin' field of the slice
+     * 
+     * @return the 'begin' field
+     */
     public int begin() {
         return begin;
     }
 
-    /** Gets the 'end' field of the slice. */
+    /**
+     * Gets the 'end' field of the slice.
+     * 
+     * @return the 'end' field.
+     */
     public int end() {
         return end;
     }
 
-    /** Sets the 'begin' field of the slice. */
+    /**
+     * Sets the 'begin' field of the slice.
+     * 
+     * @param begin the value to set
+     */
     public void setBegin(int begin) {
         this.begin = begin;
     }
 
-    /** Sets the 'end' field of the slice. */
+    /**
+     * Sets the 'end' field of the slice.
+     * 
+     * @param end the value to set
+     */
     public void setEnd(int end) {
         this.end = end;
     }
 
-    /** Gets the first character of the slice. The behavior is unspecified if the slice is empty. */
+    /**
+     * Gets the first byte of the slice. The behavior is unspecified if the slice is empty.
+     * 
+     * @return The first byte of the slice
+     */
     public byte front() {
         return data[begin];
     }
 
-    /** Gets the last character of the slice. The behavior is unspecified if the slice is empty. */
+    /**
+     * Gets the last byte of the slice. The behavior is unspecified if the slice is empty.
+     * 
+     * @return The last byte of the slice.
+     */
     public byte back() {
         return data[end - 1];
     }
 
-    /** Gets the underlying array from the slice. */
+    /**
+     * Gets the underlying array from the slice.
+     * 
+     * @return The underlying array
+     */
     public byte[] data() {
         return data;
     }
 
-    /** Gets the size of the slice. */
+    /**
+     * Gets the size of the slice.
+     * 
+     * @return The size of the slice
+     */
     public int size() {
         return end - begin;
     }

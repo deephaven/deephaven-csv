@@ -12,7 +12,13 @@ public final class QueueNode {
      * are immutable.
      */
     public final byte[] packedBuffer;
+    /**
+     * The starting position (inclusive) of our slice of the packed data
+     */
     public final int packedBegin;
+    /**
+     * The ending position (exclusive) of our slice of the packed data
+     */
     public final int packedEnd;
 
     /**
@@ -20,9 +26,18 @@ public final class QueueNode {
      * references in this interval (and the bytes they point to) are immutable.
      */
     public final byte[][] largeArrayBuffer;
+    /**
+     * The starting position (inclusive) of our slice of the large array data
+     */
     public final int largeArrayBegin;
+    /**
+     * The ending position (exclusive) of our slice of the large array data
+     */
     public final int largeArrayEnd;
 
+    /**
+     * Points to the next node in the queue.
+     */
     public QueueNode next = null;
 
     /**
@@ -33,6 +48,13 @@ public final class QueueNode {
 
     /**
      * Constructor. Sets this queue node to represent the passed-in slices.
+     * 
+     * @param packedBuffer The underlying array storage for the packed buffer
+     * @param packedBegin The starting position (inclusive) of our slice of the packed data
+     * @param packedEnd The ending position (exclusive) of our slice of the packed data
+     * @param largeArrayBuffer The underlying array storage for the large array buffer
+     * @param largeArrayBegin The starting position (inclusive) of our slice of the large array data
+     * @param largeArrayEnd The ending position (exclusive) of our slice of the large array data
      */
     public QueueNode(byte[] packedBuffer, int packedBegin, int packedEnd, byte[][] largeArrayBuffer,
             int largeArrayBegin,

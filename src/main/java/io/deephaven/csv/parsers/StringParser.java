@@ -6,6 +6,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the String type. */
 public final class StringParser implements Parser<String[]> {
+    /**
+     * Singleton instance.
+     */
     public static final StringParser INSTANCE = new StringParser();
 
     private StringParser() {}

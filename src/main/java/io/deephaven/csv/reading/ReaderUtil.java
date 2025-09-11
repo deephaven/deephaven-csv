@@ -4,7 +4,17 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.tokenization.RangeTests;
 import io.deephaven.csv.util.MutableInt;
 
+/**
+ * A set of utilities useful when attempting to read the user input.
+ */
 public class ReaderUtil {
+    /**
+     * Makes a set of "synthetic" headers for when the CsvSpecs indicates the input is headerless, but the caller also
+     * did not specify custom headers
+     * 
+     * @param numHeaders The number of headers in the input.
+     * @return A set of column header names of the forum Column1, Column2, ...
+     */
     public static String[] makeSyntheticHeaders(int numHeaders) {
         final String[] result = new String[numHeaders];
         for (int ii = 0; ii < result.length; ++ii) {

@@ -11,9 +11,21 @@ import org.jetbrains.annotations.NotNull;
  * then feed them to the sink for the Deephaven DateTime (as long) type.
  */
 public abstract class TimestampParserBase implements Parser<long[]> {
+    /**
+     * Scale factor for converting seconds to nanoseconds
+     */
     protected static final long SECOND_SCALE = 1_000_000_000;
+    /**
+     * Scale factor for converting milliseconds to nanoseconds
+     */
     protected static final long MILLISECOND_SCALE = 1_000_000;
+    /**
+     * Scale factor for converting microseconds to nanoseconds
+     */
     protected static final long MICROSECOND_SCALE = 1_000;
+    /**
+     * Scale factor (degenerate) for converting nanoseconds to nanoseconds
+     */
     protected static final long NANOSECOND_SCALE = 1;
 
     private final long scale;

@@ -11,6 +11,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the int type. */
 public final class IntParser implements Parser<int[]> {
+    /**
+     * Singleton instance
+     */
     public static final IntParser INSTANCE = new IntParser();
 
     private IntParser() {}

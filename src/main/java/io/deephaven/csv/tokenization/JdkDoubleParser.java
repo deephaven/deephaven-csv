@@ -4,9 +4,13 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
 
 /**
- * A {@link CustomDoubleParser} that uses {@link Double#parseDouble(String)}.
+ * A {@link CustomDoubleParser} that uses {@link Double#parseDouble(String)}. Not actually an 'enum'. We use this as a
+ * Java trick to get singletons.
  */
 public enum JdkDoubleParser implements CustomDoubleParser {
+    /**
+     * Singleton instance.
+     */
     INSTANCE;
 
     /**

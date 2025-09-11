@@ -11,6 +11,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the short type. */
 public final class ShortParser implements Parser<short[]> {
+    /**
+     * Singleton instance.
+     */
     public static final ShortParser INSTANCE = new ShortParser();
 
     private ShortParser() {}

@@ -35,6 +35,13 @@ public class Tokenizer {
     /** Storage for a temporary "out" variable owned by tryParseDateTime. */
     private final MutableBoolean dateTimeTempBoolean = new MutableBoolean();
 
+    /**
+     * Constructor.
+     * 
+     * @param customDoubleParser The specified CustomDoubleParser
+     * @param customTimeZoneParser The specified CustomTimeZoneParser.
+     */
+
     public Tokenizer(final CustomDoubleParser customDoubleParser, final CustomTimeZoneParser customTimeZoneParser) {
         this.customDoubleParser = Objects.requireNonNull(customDoubleParser);
         this.customTimeZoneParser = customTimeZoneParser;
@@ -729,7 +736,11 @@ public class Tokenizer {
      * A pluggable interface for a user-supplied double parser.
      */
     public interface CustomDoubleParser {
-
+        /**
+         * Attempt to load a CustomDoubleParser
+         * 
+         * @return A set Optional if the load succeeded; an unset Optional if it failed.
+         */
         static Optional<CustomDoubleParser> load() {
             final Iterator<CustomDoubleParser> it = ServiceLoader.load(CustomDoubleParser.class).iterator();
             if (!it.hasNext()) {

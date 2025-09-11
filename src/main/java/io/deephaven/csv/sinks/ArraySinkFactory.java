@@ -5,6 +5,10 @@ import io.deephaven.csv.util.MutableObject;
 import java.lang.reflect.Array;
 import java.util.function.IntFunction;
 
+/**
+ * Factory for simple array sinks. This is useful if you are coding up something quickly and just want a set of simple
+ * Sink implementations that store your data in arrays of the appropriate types.
+ */
 public class ArraySinkFactory implements SinkFactory {
     private final Byte byteSentinel;
     private final Short shortSentinel;
@@ -18,6 +22,32 @@ public class ArraySinkFactory implements SinkFactory {
     private final Long dateTimeAsLongSentinel;
     private final Long timestampAsLongSentinel;
 
+
+    /**
+     * Constructor
+     * 
+     * @param byteSentinel If not null, a value that will be stored in your byte[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param shortSentinel If not null, a value that will be stored in your short[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param intSentinel If not null, a value that will be stored in your int[] array to represent null. If null, then
+     *        the parser will fail upon encountering null.
+     * @param longSentinel If not null, a value that will be stored in your long[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param floatSentinel If not null, a value that will be stored in your float[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param doubleSentinel If not null, a value that will be stored in your double[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param booleanAsByteSentinel If not null, a value that will be stored in your byte[] array to represent null. If
+     *        null, then the parser will fail upon encountering null.
+     * @param charSentinel If not null, a value that will be stored in your char[] array to represent null. If null,
+     *        then the parser will fail upon encountering null.
+     * @param stringSentinel A String value that will be stored in your String[] array to represent null. Can be null.
+     * @param dateTimeAsLongSentinel If not null, a value that will be stored in your char[] array to represent null. If
+     *        null, then the parser will fail upon encountering null.
+     * @param timestampAsLongSentinel If not null, a value that will be stored in your char[] array to represent null.
+     *        If null, then the parser will fail upon encountering null.
+     */
     public ArraySinkFactory(Byte byteSentinel, Short shortSentinel, Integer intSentinel, Long longSentinel,
             Float floatSentinel, Double doubleSentinel, Byte booleanAsByteSentinel, Character charSentinel,
             String stringSentinel, Long dateTimeAsLongSentinel, Long timestampAsLongSentinel) {

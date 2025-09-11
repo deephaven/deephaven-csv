@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the double type. */
 public final class DoubleParser implements Parser<double[]> {
+    /**
+     * The singleton instance.
+     */
     public static final DoubleParser INSTANCE = new DoubleParser();
 
     private DoubleParser() {}

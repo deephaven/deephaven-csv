@@ -51,7 +51,15 @@ public final class DelimitedCellGrabber implements CellGrabber {
      */
     private int physicalRowNum;
 
-    /** Constructor. */
+    /**
+     * Constructor.
+     * 
+     * @param inputStream The input, represented as UTF-8 bytes.
+     * @param quoteChar The configured quote char. Typically "
+     * @param fieldDelimiter The configured field delimiter. Typically ,
+     * @param ignoreSurroundingSpaces Whether to ignore surrounding spaces
+     * @param trim Whether to trim spaces inside quoted values.
+     */
     public DelimitedCellGrabber(
             final InputStream inputStream,
             final byte quoteChar,

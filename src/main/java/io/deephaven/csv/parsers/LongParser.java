@@ -10,6 +10,9 @@ import org.jetbrains.annotations.NotNull;
 
 /** The parser for the long type. */
 public final class LongParser implements Parser<long[]> {
+    /**
+     * Singleton instance.
+     */
     public static final LongParser INSTANCE = new LongParser();
 
     private LongParser() {}
