@@ -325,12 +325,21 @@ public abstract class CsvSpecs {
         /**
          * Whether to run concurrently. In particular, the operation that reads the raw file, breaks it into columns,
          * and stores that column text in memory can run in parallel with the column parsers, and the parsers can run in
-         * parallel with each other.
+         * parallel with each other. Defaults to true.
          * 
          * @param async The async property.
          * @return self after modifiying the concurrent property.
          */
         Builder concurrent(boolean async);
+
+        /**
+         * Number of milliseconds to wait for all reader threads to shut down if processing ends abnormally, typically
+         * due to an exception while reading data. Defaults to 60 * 1000.
+         * 
+         * @param timeout The timeout property.
+         * @return self after modifiying the timeout property.
+         */
+        Builder threadShutdownTimeout(long timeout);
 
         /**
          * Build the CsvSpecs object.
@@ -701,6 +710,18 @@ public abstract class CsvSpecs {
     @Default
     public boolean concurrent() {
         return true;
+    }
+
+    private static final long defaultThreadShutdownTimeout = 60 * 1000;
+
+    /**
+     * See {@link Builder#threadShutdownTimeout}.
+     * 
+     * @return The number of milliseconds the library should wait for the threads to shut down.
+     */
+    @Default
+    public long threadShutdownTimeout() {
+        return defaultThreadShutdownTimeout;
     }
 
     private static void check7BitAscii(String what, char c, List<String> problems) {

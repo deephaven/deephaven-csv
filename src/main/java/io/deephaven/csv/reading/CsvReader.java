@@ -163,7 +163,7 @@ public final class CsvReader {
 
         try {
             // The writer result.
-            final long numRows;
+            long numRows = 0;
             // The reader results.
             final ArrayList<ParseDenseStorageToColumn.Result> readerResults = new ArrayList<>();
 
@@ -174,6 +174,8 @@ public final class CsvReader {
                 // Our CompletionService unfortunately has type Object because of the diversity of lambdas
                 // we submit to it (the writer has type Long and the readers have type ParseDenseStorageToColumn.Result)
                 final CompletionService<Object> ecs = new ExecutorCompletionService<>(executorService);
+                // Do some work to catch the inner exception, if there is one.
+                Throwable innerThrowable = null;
                 try {
                     final Future<Object> writerFuture = ecs.submit(writerLambda::call);
 
@@ -195,8 +197,26 @@ public final class CsvReader {
                     for (Future<Object> readerFuture : readerFutures) {
                         readerResults.add((ParseDenseStorageToColumn.Result) readerFuture.get());
                     }
+                } catch (Throwable t) {
+                    innerThrowable = t;
                 } finally {
                     executorService.shutdownNow();
+                    final boolean allTerminated =
+                            executorService.awaitTermination(specs.threadShutdownTimeout(), TimeUnit.MILLISECONDS);
+                    if (!allTerminated) {
+                        final String message = String.format("Failed to shutdown all threads (Waited %d milliseconds)",
+                                specs.threadShutdownTimeout());
+
+                        if (innerThrowable != null) {
+                            throw new RuntimeException(message, innerThrowable);
+                        } else {
+                            throw new RuntimeException(message);
+                        }
+                    }
+
+                    if (innerThrowable != null) {
+                        throw innerThrowable;
+                    }
                 }
             } else {
                 // Sequentially run the writer, then each reader.

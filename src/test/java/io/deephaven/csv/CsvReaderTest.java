@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -2526,6 +2527,69 @@ public class CsvReaderTest {
         invokeTest(specs, input, expected);
     }
 
+    /**
+     * In this test, we have a cooperating IntSink and DoubleSink. When the IntSink is ultimately asked to write a
+     * value, it will wait until the DoubleSink indicates it's also ready to write a value. At that point, the IntSink
+     * will throw an exception. This will cause the library to catch the exception and attempt to shut down all threads.
+     * However, the DoubleSink will stubbornly ignore the InterruptedExceptions posted to it, until a configured timeout
+     * expires. Then it will return normally.
+     * <p>
+     * Because the DoubleSink timeout is less than the executor timeout, the executor shutdown will succeed and we will
+     * see the root cause message "synthetic error for testing", because this was the exception thrown by the IntSink.
+     * </p>
+     */
+    @Test
+    public void awaitsReadersThatAreSlowToRespondToInterrupts() throws InterruptedException {
+        final String input = "Ints,Doubles\n" + "0,1.1\n" + "2,3.3\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("Ints", 0, 2),
+                        Column.ofValues("Doubles", 1.1, 3.3));
+
+        final CountDownLatch shutdownRequest = new CountDownLatch(1);
+        final CountDownLatch shutdownResponse = new CountDownLatch(1);
+        final long fiveSeconds = 5 * 1000;
+        Assertions.assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().build(), input, expected,
+                makeCooperatingSinkFactories(fiveSeconds, shutdownRequest, shutdownResponse),
+                null)).hasRootCauseMessage("synthetic error for testing");
+        // On its way out, DoubleSink will have shut down, and on its way out, it will
+        // have decremented the "shutdownResponse" latch.
+        Assertions.assertThat(shutdownResponse.getCount()).isEqualTo(0);
+    }
+
+    /**
+     * This test uses the same logic as {@link CsvReaderTest#awaitsReadersThatAreSlowToRespondToInterrupts}. However in
+     * this case, we set the DoubleSink timeout to be greater than the executor timeout. Therefore, the executor
+     * shutdown will fail, and throw a "Failed to shutdown all threads" exception. This exception wraps the original
+     * cause so we will still see "synthetic error for testing" as the root cause.
+     */
+    @Test
+    public void timesOutForReadersThatRefuseToRespondToInterrupts() throws InterruptedException {
+        final String input = "Ints,Doubles\n" + "0,1.1\n" + "2,3.3\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofValues("Ints", 0, 2),
+                        Column.ofValues("Doubles", 1.1, 3.3));
+
+        final CountDownLatch shutdownRequest = new CountDownLatch(1);
+        final CountDownLatch shutdownResponse = new CountDownLatch(1);
+        final long fiveSeconds = 5 * 1000;
+        final long oneThousandSeconds = 1000 * 1000;
+        Assertions
+                .assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().threadShutdownTimeout(fiveSeconds).build(),
+                        input, expected,
+                        makeCooperatingSinkFactories(oneThousandSeconds, shutdownRequest, shutdownResponse),
+                        null))
+                .hasCause(new RuntimeException("Failed to shutdown all threads (Waited 5000 milliseconds)"))
+                .hasRootCauseMessage("synthetic error for testing");
+        // The executor shutdown timed out, and so the DoubleSink thread is still running.
+        // Here we request that it shut itself down. It will honor this request.
+        shutdownRequest.countDown();
+        shutdownResponse.await();
+    }
+
     private static final class RepeatingInputStream extends InputStream {
         private byte[] data;
         private final byte[] body;
@@ -3001,6 +3065,26 @@ public class CsvReaderTest {
                 Blackhole::new);
     }
 
+    private static SinkFactory makeCooperatingSinkFactories(
+            long doubleTimeoutMillis, CountDownLatch incomingShutdownRequest,
+            CountDownLatch outgoingShutdownComplete) {
+        final CountDownLatch sinkReady = new CountDownLatch(1);
+        return SinkFactory.of(
+                Blackhole::new,
+                Blackhole::new,
+                colNum -> new ThrowingSink<>(sinkReady),
+                Blackhole::new,
+                Blackhole::new,
+                colNum -> new StubbornSink<>(doubleTimeoutMillis, sinkReady,
+                        incomingShutdownRequest, outgoingShutdownComplete),
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new,
+                Blackhole::new);
+    }
+
+
     private static SinkFactory makeBlackholeSinkFactoryWithSynchronizingDoubleSink(final int numParticipatingColumns,
             final long thresholdSize) {
         final SyncState ss = new SyncState(numParticipatingColumns, thresholdSize);
@@ -3036,6 +3120,85 @@ public class CsvReaderTest {
         @Override
         public Object getUnderlying() {
             return colNum;
+        }
+
+        @Override
+        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+            // Do nothing.
+        }
+    }
+
+    private static class ThrowingSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+        private final CountDownLatch incomingSinkReady;
+
+        public ThrowingSink(CountDownLatch incomingSinkReady) {
+            this.incomingSinkReady = incomingSinkReady;
+        }
+
+        @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            if (destBegin == destEnd) {
+                return;
+            }
+            try {
+                incomingSinkReady.await();
+                throw new RuntimeException("synthetic error for testing");
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Interrupted");
+            }
+        }
+
+        @Override
+        public Object getUnderlying() {
+            return null;
+        }
+
+        @Override
+        public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+            // Do nothing.
+        }
+    }
+
+    private static class StubbornSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+        private final long timeoutMillis;
+        private final CountDownLatch outgoingSinkReady;
+        private final CountDownLatch incomingShutdownRequest;
+        private final CountDownLatch outgoingShutdownComplete;
+
+        public StubbornSink(long timeoutMillis, CountDownLatch outgoingSinkReady,
+                CountDownLatch incomingShutdownRequest, CountDownLatch outgoingShutdownComplete) {
+            this.timeoutMillis = timeoutMillis;
+            this.outgoingSinkReady = outgoingSinkReady;
+            this.incomingShutdownRequest = incomingShutdownRequest;
+            this.outgoingShutdownComplete = outgoingShutdownComplete;
+        }
+
+        @Override
+        public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+            if (destBegin == destEnd) {
+                return;
+            }
+
+            // Notify other cooperating sink that we are inside our "write" stage.
+            outgoingSinkReady.countDown();
+
+            final long expirationTime = System.currentTimeMillis() + timeoutMillis;
+            while (true) {
+                long remainingTime = expirationTime - System.currentTimeMillis();
+                try {
+                    boolean ignored = incomingShutdownRequest.await(remainingTime, TimeUnit.MILLISECONDS);
+                    // Exit infinite loop, regardless of message received or timeout,
+                    break;
+                } catch (InterruptedException e) {
+                    // Ignore attempts to interrupt me earlier than the timeout.
+                }
+            }
+            outgoingShutdownComplete.countDown();
+        }
+
+        @Override
+        public Object getUnderlying() {
+            return null;
         }
 
         @Override
