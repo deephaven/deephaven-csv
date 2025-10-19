@@ -126,7 +126,7 @@ public abstract class CsvSpecs {
         Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
 
         /**
-         * The parser to uses when all values in the column are null. Defaults to {@code Parsers#STRING}.
+         * The parser to uses when all values in the column are null. The default is {@code Parsers#STRING}.
          * 
          * @param parser The parser
          * @return self after modifying the parser property.
@@ -158,7 +158,7 @@ public abstract class CsvSpecs {
          * "legal" is entirely up to the caller. For example, some applications cannot tolerate punctuation characters
          * in column names and need to remove them. The CSV library itself has no limitations with regard to column
          * names. The legalizer function is permitted to return the input array (perhaps with some elements modified) as
-         * the return value. Defaults to {@code Function#identity()}.
+         * the return value. The default is {@code Function#identity()}.
          * 
          * @param headerLegalizer The custom header legalizer.
          * @return self after modifying the headerLegalizer property.
@@ -167,7 +167,7 @@ public abstract class CsvSpecs {
 
         /**
          * An optional validator for column headers. The validator is a {@link Predicate} function that takes a column
-         * name and returns a true if it is a legal column name, false otherwise. Defaults to {@code c -> true}.
+         * name and returns a true if it is a legal column name, false otherwise. The default is {@code c -> true}.
          * 
          * @param headerValidator The custom header validator.
          * @return self after modifying the headerValidator property.
@@ -201,10 +201,11 @@ public abstract class CsvSpecs {
          * chars). The difference arises when encountering characters outside the Unicode Basic Multilingual Plane. For
          * example, the Unicode code point 💔 (U+1F494) is one Unicode code point, but takes two Java chars to
          * represent. Along these lines, the string 💔💔💔 would fit in a column of width 3 when utf32CountingMode is
-         * true, but would require a column width of at least 6 when utf32CountingMode is false. The default setting of
-         * true is arguably more natural for users (the number of characters they see matches the visual width of the
-         * column). But some programs may want the value of false because they are counting Java chars. It is an error
-         * to set this parameter if {@link #hasFixedWidthColumns} is false.
+         * true, but would require a column width of at least 6 when utf32CountingMode is false. The setting of true is
+         * arguably more natural for users (the number of characters they see matches the visual width of the column).
+         * But some programs may want the value of false because they are counting Java chars. It is an error to set
+         * this parameter if {@link #hasFixedWidthColumns} is false. The default is
+         * {@value #defaultUtf32CountingConvention}.
          * 
          * @param useUtf32CountingConvention The useUtf32CountingConvention property.
          * @return self after modifying the useUtf32CountingConvention property.
@@ -213,7 +214,7 @@ public abstract class CsvSpecs {
 
         /**
          * Number of data rows to skip before processing data. This is useful when you want to parse data in chunks.
-         * Typically used together with {@link Builder#numRows}. Defaults to 0.
+         * Typically used together with {@link Builder#numRows}. The default is 0.
          * 
          * @param skipRows The skipRows property
          * @return self after modifying the skipRows property.
@@ -222,7 +223,7 @@ public abstract class CsvSpecs {
 
         /**
          * Max number of rows to process. This is useful when you want to parse data in chunks. Typically used together
-         * with {@link Builder#skipRows}. Defaults to {@link Long#MAX_VALUE}.
+         * with {@link Builder#skipRows}. The default is {@link Long#MAX_VALUE}.
          * 
          * @param numRows The numRows property
          * @return self after modifying the numRows property.
@@ -230,7 +231,7 @@ public abstract class CsvSpecs {
         Builder numRows(long numRows);
 
         /**
-         * Whether the library should skip over empty lines in the input. Defaults to false.
+         * Whether the library should skip over empty lines in the input. The default is false.
          * 
          * @param ignoreEmptyLines the ignoreEmptyLines property
          * @return self after modifying the ignoreEmptyLines property.
@@ -240,7 +241,7 @@ public abstract class CsvSpecs {
         /**
          * Whether the library should allow missing columns in the input. If this flag is set, then rows that are too
          * short (that have fewer columns than the header row) will be interpreted as if the missing columns contained
-         * the empty string. Defaults to false.
+         * the empty string. The default is false.
          * 
          * @param allowMissingColumns The allowMissingColumns property
          * @return self after modifying the allowMissingColumns property
@@ -249,7 +250,8 @@ public abstract class CsvSpecs {
 
         /**
          * Whether the library should allow excess columns in the input. If this flag is set, then rows that are too
-         * long (that have more columns than the header row) will have those excess columns dropped. Defaults to false.
+         * long (that have more columns than the header row) will have those excess columns dropped. The default is
+         * false.
          * 
          * @param ignoreExcessColumns The ignoreExcessColumns property
          * @return self after modifying the ignoreExcessColumns parameter
@@ -257,7 +259,7 @@ public abstract class CsvSpecs {
         Builder ignoreExcessColumns(boolean ignoreExcessColumns);
 
         /**
-         * Whether the input file has a header row. Defaults to true.
+         * Whether the input file has a header row. The default is true.
          * 
          * @param hasHeaderRow The hasHeaderRow property
          * @return self after modifying the hasHeaderRow property.
@@ -275,7 +277,8 @@ public abstract class CsvSpecs {
 
         /**
          * The field delimiter character (the character that separates one column from the next). Must be 7-bit ASCII.
-         * Defaults to {code ','}. It is an error to set this parameter if {@link #hasFixedWidthColumns} is true.
+         * The default is '{@value #defaultDelimiter}'. It is an error to set this parameter if
+         * {@link #hasFixedWidthColumns} is true.
          * 
          * @param delimiter The deliminter property.
          * @return self after modifying the delimiter property.
@@ -284,7 +287,7 @@ public abstract class CsvSpecs {
 
         /**
          * The quote character (used when you want field or line delimiters to be interpreted as literal text. Must be
-         * 7-bit ASCII. Defaults to {@code '"'}. For example:
+         * 7-bit ASCII. The default is '{@value #defaultQuote}' For example:
          *
          * <pre>
          * 123,"hello, there",456,
@@ -306,7 +309,7 @@ public abstract class CsvSpecs {
         Builder quote(char quote);
 
         /**
-         * Whether to trim leading and trailing blanks from non-quoted values. Defaults to {@code true}.
+         * Whether to trim leading and trailing blanks from non-quoted values. The default is {@code true}.
          * 
          * @param ignoreSurroundingSpaces The ignoreSurroundingSpaces property.
          * @return self after modifying the ignoreSurroundingSpaces property.
@@ -314,8 +317,8 @@ public abstract class CsvSpecs {
         Builder ignoreSurroundingSpaces(boolean ignoreSurroundingSpaces);
 
         /**
-         * Whether to trim leading and trailing blanks from inside quoted values. Defaults to {@code false}. It is an
-         * error to set this parameter if {@link #hasFixedWidthColumns} is true.
+         * Whether to trim leading and trailing blanks from inside quoted values. It is an error to set this parameter
+         * if {@link #hasFixedWidthColumns} is true. The default is {@value #defaultTrim}.
          * 
          * @param trim The trim property.
          * @return self after modifying the trim property.
@@ -325,7 +328,7 @@ public abstract class CsvSpecs {
         /**
          * Whether to run concurrently. In particular, the operation that reads the raw file, breaks it into columns,
          * and stores that column text in memory can run in parallel with the column parsers, and the parsers can run in
-         * parallel with each other. Defaults to true.
+         * parallel with each other. The default is true.
          * 
          * @param async The async property.
          * @return self after modifiying the concurrent property.
@@ -334,10 +337,10 @@ public abstract class CsvSpecs {
 
         /**
          * Number of milliseconds to wait for all reader threads to shut down if processing ends abnormally, typically
-         * due to an exception while reading data. Defaults to 60 * 1000.
+         * due to an exception while reading data. The default is {@value #defaultThreadShutdownTimeout}.
          * 
          * @param timeout The timeout property.
-         * @return self after modifiying the timeout property.
+         * @return self after modifying the timeout property.
          */
         Builder threadShutdownTimeout(long timeout);
 
@@ -655,7 +658,7 @@ public abstract class CsvSpecs {
         return 0;
     }
 
-    private final char defaultDelimiter = ',';
+    private static final char defaultDelimiter = ',';
 
     /**
      * See {@link Builder#delimiter}.

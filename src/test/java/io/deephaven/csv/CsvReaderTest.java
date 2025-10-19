@@ -2582,8 +2582,10 @@ public class CsvReaderTest {
                         input, expected,
                         makeCooperatingSinkFactories(oneThousandSeconds, shutdownRequest, shutdownResponse),
                         null))
-                .hasCause(new RuntimeException("Failed to shutdown all threads (Waited 5000 milliseconds)"))
-                .hasRootCauseMessage("synthetic error for testing");
+                .hasRootCauseMessage("synthetic error for testing")
+                .cause()
+                .hasSuppressedException(
+                        new TimeoutException("Failed to shutdown all threads (after waiting 5000 milliseconds)"));
         // The executor shutdown timed out, and so the DoubleSink thread is still running.
         // Here we request that it shut itself down. It will honor this request.
         shutdownRequest.countDown();

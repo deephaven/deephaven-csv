@@ -197,6 +197,8 @@ public final class CsvReader {
                     for (Future<Object> readerFuture : readerFutures) {
                         readerResults.add((ParseDenseStorageToColumn.Result) readerFuture.get());
                     }
+                } catch (ExecutionException e) {
+                    innerThrowable = e.getCause();
                 } catch (Throwable t) {
                     innerThrowable = t;
                 } finally {
@@ -204,16 +206,15 @@ public final class CsvReader {
                     final boolean allTerminated =
                             executorService.awaitTermination(specs.threadShutdownTimeout(), TimeUnit.MILLISECONDS);
                     if (!allTerminated) {
-                        final String message = String.format("Failed to shutdown all threads (Waited %d milliseconds)",
+                        final String message = String.format(
+                                "Failed to shutdown all threads (after waiting %d milliseconds)",
                                 specs.threadShutdownTimeout());
-
-                        if (innerThrowable != null) {
-                            throw new RuntimeException(message, innerThrowable);
-                        } else {
-                            throw new RuntimeException(message);
+                        if (innerThrowable == null) {
+                            // We probably can't get here, since we wait for all the futures in the try block above.
+                            throw new TimeoutException(message);
                         }
+                        innerThrowable.addSuppressed(new TimeoutException(message));
                     }
-
                     if (innerThrowable != null) {
                         throw innerThrowable;
                     }
