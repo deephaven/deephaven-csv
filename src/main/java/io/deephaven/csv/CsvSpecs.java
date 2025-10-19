@@ -126,7 +126,7 @@ public abstract class CsvSpecs {
         Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
 
         /**
-         * The parser to uses when all values in the column are null. The default is {@code Parsers#STRING}.
+         * The parser to uses when all values in the column are null. The default is {@link Parsers#STRING}.
          * 
          * @param parser The parser
          * @return self after modifying the parser property.
@@ -158,7 +158,7 @@ public abstract class CsvSpecs {
          * "legal" is entirely up to the caller. For example, some applications cannot tolerate punctuation characters
          * in column names and need to remove them. The CSV library itself has no limitations with regard to column
          * names. The legalizer function is permitted to return the input array (perhaps with some elements modified) as
-         * the return value. The default is {@code Function#identity()}.
+         * the return value. The default is {@link Function#identity()}.
          * 
          * @param headerLegalizer The custom header legalizer.
          * @return self after modifying the headerLegalizer property.
