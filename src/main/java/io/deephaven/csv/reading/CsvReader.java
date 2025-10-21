@@ -204,10 +204,11 @@ public final class CsvReader {
                 } finally {
                     executorService.shutdownNow();
                     final boolean allTerminated =
-                            executorService.awaitTermination(specs.threadShutdownTimeout(), TimeUnit.MILLISECONDS);
+                            executorService.awaitTermination(specs.threadShutdownTimeout().toNanos(),
+                                    TimeUnit.NANOSECONDS);
                     if (!allTerminated) {
                         final String message = String.format(
-                                "Failed to shutdown all threads (after waiting %d milliseconds)",
+                                "Failed to shutdown all threads (after waiting %s)",
                                 specs.threadShutdownTimeout());
                         if (innerThrowable == null) {
                             // We probably can't get here, since we wait for all the futures in the try block above.

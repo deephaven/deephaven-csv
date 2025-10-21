@@ -34,6 +34,7 @@ import java.io.*;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -2549,7 +2550,7 @@ public class CsvReaderTest {
 
         final CountDownLatch shutdownRequest = new CountDownLatch(1);
         final CountDownLatch shutdownResponse = new CountDownLatch(1);
-        final long fiveSeconds = 5 * 1000;
+        final Duration fiveSeconds = Duration.ofSeconds(5);
         Assertions.assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().build(), input, expected,
                 makeCooperatingSinkFactories(fiveSeconds, shutdownRequest, shutdownResponse),
                 null)).hasRootCauseMessage("synthetic error for testing");
@@ -2575,8 +2576,8 @@ public class CsvReaderTest {
 
         final CountDownLatch shutdownRequest = new CountDownLatch(1);
         final CountDownLatch shutdownResponse = new CountDownLatch(1);
-        final long fiveSeconds = 5 * 1000;
-        final long oneThousandSeconds = 1000 * 1000;
+        final Duration fiveSeconds = Duration.ofSeconds(5);
+        final Duration oneThousandSeconds = Duration.ofSeconds(1000);
         Assertions
                 .assertThatThrownBy(() -> invokeTest(defaultCsvBuilder().threadShutdownTimeout(fiveSeconds).build(),
                         input, expected,
@@ -2585,7 +2586,7 @@ public class CsvReaderTest {
                 .hasRootCauseMessage("synthetic error for testing")
                 .cause()
                 .hasSuppressedException(
-                        new TimeoutException("Failed to shutdown all threads (after waiting 5000 milliseconds)"));
+                        new TimeoutException("Failed to shutdown all threads (after waiting PT5S)"));
         // The executor shutdown timed out, and so the DoubleSink thread is still running.
         // Here we request that it shut itself down. It will honor this request.
         shutdownRequest.countDown();
@@ -3068,7 +3069,7 @@ public class CsvReaderTest {
     }
 
     private static SinkFactory makeCooperatingSinkFactories(
-            long doubleTimeoutMillis, CountDownLatch incomingShutdownRequest,
+            Duration timeout, CountDownLatch incomingShutdownRequest,
             CountDownLatch outgoingShutdownComplete) {
         final CountDownLatch sinkReady = new CountDownLatch(1);
         return SinkFactory.of(
@@ -3077,7 +3078,7 @@ public class CsvReaderTest {
                 colNum -> new ThrowingSink<>(sinkReady),
                 Blackhole::new,
                 Blackhole::new,
-                colNum -> new StubbornSink<>(doubleTimeoutMillis, sinkReady,
+                colNum -> new StubbornSink<>(timeout, sinkReady,
                         incomingShutdownRequest, outgoingShutdownComplete),
                 Blackhole::new,
                 Blackhole::new,
@@ -3162,14 +3163,14 @@ public class CsvReaderTest {
     }
 
     private static class StubbornSink<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
-        private final long timeoutMillis;
+        private final long timeout;
         private final CountDownLatch outgoingSinkReady;
         private final CountDownLatch incomingShutdownRequest;
         private final CountDownLatch outgoingShutdownComplete;
 
-        public StubbornSink(long timeoutMillis, CountDownLatch outgoingSinkReady,
+        public StubbornSink(Duration timeout, CountDownLatch outgoingSinkReady,
                 CountDownLatch incomingShutdownRequest, CountDownLatch outgoingShutdownComplete) {
-            this.timeoutMillis = timeoutMillis;
+            this.timeout = timeout.toMillis();
             this.outgoingSinkReady = outgoingSinkReady;
             this.incomingShutdownRequest = incomingShutdownRequest;
             this.outgoingShutdownComplete = outgoingShutdownComplete;
@@ -3184,7 +3185,7 @@ public class CsvReaderTest {
             // Notify other cooperating sink that we are inside our "write" stage.
             outgoingSinkReady.countDown();
 
-            final long expirationTime = System.currentTimeMillis() + timeoutMillis;
+            final long expirationTime = System.currentTimeMillis() + timeout;
             while (true) {
                 long remainingTime = expirationTime - System.currentTimeMillis();
                 try {
