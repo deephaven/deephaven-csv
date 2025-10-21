@@ -12,6 +12,7 @@ import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -331,18 +332,18 @@ public abstract class CsvSpecs {
          * parallel with each other. The default is true.
          * 
          * @param async The async property.
-         * @return self after modifiying the concurrent property.
+         * @return self after modifying the concurrent property.
          */
         Builder concurrent(boolean async);
 
         /**
-         * Number of milliseconds to wait for all reader threads to shut down if processing ends abnormally, typically
-         * due to an exception while reading data. The default is {@value #defaultThreadShutdownTimeout}.
+         * The duration to wait for all reader threads to shut down if processing ends abnormally, typically due to an
+         * exception while reading data. The default is 1 minute.
          * 
          * @param timeout The timeout property.
          * @return self after modifying the timeout property.
          */
-        Builder threadShutdownTimeout(long timeout);
+        Builder threadShutdownTimeout(Duration timeout);
 
         /**
          * Build the CsvSpecs object.
@@ -715,7 +716,7 @@ public abstract class CsvSpecs {
         return true;
     }
 
-    private static final long defaultThreadShutdownTimeout = 60 * 1000;
+    private static final Duration defaultThreadShutdownTimeout = Duration.ofMinutes(1);
 
     /**
      * See {@link Builder#threadShutdownTimeout}.
@@ -723,7 +724,7 @@ public abstract class CsvSpecs {
      * @return The number of milliseconds the library should wait for the threads to shut down.
      */
     @Default
-    public long threadShutdownTimeout() {
+    public Duration threadShutdownTimeout() {
         return defaultThreadShutdownTimeout;
     }
 
