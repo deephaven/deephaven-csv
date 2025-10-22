@@ -154,11 +154,11 @@ If you prefer, you can run the benchmarks directly via the JMH jar:
 ```
 
 ```shell
-java -jar build/libs/deephaven-csv-0.18.0-SNAPSHOT-jmh.jar -prof gc -rf JSON
+java -jar build/libs/deephaven-csv-0.19.0-SNAPSHOT-jmh.jar -prof gc -rf JSON
 ```
 
 ```shell
-java -jar build/libs/deephaven-csv-0.18.0-SNAPSHOT-jmh.jar -prof gc -rf JSON <regex>
+java -jar build/libs/deephaven-csv-0.19.0-SNAPSHOT-jmh.jar -prof gc -rf JSON <regex>
 ```
 
 The JMH jar is the preferred way to run official benchmarks, and provides a common bytecode for sharing the benchmarks
