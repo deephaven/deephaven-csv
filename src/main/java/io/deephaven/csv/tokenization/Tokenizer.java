@@ -4,6 +4,7 @@ import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.reading.ReaderUtil;
 import io.deephaven.csv.util.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.Iterator;
 import java.util.Objects;
@@ -164,7 +165,7 @@ public class Tokenizer {
      */
     public boolean tryParseFloatStrict(final ByteSlice bs, final MutableFloat result) {
         try {
-            final float res = Float.parseFloat(bs.toString());
+            final float res = Float.parseFloat(bs.toString(StandardCharsets.US_ASCII));
             result.setValue(res);
             return true;
         } catch (NumberFormatException nfe) {

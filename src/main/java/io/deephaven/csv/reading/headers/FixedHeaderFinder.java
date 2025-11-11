@@ -10,6 +10,7 @@ import io.deephaven.csv.util.MutableBoolean;
 import io.deephaven.csv.util.MutableInt;
 import io.deephaven.csv.util.MutableObject;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class FixedHeaderFinder {
             }
 
             headersToUse =
-                    extractHeaders(headerRow, columnWidthsToUse, specs.useUtf32CountingConvention());
+                    extractHeaders(headerRow, columnWidthsToUse, specs.useUtf32CountingConvention(), specs.charset());
         } else {
             if (columnWidthsToUse.length == 0) {
                 throw new CsvReaderException(
@@ -135,7 +136,8 @@ public class FixedHeaderFinder {
      * @param utf32CountingMode Whether we are in the UTF-32 or UTF-16 counting mode
      * @return The array of headers
      */
-    private static String[] extractHeaders(ByteSlice row, int[] columnWidths, boolean utf32CountingMode) {
+    private static String[] extractHeaders(ByteSlice row, int[] columnWidths, boolean utf32CountingMode,
+            Charset charset) {
         final int numCols = columnWidths.length;
         if (numCols == 0) {
             return new String[0];
@@ -153,7 +155,7 @@ public class FixedHeaderFinder {
             final int actualEndByte = Math.min(proposedEndByte, row.end());
             tempSlice.reset(row.data(), beginByte, actualEndByte);
             ReaderUtil.trimSpacesAndTabs(tempSlice);
-            result[colNum] = tempSlice.toString();
+            result[colNum] = tempSlice.toString(charset);
             beginByte = actualEndByte;
         }
         return result;

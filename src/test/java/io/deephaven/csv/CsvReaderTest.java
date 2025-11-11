@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -1735,15 +1736,6 @@ public class CsvReaderTest {
     }
 
     @Test
-    public void allNullsButNoParser() {
-        Assertions
-                .assertThatThrownBy(
-                        () -> invokeTest(defaultCsvBuilder().nullParser(null).build(), ALL_NULLS, ColumnSet.NONE))
-                .hasRootCauseMessage(
-                        "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
-    }
-
-    @Test
     public void emptyTableWithSpecifiedParser() throws CsvReaderException {
         final String input = "Values\n";
         final ColumnSet expected = ColumnSet.of(Column.ofArray("Values", new long[0], 0));
@@ -2593,6 +2585,27 @@ public class CsvReaderTest {
         shutdownResponse.await();
     }
 
+    @Test
+    public void nonDefaultCharset() throws CsvReaderException, IOException {
+        final String input = "SomeStrings\n" + "foo\n" + "bar\n" + "baz\n";
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("SomeStrings", "foo", "bar", "baz"));
+
+        for (final Charset charset : new Charset[] {
+                StandardCharsets.UTF_8,
+                StandardCharsets.ISO_8859_1,
+                StandardCharsets.US_ASCII,
+                StandardCharsets.UTF_16,
+                StandardCharsets.UTF_16BE,
+                StandardCharsets.UTF_16LE
+        }) {
+            invokeTest(defaultCsvBuilder().charset(charset).build(), toInputStream(input, charset), expected,
+                    makeMySinkFactory(), null);
+        }
+    }
+
     private static final class RepeatingInputStream extends InputStream {
         private byte[] data;
         private final byte[] body;
@@ -2936,8 +2949,19 @@ public class CsvReaderTest {
 
     /** Convert String to InputStream */
     private static InputStream toInputStream(final String input) {
+        try {
+            return toInputStream(input, StandardCharsets.UTF_8);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static InputStream toInputStream(final String input, final Charset charset) throws IOException {
         final StringReader reader = new StringReader(input);
-        return new ReaderInputStream(reader, StandardCharsets.UTF_8);
+        return ReaderInputStream.builder()
+                .setCharset(charset)
+                .setReader(reader)
+                .get();
     }
 
     /***

@@ -1,5 +1,7 @@
 package io.deephaven.csv.parsers;
 
+import io.deephaven.csv.CsvSpecs;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,6 +75,14 @@ public class Parsers {
      * included by default, because they look like ints/longs.
      */
     public static final List<Parser<?>> DEFAULT = unmodifiable(BOOLEAN, INT, LONG, DOUBLE, DATETIME, CHAR, STRING);
+
+    /**
+     * Notably, BYTE, SHORT, and FLOAT are not in the list of standard parsers. The TIMESTAMP_* parsers are never
+     * included by default, because they look like ints/longs.
+     */
+    public static List<Parser<?>> defaults(final CsvSpecs specs) {
+        return Arrays.asList(BOOLEAN, INT, LONG, DOUBLE, DATETIME, CHAR, StringParser.of(specs.charset()));
+    }
 
     /**
      * The above plus BYTE. The TIMESTAMP_* parsers are never included by default, because they look like ints/longs.

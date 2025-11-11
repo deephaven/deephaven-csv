@@ -3,6 +3,8 @@ package io.deephaven.csv.tokenization;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * A {@link CustomDoubleParser} that uses {@link Double#parseDouble(String)}. Not actually an 'enum'. We use this as a
  * Java trick to get singletons.
@@ -21,7 +23,7 @@ public enum JdkDoubleParser implements CustomDoubleParser {
      */
     @Override
     public double parse(ByteSlice bs) throws NumberFormatException {
-        return Double.parseDouble(bs.toString());
+        return Double.parseDouble(bs.toString(StandardCharsets.US_ASCII));
     }
 
     /**

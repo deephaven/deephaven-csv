@@ -3,6 +3,7 @@ package io.deephaven.csv;
 import io.deephaven.csv.annotations.BuildableStyle;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
+import io.deephaven.csv.parsers.StringParser;
 import io.deephaven.csv.tokenization.JdkDoubleParser;
 import io.deephaven.csv.tokenization.Tokenizer;
 import io.deephaven.csv.tokenization.Tokenizer.CustomDoubleParser;
@@ -12,6 +13,7 @@ import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
@@ -127,7 +129,8 @@ public abstract class CsvSpecs {
         Builder putNullValueLiteralsForIndex(int index, List<String> nullValueLiteral);
 
         /**
-         * The parser to uses when all values in the column are null. The default is {@link Parsers#STRING}.
+         * The parser to uses when all values in the column are null. The default is {@link StringParser#of(Charset)}
+         * with {@link CsvSpecs#charset()}.
          * 
          * @param parser The parser
          * @return self after modifying the parser property.
@@ -346,6 +349,14 @@ public abstract class CsvSpecs {
         Builder threadShutdownTimeout(Duration timeout);
 
         /**
+         * The charset to use for library built {@link StringParser}. By default, is {@link Charset#defaultCharset()}.
+         *
+         * @param charset the charset
+         * @return self after modifying the charset property.
+         */
+        Builder charset(Charset charset);
+
+        /**
          * Build the CsvSpecs object.
          * 
          * @return The built object.
@@ -458,13 +469,13 @@ public abstract class CsvSpecs {
     public abstract Map<Integer, String> headerForIndex();
 
     /**
-     * See {@link Builder#parsers}.
+     * See {@link Builder#parsers}. Defaults to {@link Parsers#defaults(CsvSpecs)}.
      * 
      * @return The set of configured parsers.
      */
     @Default
     public List<Parser<?>> parsers() {
-        return Parsers.DEFAULT;
+        return Parsers.defaults(this);
     }
 
     /**
@@ -511,9 +522,8 @@ public abstract class CsvSpecs {
      * @return The parser to use when all values in the column are null.
      */
     @Default
-    @Nullable
     public Parser<?> nullParser() {
-        return Parsers.STRING;
+        return StringParser.of(charset());
     }
 
     /**
@@ -726,6 +736,16 @@ public abstract class CsvSpecs {
     @Default
     public Duration threadShutdownTimeout() {
         return defaultThreadShutdownTimeout;
+    }
+
+    /**
+     * The Charset to use with library built {@link StringParser}. By default, is {@link Charset#defaultCharset()}.
+     *
+     * @return the charset
+     */
+    @Default
+    public Charset charset() {
+        return Charset.defaultCharset();
     }
 
     private static void check7BitAscii(String what, char c, List<String> problems) {

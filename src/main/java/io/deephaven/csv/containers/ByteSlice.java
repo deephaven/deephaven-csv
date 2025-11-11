@@ -2,6 +2,8 @@ package io.deephaven.csv.containers;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.charset.Charset;
+
 /**
  * An object that represents a slice of byte data. This object is intended to be reusable. It implements
  * {@link CharSequence} because there are a few special cases (e.g. calling out to certain libraries) where it is
@@ -155,10 +157,25 @@ public final class ByteSlice implements CharSequence {
         return new ByteSlice(data, newBegin, newEnd);
     }
 
+    /**
+     * Creates the string from this byte slice using {@link Charset#defaultCharset()}.
+     *
+     * @return the String
+     */
     @Override
     @NotNull
     public String toString() {
+        return toString(Charset.defaultCharset());
+    }
+
+    /**
+     * Creates the string from this byte slice using {@code charset}.
+     *
+     * @param charset the charset
+     * @return the String
+     */
+    public String toString(final Charset charset) {
         final int size = size();
-        return size == 0 ? "" : new String(data, begin, size);
+        return size == 0 ? "" : new String(data, begin, size, charset);
     }
 }

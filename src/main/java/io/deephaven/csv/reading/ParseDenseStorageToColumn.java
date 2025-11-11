@@ -20,7 +20,7 @@ public final class ParseDenseStorageToColumn {
     /**
      * @param colNum The column number being parsed. Some custom sinks use this for their own information.
      * @param dsr A reader for the input.
-     * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
+     * @param parsers The set of parsers to try.
      * @param specs The CsvSpecs which control how the column is interpreted.
      * @param nullValueLiteralsToUse If a cell text is equal to any of the values in this array, the cell will be
      *        interpreted as the null value. Typically set to a one-element array containing the empty string.
@@ -37,7 +37,7 @@ public final class ParseDenseStorageToColumn {
             final String[] nullValueLiteralsToUse,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
-        Set<Parser<?>> parserSet = new HashSet<>(parsers != null ? parsers : Parsers.DEFAULT);
+        Set<Parser<?>> parserSet = new HashSet<>(parsers);
 
         final Tokenizer tokenizer = new Tokenizer(specs.customDoubleParser(), specs.customTimeZoneParser());
         final Parser.GlobalContext gctx =
@@ -98,7 +98,7 @@ public final class ParseDenseStorageToColumn {
 
         // The rest of this logic is for case 2: there is a non-null cell (so the type inference process can begin).
 
-        final CategorizedParsers cats = CategorizedParsers.create(parserSet);
+        final CategorizedParsers cats = CategorizedParsers.create(specs, parserSet);
 
         if (cats.customParser != null) {
             ih.reset();
@@ -112,15 +112,16 @@ public final class ParseDenseStorageToColumn {
             return parseNumerics(cats, gctx, ih.move(), ihAlt.move());
         }
 
-        List<Parser<?>> universeByPrecedence = Arrays.asList(Parsers.CHAR, Parsers.STRING);
+        final StringParser stringParser = StringParser.of(specs.charset());
+        List<Parser<?>> universeByPrecedence = Arrays.asList(Parsers.CHAR, stringParser);
         final MutableBoolean dummyBoolean = new MutableBoolean();
         final MutableLong dummyLong = new MutableLong();
         if (cats.timestampParser != null && tokenizer.tryParseLong(ih.get().bs(), dummyLong)) {
-            universeByPrecedence = Arrays.asList(cats.timestampParser, Parsers.CHAR, Parsers.STRING);
+            universeByPrecedence = Arrays.asList(cats.timestampParser, Parsers.CHAR, stringParser);
         } else if (cats.booleanParser != null && tokenizer.tryParseBoolean(ih.get().bs(), dummyBoolean)) {
-            universeByPrecedence = Arrays.asList(Parsers.BOOLEAN, Parsers.STRING);
+            universeByPrecedence = Arrays.asList(Parsers.BOOLEAN, stringParser);
         } else if (cats.dateTimeParser != null && tokenizer.tryParseDateTime(ih.get().bs(), dummyLong)) {
-            universeByPrecedence = Arrays.asList(Parsers.DATETIME, Parsers.STRING);
+            universeByPrecedence = Arrays.asList(Parsers.DATETIME, stringParser);
         }
         List<Parser<?>> parsersToUse = limitToSpecified(universeByPrecedence, parserSet);
         return parseFromList(parsersToUse, gctx, ih.move(), ihAlt.move());
@@ -391,7 +392,7 @@ public final class ParseDenseStorageToColumn {
     }
 
     private static class CategorizedParsers {
-        public static CategorizedParsers create(final Collection<Parser<?>> parsers)
+        public static CategorizedParsers create(final CsvSpecs specs, final Collection<Parser<?>> parsers)
                 throws CsvReaderException {
             Parser<?> booleanParser = null;
             final Set<Parser<?>> specifiedNumericParsers = new HashSet<>();
@@ -421,7 +422,7 @@ public final class ParseDenseStorageToColumn {
                     continue;
                 }
 
-                if (p == Parsers.CHAR || p == Parsers.STRING) {
+                if (p == Parsers.CHAR || p instanceof StringParser) {
                     specifiedCharAndStringParsers.add(p);
                     continue;
                 }
@@ -472,7 +473,7 @@ public final class ParseDenseStorageToColumn {
                             Parsers.FLOAT_STRICT,
                             Parsers.DOUBLE);
             final List<Parser<?>> allCharAndStringParsersByPrecedence =
-                    Arrays.asList(Parsers.CHAR, Parsers.STRING);
+                    Arrays.asList(Parsers.CHAR, StringParser.of(specs.charset()));
 
             final List<Parser<?>> numericParsers =
                     limitToSpecified(allNumericParsersByPrecedence, specifiedNumericParsers);

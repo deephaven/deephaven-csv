@@ -47,7 +47,7 @@ public class DelimitedHeaderFinder {
                 }
                 --skipCount;
             }
-            headersToUse = Arrays.stream(headerRow).map(String::new).toArray(String[]::new);
+            headersToUse = Arrays.stream(headerRow).map(x -> new String(x, specs.charset())).toArray(String[]::new);
         }
 
         // Whether or not the input had headers, maybe override with client-specified headers.

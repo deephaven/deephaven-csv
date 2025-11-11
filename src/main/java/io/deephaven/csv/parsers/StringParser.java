@@ -4,14 +4,31 @@ import io.deephaven.csv.sinks.Sink;
 import io.deephaven.csv.util.CsvReaderException;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.charset.Charset;
+import java.util.Objects;
+
 /** The parser for the String type. */
 public final class StringParser implements Parser<String[]> {
     /**
-     * Singleton instance.
+     * Singleton instance with {@link Charset#defaultCharset()}.
      */
-    public static final StringParser INSTANCE = new StringParser();
+    public static final StringParser INSTANCE = new StringParser(Charset.defaultCharset());
 
-    private StringParser() {}
+    /**
+     * The String parser instance with {@code charset}.
+     *
+     * @param charset the charset
+     * @return the String parser
+     */
+    public static StringParser of(final Charset charset) {
+        return Charset.defaultCharset().equals(charset) ? INSTANCE : new StringParser(charset);
+    }
+
+    private final Charset charset;
+
+    private StringParser(Charset charset) {
+        this.charset = Objects.requireNonNull(charset);
+    }
 
     @NotNull
     @Override
@@ -50,7 +67,7 @@ public final class StringParser implements Parser<String[]> {
                 nulls[chunkIndex++] = true;
                 continue;
             }
-            final String value = ih.bs().toString();
+            final String value = ih.bs().toString(charset);
             if (value.equals(reservedValue)) {
                 // If a reserved value is defined, it must not be present in the input.
                 break;
