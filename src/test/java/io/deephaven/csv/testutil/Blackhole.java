@@ -1,0 +1,30 @@
+package io.deephaven.csv.testutil;
+
+import io.deephaven.csv.sinks.Sink;
+import io.deephaven.csv.sinks.Source;
+
+public class Blackhole<TARRAY> implements Sink<TARRAY>, Source<TARRAY> {
+    private final int colNum;
+
+    public Blackhole(int colNum) {
+        this.colNum = colNum;
+    }
+
+    @Override
+    public void write(TARRAY src, boolean[] isNull, long destBegin, long destEnd, boolean appending) {
+        // Do nothing.
+    }
+
+    /**
+     * For the sake of one of our unit tests, we return the colNum as our underlying.
+     */
+    @Override
+    public Object getUnderlying() {
+        return colNum;
+    }
+
+    @Override
+    public void read(TARRAY dest, boolean[] isNull, long srcBegin, long srcEnd) {
+        // Do nothing.
+    }
+}
