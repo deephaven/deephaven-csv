@@ -1509,7 +1509,7 @@ public class CsvReaderTest {
                                         .parsers(Arrays.asList(Parsers.INT, Parsers.LONG)).build(),
                                 input, expected))
                 .hasRootCauseMessage(
-                        "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
+                        "Consumed 3 numeric items, then encountered a non-numeric item but there are no custom or char/string parsers available.");
     }
 
     @Test
