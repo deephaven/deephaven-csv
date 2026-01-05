@@ -68,27 +68,54 @@ public abstract class CsvSpecs {
          */
         Builder parsers(Iterable<? extends Parser<?>> elements);
 
+
         /**
-         * Used to force a specific parser for a specific column, specified by column name. Specifying a parser forgoes
-         * column inference for that column. If {@link #putParserForName} and {@link #putParserForIndex} both refer to
-         * the same column, {@link #putParserForName} takes priority.
-         * 
+         * Used to force a single parser for a specific column, specified by column name. Specifying a single parser
+         * forgoes type inference for that column. If {@link #putParserForName} and {@link #putParserForIndex} both
+         * refer to the same column, {@link #putParserForName} takes priority.
+         *
          * @param columnName The column name
          * @param parser The parser
          * @return self after modifying the parser property for the given columnName.
          */
-        Builder putParserForName(String columnName, Parser<?> parser);
+        default Builder putParserForName(String columnName, Parser<?> parser) {
+            return putParsersForName(columnName, Collections.singletonList(parser));
+        }
 
         /**
-         * Used to force a specific parser for a specific column, specified by 0-based column index. Specifying a parser
-         * forgoes column inference for that column. If {@link #putParserForName} and {@link #putParserForIndex} both
-         * refer to the same column, {@link #putParserForName} takes priority.
-         * 
+         * Used to force a single parser for a specific column, specified by 0-based column index. Specifying a single
+         * parser forgoes type inference for that column. If {@link #putParserForName} and {@link #putParserForIndex}
+         * both refer to the same column, {@link #putParserForName} takes priority.
+         *
          * @param index The column index
          * @param parser The parser
          * @return self after modifying the parser property for the given column index.
          */
-        Builder putParserForIndex(int index, Parser<?> parser);
+        default Builder putParserForIndex(int index, Parser<?> parser) {
+            return putParsersForIndex(index, Collections.singletonList(parser));
+        }
+
+        /**
+         * Used to force a specific set of parsers for a specific column, specified by column name. If
+         * {@link #putParsersForName} and {@link #putParsersForIndex} both refer to the same column,
+         * {@link #putParsersForName} takes priority.
+         * 
+         * @param columnName The column name
+         * @param elements The parsers
+         * @return self after modifying the parser property for the given columnName.
+         */
+        Builder putParsersForName(String columnName, List<Parser<?>> elements);
+
+        /**
+         * Used to force a specific set of parsers for a specific column, specified by column name. If
+         * {@link #putParsersForName} and {@link #putParsersForIndex} both refer to the same column,
+         * {@link #putParsersForName} takes priority.
+         * 
+         * @param index The column index
+         * @param elements The parsers
+         * @return self after modifying the parser property for the given column index.
+         */
+        Builder putParsersForIndex(int index, List<Parser<?>> elements);
 
         /**
          * The default collection of strings that means "null value" in the input. These defaults are used for a column
@@ -468,18 +495,18 @@ public abstract class CsvSpecs {
     }
 
     /**
-     * See {@link Builder#putParserForName}.
+     * See {@link Builder#putParsersForName}.
      * 
      * @return A map of the client-specified parsers, keyed by column name.
      */
-    public abstract Map<String, Parser<?>> parserForName();
+    public abstract Map<String, List<Parser<?>>> parsersForName();
 
     /**
-     * See {@link Builder#putParserForIndex}.
+     * See {@link Builder#putParsersForIndex}.
      * 
      * @return A map of the client-specified parsers, keyed by column index.
      */
-    public abstract Map<Integer, Parser<?>> parserForIndex();
+    public abstract Map<Integer, List<Parser<?>>> parsersForIndex();
 
     /**
      * See {@link Builder#nullValueLiterals}.

@@ -247,13 +247,13 @@ public final class CsvReader {
      */
     private static List<Parser<?>> calcParsersToUse(final CsvSpecs specs, final String columnName,
             final int columnIndex) {
-        Parser<?> specifiedParser = specs.parserForName().get(columnName);
-        if (specifiedParser != null) {
-            return Collections.singletonList(specifiedParser);
+        List<Parser<?>> specifiedParsers = specs.parsersForName().get(columnName);
+        if (specifiedParsers != null) {
+            return specifiedParsers;
         }
-        specifiedParser = specs.parserForIndex().get(columnIndex);
-        if (specifiedParser != null) {
-            return Collections.singletonList(specifiedParser);
+        specifiedParsers = specs.parsersForIndex().get(columnIndex);
+        if (specifiedParsers != null) {
+            return specifiedParsers;
         }
         return specs.parsers();
     }
