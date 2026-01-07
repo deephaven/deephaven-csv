@@ -6,5 +6,5 @@ group = 'io.deephaven'
 version = project.property('version')
 
 if (!name.startsWith('deephaven-csv')) {
-    archivesBaseName = "deephaven-csv-${name}"
+    base.archivesName = "deephaven-csv-${name}"
 }
