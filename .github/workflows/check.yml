@@ -24,11 +24,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: |
-            23
             8
             11
             17
             21
+            25
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -37,7 +37,7 @@ jobs:
         run: |
           cat .github/env/${{ runner.os }}/gradle.properties >> gradle.properties
           echo >> gradle.properties
-          echo "org.gradle.java.installations.paths=$JAVA_HOME_8_X64,$JAVA_HOME_11_X64,$JAVA_HOME_17_X64,$JAVA_HOME_21_X64,$JAVA_HOME_23_X64" >> gradle.properties
+          echo "org.gradle.java.installations.paths=$JAVA_HOME_8_X64,$JAVA_HOME_11_X64,$JAVA_HOME_17_X64,$JAVA_HOME_21_X64,$JAVA_HOME_25_X64" >> gradle.properties
           echo "customDoubleParser=${{ matrix.customDoubleParser }}" >> gradle.properties
           cat gradle.properties
 
