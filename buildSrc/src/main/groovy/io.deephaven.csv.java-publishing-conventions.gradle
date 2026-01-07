@@ -1,4 +1,5 @@
 plugins {
+    id 'base'
     id 'java'
     id 'signing'
     id 'com.vanniktech.maven.publish.base'
@@ -39,9 +40,9 @@ mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
     // We only need to override artifactId; groupId (1st argument), version (3rd argument) will be inferred
-    coordinates(null, archivesBaseName, null)
+    coordinates(null, base.archivesName.get(), null)
     pom {
-        name = archivesBaseName
+        name = base.archivesName.get()
         description = project.description
         url = projectUrl
         organization {
@@ -88,10 +89,10 @@ signing {
 tasks.withType(Jar).configureEach {
     manifest {
         attributes(
-                'Specification-Title': archivesBaseName,
+                'Specification-Title': base.archivesName.get(),
                 'Specification-Version': project.version,
                 'Specification-Vendor': orgName,
-                'Implementation-Title': archivesBaseName,
+                'Implementation-Title': base.archivesName.get(),
                 'Implementation-Version': project.version,
                 'Implementation-Vendor': orgName,
                 'Implementation-Vendor-Id': project.group,
