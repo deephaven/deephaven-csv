@@ -24,9 +24,11 @@ def registerTest = version -> {
     project.tasks.register("testOn${version}", Test) { test ->
         test.group = 'verification'
         test.description = "Runs the test suite with Java ${version}."
-        test.javaLauncher.set javaToolchains.launcherFor {
+        test.javaLauncher = javaToolchains.launcherFor {
             languageVersion = JavaLanguageVersion.of(version)
         }
+        test.testClassesDirs = testing.suites.test.sources.output.classesDirs
+        test.classpath = testing.suites.test.sources.runtimeClasspath
     }
 }
 
