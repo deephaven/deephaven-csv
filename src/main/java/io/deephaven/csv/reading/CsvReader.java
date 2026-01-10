@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -50,8 +51,17 @@ public final class CsvReader {
     private CsvReader() {}
 
     /**
-     * Read the data.
-     *
+     * Read the data. Note that the InputStream 'stream' is assumed to be encoded as UTF-8. (A stream of pure ASCII is
+     * also acceptable, because ASCII is a subset of UTF-8). If your stream is encoded in some other character set, e.g.
+     * ISO-8859-1, you will need to convert it to UTF-8 before passing it to this method. You can conveniently do this
+     * with the ReaderInputStream from Apache Commons:
+     * 
+     * <pre>
+     * InputStream sourceStream = new FileInputStream("input_iso-8859-1.txt");
+     * Reader reader = new InputStreamReader(sourceStream, StandardCharsets.ISO_8859_1);
+     * InputStream utf8Stream = new ReaderInputStream(reader, StandardCharsets.UTF_8);
+     * </pre>
+     * 
      * @param specs A {@link CsvSpecs} object providing options for the parse.
      * @param stream The input data, encoded in UTF-8.
      * @param sinkFactory A factory that can provide Sink&lt;T&gt; of all appropriate types for the output data. Once

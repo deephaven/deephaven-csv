@@ -8,6 +8,7 @@ import io.deephaven.csv.util.CsvReaderException;
 import io.deephaven.csv.util.MutableBoolean;
 import io.deephaven.csv.util.MutableObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,7 +48,8 @@ public class DelimitedHeaderFinder {
                 }
                 --skipCount;
             }
-            headersToUse = Arrays.stream(headerRow).map(String::new).toArray(String[]::new);
+            headersToUse = Arrays.stream(headerRow).map(bytes -> new String(bytes, StandardCharsets.UTF_8))
+                    .toArray(String[]::new);
         }
 
         // Whether or not the input had headers, maybe override with client-specified headers.
