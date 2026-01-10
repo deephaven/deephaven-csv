@@ -2,10 +2,21 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    open-pull-requests-limit: 99
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(github-actions)"
+    assignees:
+      - "devinrsmith"
+      - "kosak"
   - package-ecosystem: "gradle"
     directory: "/"
+    open-pull-requests-limit: 99
     schedule:
-      interval: "daily"
-
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(gradle)"
+    assignees:
+      - "devinrsmith"
+      - "kosak"
