@@ -116,11 +116,15 @@ public final class CsvReader {
     private static Result delimitedReadLogic(
             final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory)
             throws CsvReaderException {
-        // These two have already been validated by CsvSpecs to be 7-bit ASCII.
+        final byte IllegalUtf8 = (byte) 0xff;
+
+        // These three have already been validated by CsvSpecs to be 7-bit ASCII.
         final byte quoteAsByte = (byte) specs.quote();
         final byte delimiterAsByte = (byte) specs.delimiter();
+        final byte escapeCharAsByte = specs.escape() == null ? IllegalUtf8 : (byte) specs.escape().charValue();
         final CellGrabber grabber =
-                new DelimitedCellGrabber(stream, quoteAsByte, delimiterAsByte, specs.ignoreSurroundingSpaces(),
+                new DelimitedCellGrabber(stream, quoteAsByte, escapeCharAsByte, delimiterAsByte,
+                        specs.ignoreSurroundingSpaces(),
                         specs.trim());
         // For an "out" parameter
         final MutableObject<byte[][]> firstDataRowHolder = new MutableObject<>();

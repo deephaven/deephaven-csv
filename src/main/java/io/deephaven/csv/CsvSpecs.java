@@ -319,7 +319,7 @@ public abstract class CsvSpecs {
          * 7-bit ASCII. The default is '{@value #defaultQuote}' For example:
          *
          * <pre>
-         * 123,"hello, there",456,
+         * 123,"hello, there",456
          * </pre>
          *
          * Would be read as the three fields:
@@ -336,6 +336,29 @@ public abstract class CsvSpecs {
          * @return self after modifying the quote property.
          */
         Builder quote(char quote);
+
+        /**
+         * The escape character (used when you want field or line delimiters to be interpreted as literal text, or you
+         * want to add C-style control characters like \b, \t, \n, \r, \f). Typically set to the backslash character
+         * ('\'). Must be 7-bit ASCII. The default is null, interpreted as unset. For example, with the escape character
+         * set to '\':
+         *
+         * <pre>
+         * 123,hello\, there\n,456
+         * </pre>
+         *
+         * Would be read as the three fields:
+         *
+         * <ul>
+         * <li>123
+         * <li>hello, there\n (where \n is the newline character)
+         * <li>456
+         * </ul>
+         *
+         * @param escape The escape property.
+         * @return self after modifying the escape property.
+         */
+        Builder escape(Character escape);
 
         /**
          * Whether to trim leading and trailing blanks from non-quoted values. The default is {@code true}.
@@ -399,6 +422,9 @@ public abstract class CsvSpecs {
         final List<String> problems = new ArrayList<>();
         check7BitAscii("quote", quote(), problems);
         check7BitAscii("delimiter", delimiter(), problems);
+        if (escape() != null) {
+            check7BitAscii("escape", escape(), problems);
+        }
         checkNonnegative("skipRows", skipRows(), problems);
         checkNonnegative("skipHeaderRows", skipHeaderRows(), problems);
         checkNonnegative("numRows", numRows(), problems);
@@ -699,7 +725,6 @@ public abstract class CsvSpecs {
         return defaultDelimiter;
     }
 
-
     private static final char defaultQuote = '"';
 
     /**
@@ -710,6 +735,17 @@ public abstract class CsvSpecs {
     @Default
     public char quote() {
         return defaultQuote;
+    }
+
+    /**
+     * See {@link Builder#escape}.
+     *
+     * @return The caller-specified escape character, or null if none.
+     */
+    @Default
+    @Nullable
+    public Character escape() {
+        return null;
     }
 
     /**

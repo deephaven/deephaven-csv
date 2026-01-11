@@ -21,6 +21,11 @@ public final class DelimitedCellGrabber implements CellGrabber {
     private final InputStream inputStream;
     /** The configured CSV quote character (typically '"'). Must be 7-bit ASCII. */
     private final byte quoteChar;
+    /**
+     * The configured CVS escape character. Must be 7-bit ASCII. If configured to null in CsvSpecs, we set it to the
+     * illegal UTF-8 byte 0xff so it has no effect.
+     */
+    private final byte escapeChar;
     /** The configured CVS field delimiter (typically ','). Must be 7-bit ASCII. */
     private final byte fieldDelimiter;
     /** Whether to trim leading and trailing blanks from non-quoted values. */
@@ -40,7 +45,8 @@ public final class DelimitedCellGrabber implements CellGrabber {
      * buffer[] array. But we can't do that when the input cell spans more than one buffer[] chunk, or when the input
      * cell does not exactly represent the output. This latter case can happen for example when an escaped quote ("")
      * needs to be returned as a single quotation mark ("). So if our input is hello""there, then we can't directly
-     * return a slice of the input array, because actually we need hello"there (one quotation mark, not two).
+     * return a slice of the input array, because actually we need hello"there (one quotation mark, not two). Another
+     * case where this can happen is when the escape character is enabled and we encounter an escape like \, or \n.
      */
     private final GrowableByteBuffer spillBuffer;
     /**
@@ -56,6 +62,8 @@ public final class DelimitedCellGrabber implements CellGrabber {
      * 
      * @param inputStream The input, represented as UTF-8 bytes.
      * @param quoteChar The configured quote char. Typically "
+     * @param escapeChar The configured escape char. Defaults to our representation of 'none' but if the feature is
+     *        desired, is typically set to \
      * @param fieldDelimiter The configured field delimiter. Typically ,
      * @param ignoreSurroundingSpaces Whether to ignore surrounding spaces
      * @param trim Whether to trim spaces inside quoted values.
@@ -63,11 +71,13 @@ public final class DelimitedCellGrabber implements CellGrabber {
     public DelimitedCellGrabber(
             final InputStream inputStream,
             final byte quoteChar,
+            final byte escapeChar,
             final byte fieldDelimiter,
             final boolean ignoreSurroundingSpaces,
             final boolean trim) {
         this.inputStream = inputStream;
         this.quoteChar = quoteChar;
+        this.escapeChar = escapeChar;
         this.fieldDelimiter = fieldDelimiter;
         this.ignoreSurroundingSpaces = ignoreSurroundingSpaces;
         this.trim = trim;
@@ -131,10 +141,16 @@ public final class DelimitedCellGrabber implements CellGrabber {
                 }
                 prevCharWasCarriageReturn = false;
             }
-            if (ch != quoteChar) {
+            if (ch != quoteChar && ch != escapeChar) {
                 // Ordinary character. Note: in quoted mode we will gladly eat field and line separators.
                 continue;
             }
+
+            if (ch == escapeChar) {
+                processEscapeChar();
+                continue;
+            }
+
             // This character is a quote char. It could be the end of the cell, or it could be an escaped
             // quote char (e.g. ""). The way to tell is to peek ahead at the next character.
             if (!tryEnsureMore()) {
@@ -264,7 +280,57 @@ public final class DelimitedCellGrabber implements CellGrabber {
                 ++physicalRowNum;
                 return;
             }
+            if (ch == escapeChar) {
+                ++offset;
+                processEscapeChar();
+                continue;
+            }
+
             ++offset;
+        }
+    }
+
+    private void processEscapeChar() throws CsvReaderException {
+        // Spill data up to and including the escape character into the spill buffer.
+        // Below, we will replace the escape character with the transformed escaped character.
+        spillRange();
+
+        // This character is an escape character. In practice, it is used to either to make the next
+        // metacharacter like the quote or field separator normal, or to provide a C-style special character like
+        // newline or tab.
+        // However, it can't appear as the last character of the input.
+        if (!tryEnsureMore()) {
+            throw new CsvReaderException(
+                    "The last character in the input was the escape character. This is not allowed. The escape character needs to be followed by another character.");
+        }
+
+        // Consume the next char (the escaped character). Potentially transform it if it is one of the C escapes:
+        // characters b, t, n etc
+        final byte nextChar = buffer[offset++];
+        final byte nextCharTransformed = transformEscapedChar(nextChar);
+
+        // Replace the placeholder character with the transformed character
+        spillBuffer.data()[spillBuffer.size() - 1] = nextCharTransformed;
+
+        // Advance the spill buffer's notion of "next start position" so it skips the escaped character.
+        startOffset = offset;
+    }
+
+    private static byte transformEscapedChar(byte nextChar) {
+        // Feeling some "Reflections on Trusting Trust" realness.
+        switch (nextChar) {
+            case 'b':
+                return '\b';
+            case 't':
+                return '\t';
+            case 'n':
+                return '\n';
+            case 'r':
+                return '\r';
+            case 'f':
+                return '\f';
+            default:
+                return nextChar;
         }
     }
 
