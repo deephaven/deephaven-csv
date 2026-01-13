@@ -102,12 +102,11 @@ public class ParserFidelityTest {
         }
 
         if (fidelity == ParseFidelity.PARSE_FAIL) {
-            Assertions.assertThat(failed);
+            Assertions.assertThat(failed).isTrue();
             return;
         }
 
-        Assertions.assertThat(!failed);
-        assert result != null; // make linter happy
+        Assertions.assertThat(failed).isFalse();
 
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(1);
