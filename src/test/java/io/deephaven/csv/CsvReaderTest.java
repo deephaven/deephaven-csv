@@ -66,11 +66,11 @@ public class CsvReaderTest {
         final RepeatingInputStream inputStream = new RepeatingInputStream("Col1,Col2\n", "1,2.2\n", numRows);
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(),
-                                inputStream, StandardCharsets.UTF_8,
-                                ColumnSet.NONE,
-                                CsvTestUtil.makeBlackholeSinkFactoryWithFailingDoubleSink(),
-                                null))
+                        () -> CsvReader.read(
+                                CsvTestUtil.defaultCsvSpecs(),
+                                inputStream,
+                                StandardCharsets.UTF_8,
+                                CsvTestUtil.makeBlackholeSinkFactoryWithFailingDoubleSink()))
                 .hasRootCauseMessage("synthetic error for testing: out of memory");
     }
 
@@ -317,9 +317,12 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeUtf8Test(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
+                        () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
                                 input,
-                                ColumnSet.NONE))
+                                StandardCharsets.UTF_8,
+                                ColumnSet.NONE,
+                                CsvTestUtil.makeMySinkFactory(),
+                                null))
                 .hasRootCauseMessage("Cell did not have closing quote character");
     }
 
@@ -2018,7 +2021,7 @@ public class CsvReaderTest {
 
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.INT)).build();
         final SinkFactory sinkFactory = CsvTestUtil.makeBlackholeSinkFactory();
-        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8, sinkFactory);
+        CsvReader.read(specs, inputStream, StandardCharsets.UTF_8, sinkFactory);
     }
 
     /**
@@ -2028,10 +2031,9 @@ public class CsvReaderTest {
     public void colnumPassedThrough() throws CsvReaderException {
         final String input = "" + "Col1,Col2,Col3\n" + "1,2,3\n" + "4,5,6\n" + "7,8,9\n";
 
-        final InputStream inputStream = CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8);
         final CsvSpecs specs = CsvTestUtil.defaultCsvSpecs();
         final SinkFactory sinkFactory = CsvTestUtil.makeBlackholeSinkFactory();
-        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8, sinkFactory);
+        final CsvReader.Result result = CsvTestUtil.parse(specs, input, StandardCharsets.UTF_8, sinkFactory);
         final CsvReader.ResultColumn[] col = result.columns();
         final int bh0Num = (Integer) col[0].data();
         final int bh1Num = (Integer) col[1].data();

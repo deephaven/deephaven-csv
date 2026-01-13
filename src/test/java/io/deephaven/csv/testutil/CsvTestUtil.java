@@ -10,6 +10,7 @@ import org.assertj.core.api.Assertions;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -43,11 +44,6 @@ public class CsvTestUtil {
         return CsvSpecs.builder().ignoreSurroundingSpaces(true).allowMissingColumns(true);
     }
 
-    public static void invokeUtf8Test(final CsvSpecs specs, final String input, final ColumnSet expected)
-            throws CsvReaderException {
-        invokeTest(specs, input, StandardCharsets.UTF_8, expected, makeMySinkFactory(), null);
-    }
-
     public static void invokeTests(final CsvSpecs specs, final String input, final ColumnSet expected)
             throws CsvReaderException {
         for (final Charset charset : STANDARD_CHARSETS) {
@@ -68,18 +64,9 @@ public class CsvTestUtil {
         }
     }
 
-    public static void invokeTest(final CsvSpecs specs, final String input, final Charset charset,
-            final ColumnSet expected,
-            final SinkFactory sinkFactory, final MakeCustomColumn makeCustomColumn)
+    public static void invokeTest(final CsvSpecs specs, final String input, final Charset charset, final ColumnSet expected, final SinkFactory sinkFactory, final MakeCustomColumn makeCustomColumn)
             throws CsvReaderException {
-        invokeTest(specs, toInputStream(input, charset), charset, expected, sinkFactory, makeCustomColumn);
-    }
-
-    public static void invokeTest(final CsvSpecs specs, final InputStream inputStream, final Charset charset,
-            final ColumnSet expected,
-            final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
-            throws CsvReaderException {
-        final CsvReader.Result result = parse(specs, inputStream, charset, sinkFactory);
+        final CsvReader.Result result = parse(specs, input, charset, sinkFactory);
         final ColumnSet actual = toColumnSet(result, makeCustomColumn);
         final String expectedToString = expected.toString();
         final String actualToString = actual.toString();
@@ -93,23 +80,23 @@ public class CsvTestUtil {
      * @return The parsed data
      * @throws CsvReaderException If any sort of failure occurs.
      */
-    public static CsvReader.Result parse(final CsvSpecs specs, final String input, final Charset encodingCharset)
+    public static CsvReader.Result parse(final CsvSpecs specs, final String input, final Charset charset)
             throws CsvReaderException {
-        return parse(specs, toInputStream(input, encodingCharset), encodingCharset, makeBlackholeSinkFactory());
+        return CsvReader.read(specs, toInputStream(input, charset), charset, makeBlackholeSinkFactory());
     }
 
     /**
      * Parses {@code inputStream} according to the specifications of {@code csvReader}.
      *
      *
-     * @param inputStream the input stream.
+     * @param input the input.
      * @return The parsed data
      * @throws CsvReaderException If any sort of failure occurs.
      */
-    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream, final Charset charset,
+    public static CsvReader.Result parse(final CsvSpecs specs, final String input, final Charset charset,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
-        return CsvReader.read(specs, inputStream, charset, sinkFactory);
+        return CsvReader.read(specs, toInputStream(input, charset), charset, sinkFactory);
     }
 
     /** Convert String to InputStream */
