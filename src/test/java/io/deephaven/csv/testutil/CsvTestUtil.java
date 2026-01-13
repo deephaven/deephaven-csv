@@ -8,16 +8,32 @@ import io.deephaven.csv.util.CsvReaderException;
 import org.apache.commons.io.input.ReaderInputStream;
 import org.assertj.core.api.Assertions;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class CsvTestUtil {
+
+    private static final List<Charset> STANDARD_CHARSETS = Collections.unmodifiableList(Arrays.asList(
+            StandardCharsets.US_ASCII,
+            StandardCharsets.ISO_8859_1,
+            StandardCharsets.UTF_8,
+            StandardCharsets.UTF_16,
+            StandardCharsets.UTF_16BE,
+            StandardCharsets.UTF_16LE));
+
     public static CsvSpecs defaultCsvSpecs() {
         return defaultCsvBuilder().build();
     }
@@ -26,21 +42,38 @@ public class CsvTestUtil {
         return CsvSpecs.builder().ignoreSurroundingSpaces(true).allowMissingColumns(true);
     }
 
-    public static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected)
+    public static void invokeTests(final CsvSpecs specs, final String input, final ColumnSet expected)
             throws CsvReaderException {
-        invokeTest(specs, input, expected, makeMySinkFactory(), null);
+        for (final Charset charset : STANDARD_CHARSETS) {
+            // Ensure we are always testing wrt UTF_8
+            if (StandardCharsets.UTF_8.equals(charset) || charset.newEncoder().canEncode(input)) {
+                invokeTest(specs, input, charset, expected, makeMySinkFactory(), null);
+            }
+        }
     }
 
-    public static void invokeTest(final CsvSpecs specs, final String input, final ColumnSet expected,
-            final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
-            throws CsvReaderException {
-        invokeTest(specs, toInputStream(input), expected, sinkFactory, makeCustomColumn);
+    public static void invokeTests(CsvSpecs specs, String input, ColumnSet expected, SinkFactory sinkFactory,
+            MakeCustomColumn makeCustomColumn) throws CsvReaderException {
+        for (final Charset charset : STANDARD_CHARSETS) {
+            // Ensure we are always testing wrt UTF_8
+            if (StandardCharsets.UTF_8.equals(charset) || charset.newEncoder().canEncode(input)) {
+                invokeTest(specs, input, charset, expected, sinkFactory, makeCustomColumn);
+            }
+        }
     }
 
-    public static void invokeTest(final CsvSpecs specs, final InputStream inputStream, final ColumnSet expected,
+    public static void invokeTest(final CsvSpecs specs, final String input, final Charset charset,
+            final ColumnSet expected,
+            final SinkFactory sinkFactory, final MakeCustomColumn makeCustomColumn)
+            throws CsvReaderException {
+        invokeTest(specs, toInputStream(input, charset), charset, expected, sinkFactory, makeCustomColumn);
+    }
+
+    public static void invokeTest(final CsvSpecs specs, final InputStream inputStream, final Charset charset,
+            final ColumnSet expected,
             final SinkFactory sinkFactory, MakeCustomColumn makeCustomColumn)
             throws CsvReaderException {
-        final CsvReader.Result result = parse(specs, inputStream, sinkFactory);
+        final CsvReader.Result result = parse(specs, inputStream, charset, sinkFactory);
         final ColumnSet actual = toColumnSet(result, makeCustomColumn);
         final String expectedToString = expected.toString();
         final String actualToString = actual.toString();
@@ -54,9 +87,9 @@ public class CsvTestUtil {
      * @return The parsed data
      * @throws CsvReaderException If any sort of failure occurs.
      */
-    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream)
+    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream, final Charset charset)
             throws CsvReaderException {
-        return parse(specs, inputStream, makeMySinkFactory());
+        return parse(specs, inputStream, charset, makeMySinkFactory());
     }
 
     /**
@@ -67,16 +100,22 @@ public class CsvTestUtil {
      * @return The parsed data
      * @throws CsvReaderException If any sort of failure occurs.
      */
-    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream,
+    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream, final Charset charset,
             final SinkFactory sinkFactory)
             throws CsvReaderException {
-        return CsvReader.read(specs, inputStream, sinkFactory);
+        return CsvReader.read(specs, inputStream, charset, sinkFactory);
     }
 
     /** Convert String to InputStream */
-    public static InputStream toInputStream(final String input) {
-        final StringReader reader = new StringReader(input);
-        return new ReaderInputStream(reader, StandardCharsets.UTF_8);
+    public static InputStream toInputStream(final String input, final Charset charset) {
+        final CharsetEncoder encoder = charset.newEncoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            return ReaderInputStream.builder().setCharSequence(input).setCharsetEncoder(encoder).get();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Unexpected exception, should not happen with String input", e);
+        }
     }
 
     /***

@@ -77,7 +77,7 @@ def registerJmhTest = version -> {
         jmhTest.testClassesDirs = sourceSets.jmhTest.output.classesDirs
         jmhTest.classpath = sourceSets.jmhTest.runtimeClasspath
         jmhTest.maxHeapSize = '2g'
-        jmhTest.javaLauncher.set javaToolchains.launcherFor {
+        jmhTest.javaLauncher = javaToolchains.launcherFor {
             languageVersion = JavaLanguageVersion.of(version)
         }
     }

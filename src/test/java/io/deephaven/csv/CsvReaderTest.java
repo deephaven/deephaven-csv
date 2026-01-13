@@ -25,6 +25,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.*;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -49,8 +50,8 @@ public class CsvReaderTest {
         final String expected2 = CsvTestUtil.repeat("b", bufferSize);
         sb.append(expected1).append('\r').append(expected2).append('\r');
         final String input = sb.toString();
-        final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), CsvTestUtil.toInputStream(input));
+        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
+                CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
         final String[] col = (String[]) result.columns()[0].data();
         final String row1 = col[0];
         final String row2 = col[1];
@@ -71,7 +72,7 @@ public class CsvReaderTest {
         Assertions
                 .assertThatThrownBy(
                         () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(),
-                                inputStream,
+                                inputStream, StandardCharsets.UTF_8,
                                 ColumnSet.NONE,
                                 CsvTestUtil.makeBlackholeSinkFactoryWithFailingDoubleSink(),
                                 null))
@@ -113,7 +114,7 @@ public class CsvReaderTest {
                         Column.ofRefs("Coin", "USDT", "USDT", "USDT", "USDT"),
                         Column.ofValues("Change", -49.00787612, -152.686844, -59.92650232, -102.3862566),
                         Column.ofRefs("Remark", null, "穿仓保证金补偿", null, null));
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
     /**
@@ -161,10 +162,10 @@ public class CsvReaderTest {
                         Column.ofRefs("String1", "hello"), // ignoring surrounding spaces
                         Column.ofRefs("String2", "there"));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(false).build(), input,
                 includingSpaces);
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).ignoreSurroundingSpaces(true).build(), input,
                 ignoringSpaces);
     }
@@ -185,7 +186,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("A", "apple", "cherry"),
                         Column.ofRefs("B", "banana", null));
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
     /**
@@ -249,7 +250,7 @@ public class CsvReaderTest {
             specsBase = specsBase.headerLegalizer(legalizer);
         }
 
-        CsvTestUtil.invokeTest(specsBase.build(), input, expected);
+        CsvTestUtil.invokeTests(specsBase.build(), input, expected);
     }
 
     /**
@@ -304,7 +305,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("ColName", colData.toArray(new String[0])));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.DEFAULT).build(), input, expected);
     }
 
     /**
@@ -321,7 +322,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
+                        () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
                                 input,
                                 ColumnSet.NONE))
                 .hasRootCauseMessage("Cell did not have closing quote character");
@@ -353,8 +354,8 @@ public class CsvReaderTest {
     @Test
     public void countsAreCorrect() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3\n";
-        final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), CsvTestUtil.toInputStream(input));
+        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
+                CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -363,7 +364,8 @@ public class CsvReaderTest {
     public void countsAreCorrectNoTrailingNewline() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3";
         final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), CsvTestUtil.toInputStream(input));
+                CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
+                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -375,7 +377,7 @@ public class CsvReaderTest {
                 CsvTestUtil.parse(
                         CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false).headers(Collections.singletonList("Value"))
                                 .build(),
-                        CsvTestUtil.toInputStream(input));
+                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -389,7 +391,8 @@ public class CsvReaderTest {
                         + "4,bar,true,2.0\n"
                         + "-5,baz,false,3.0\n";
         final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(), CsvTestUtil.toInputStream(input));
+                CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(),
+                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
         final ColumnSet cs = CsvTestUtil.toColumnSet(result, null);
         Assertions.assertThat(cs.getColumns()[0].name()).isEqualTo("Some\nInts");
         Assertions.assertThat(cs.getColumns()[1].name()).isEqualTo("Some\rStrings");
@@ -408,7 +411,7 @@ public class CsvReaderTest {
                         + "-5,baz,false,3.0\n";
         Assertions.assertThatThrownBy(
                 () -> CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(),
-                        CsvTestUtil.toInputStream(input)))
+                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8))
                 .hasRootCauseMessage("Row 8 has too many columns (expected 4)");
     }
 
@@ -430,7 +433,7 @@ public class CsvReaderTest {
                                 (byte) 0)
                                 .reinterpret(boolean.class));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), BOOLEAN_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), BOOLEAN_INPUT, expected);
     }
 
     private static final String CHAR_INPUT =
@@ -441,7 +444,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofValues("Values", 'A', Sentinels.NULL_CHAR, 'B', 'C', '1', '2', '3'));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), CHAR_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), CHAR_INPUT, expected);
     }
 
     @Test
@@ -451,7 +454,7 @@ public class CsvReaderTest {
         // NULL_CHAR can't be parsed as char; will be promoted to String.
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", "A", "" + Sentinels.NULL_CHAR));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     private static final String BYTE_INPUT = "" + "Values\n" + "-127\n" + "\n" + "127\n";
@@ -463,7 +466,8 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", (byte) (Byte.MIN_VALUE + 1), Sentinels.NULL_BYTE, Byte.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), BYTE_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), BYTE_INPUT,
+                expected);
     }
 
     @Test
@@ -476,7 +480,7 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", (short) (Byte.MIN_VALUE + 1), Sentinels.NULL_BYTE, Byte.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
     @Test
@@ -487,7 +491,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("Values", (Byte.MIN_VALUE + 1), Sentinels.NULL_INT, Byte.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), BYTE_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), BYTE_INPUT, expected);
     }
 
     private static final String SHORT_INPUT = "" + "Values\n" + "-32767\n" + "\n" + "32767\n";
@@ -499,7 +503,7 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", (short) (Short.MIN_VALUE + 1), Sentinels.NULL_SHORT, Short.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), SHORT_INPUT,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), SHORT_INPUT,
                 expected);
     }
 
@@ -513,7 +517,7 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", (int) (Short.MIN_VALUE + 1), Sentinels.NULL_SHORT, Short.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
     @Test
@@ -525,7 +529,7 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", Integer.MIN_VALUE + 1, Sentinels.NULL_INT, Integer.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -535,7 +539,7 @@ public class CsvReaderTest {
         // NULL_INT can't be parsed as int; will be promoted to long.
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", (long) Sentinels.NULL_INT));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     private static final String LONG_INPUT =
@@ -547,7 +551,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("Values", Long.MIN_VALUE + 1, Sentinels.NULL_LONG, Long.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), LONG_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), LONG_INPUT, expected);
     }
 
     @Test
@@ -558,7 +562,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofValues("Values", (double) Sentinels.NULL_LONG));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -566,7 +570,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofRefs("Values", "-9223372036854775807", null, "9223372036854775807"));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.STRING)).build(), LONG_INPUT,
                 expected);
     }
@@ -576,7 +580,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofRefs("Values", "-9223372036854775807", null, "9223372036854775807"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.STRING).build(),
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.STRING).build(),
                 LONG_INPUT, expected);
     }
 
@@ -605,7 +609,7 @@ public class CsvReaderTest {
                                 1.17549435E-38d,
                                 1.4e-45d));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), FLOAT_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), FLOAT_INPUT, expected);
     }
 
     @Test
@@ -622,7 +626,7 @@ public class CsvReaderTest {
                                 Float.MIN_NORMAL,
                                 Float.MIN_VALUE));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.FLOAT_FAST)).build(),
                 FLOAT_INPUT,
                 expected);
@@ -639,7 +643,7 @@ public class CsvReaderTest {
         // NULL_FLOAT can't be parsed as float; will be promoted to double.
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", nullFloatAsParsedByDouble));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
     private static final String DOUBLE_INPUT = ""
@@ -669,7 +673,7 @@ public class CsvReaderTest {
                                 12.34,
                                 -56.78,
                                 Double.MIN_VALUE));
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), DOUBLE_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), DOUBLE_INPUT, expected);
     }
 
     @Test
@@ -702,7 +706,7 @@ public class CsvReaderTest {
             }
         };
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder()
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder()
                 .customDoubleParser(myStrangeParser).build(), input, expected);
     }
 
@@ -713,7 +717,7 @@ public class CsvReaderTest {
         // NULL_DOUBLE can't be parsed as double; will be promoted to String
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", Sentinels.NULL_DOUBLE + ""));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(), input, expected);
     }
 
     private static final String SKIPPED_INPUT = ""
@@ -732,14 +736,15 @@ public class CsvReaderTest {
     public void skippedAndLimitedInts() throws CsvReaderException {
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 4, 5, 6, 7));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().skipRows(3).numRows(4).build(), SKIPPED_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().skipRows(3).numRows(4).build(), SKIPPED_INPUT,
+                expected);
     }
 
     @Test
     public void skippedInts() throws CsvReaderException {
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 4, 5, 6, 7, 8, 9));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().skipRows(3).build(), SKIPPED_INPUT, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().skipRows(3).build(), SKIPPED_INPUT, expected);
     }
 
     private static final String SKIPPED_HEADER_ROW_INPUT = ""
@@ -761,7 +766,7 @@ public class CsvReaderTest {
     public void skippedHeaderRows() throws CsvReaderException {
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", 7, 8, 9));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().skipHeaderRows(3).skipRows(6).build(),
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().skipHeaderRows(3).skipRows(6).build(),
                 SKIPPED_HEADER_ROW_INPUT, expected);
     }
 
@@ -780,7 +785,7 @@ public class CsvReaderTest {
                 Column.ofRefs("Col2", "aaaaa", "bbbbb", "ccccc", "ddddd", null));
 
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().nullValueLiterals(Arrays.asList("", "*NULL*")).build();
-        CsvTestUtil.invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
+        CsvTestUtil.invokeTests(specs, MULTIPLE_NULLS_INPUT, expected);
     }
 
     @Test
@@ -793,7 +798,7 @@ public class CsvReaderTest {
                 .nullValueLiterals(Arrays.asList("", "*NULL*"))
                 .putNullValueLiteralsForName("Col2", Arrays.asList("bbbbb", "ddddd"))
                 .build();
-        CsvTestUtil.invokeTest(specs, MULTIPLE_NULLS_INPUT, expected);
+        CsvTestUtil.invokeTests(specs, MULTIPLE_NULLS_INPUT, expected);
     }
 
 
@@ -812,7 +817,7 @@ public class CsvReaderTest {
                 Column.ofRefs("Col1", "aa", "cc", null, "ee", null, "gg"),
                 Column.ofRefs("Col2", "bb", "dd", null, "ff", null, "hh"));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().allowMissingColumns(true).ignoreEmptyLines(false).build(),
                 EMPTY_LINES_INPUT,
                 expected);
@@ -824,7 +829,7 @@ public class CsvReaderTest {
                 Column.ofRefs("Col1", "aa", "cc", "ee", "gg"),
                 Column.ofRefs("Col2", "bb", "dd", "ff", "hh"));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().allowMissingColumns(false).ignoreEmptyLines(true).build(),
                 EMPTY_LINES_INPUT,
                 expected);
@@ -834,7 +839,7 @@ public class CsvReaderTest {
     public void emptyLinesError() {
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(
+                        () -> CsvTestUtil.invokeTests(
                                 CsvTestUtil.defaultCsvBuilder().allowMissingColumns(false).ignoreEmptyLines(false)
                                         .build(),
                                 EMPTY_LINES_INPUT,
@@ -872,7 +877,7 @@ public class CsvReaderTest {
                                 100001.0,
                                 3000000000.0,
                                 1234.5678));
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(),
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build(),
                 VARIETY_OF_NUMERICS_INPUT, expected);
     }
 
@@ -889,7 +894,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofRefs("Values", "Hello, world", null, "Goodbye."));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -945,9 +950,10 @@ public class CsvReaderTest {
                     final Class<?> expectedType =
                             SimpleInferrer.infer(expectedTypes[kk], inferredIJ, oneCharIJK);
                     final String input = "Values\n" + allInputs[ii] + allInputs[jj] + allInputs[kk];
-                    final InputStream inputStream = CsvTestUtil.toInputStream(input);
+                    final InputStream inputStream = CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8);
                     final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build();
-                    final ColumnSet columnSet = CsvTestUtil.toColumnSet(CsvTestUtil.parse(specs, inputStream), null);
+                    final ColumnSet columnSet = CsvTestUtil
+                            .toColumnSet(CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8), null);
                     final Class<?> actualType = columnSet.getColumns()[0].reinterpretedType();
                     Assertions.assertThat(actualType)
                             .withFailMessage(
@@ -1037,7 +1043,7 @@ public class CsvReaderTest {
 
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", null, "#", "##"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, expected);
     }
 
     @Test
@@ -1045,7 +1051,8 @@ public class CsvReaderTest {
         final String input = "" + "Values\n" + "###\n"; // invalid
 
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, ColumnSet.NONE))
+                () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input,
+                        ColumnSet.NONE))
                 .hasRootCauseMessage("Cell did not have closing quote character");
     }
 
@@ -1054,7 +1061,8 @@ public class CsvReaderTest {
         final String input = "" + "Val1,Val2\n" + "#hello#junk,there\n"; // invalid
 
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, ColumnSet.NONE))
+                () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input,
+                        ColumnSet.NONE))
                 .hasRootCauseMessage("Logic error: final non-whitespace in field is not quoteChar");
     }
 
@@ -1067,7 +1075,7 @@ public class CsvReaderTest {
 
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", "hello", null));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().nullValueLiterals(Collections.singletonList("NULL")).build(), input,
                 expected);
     }
@@ -1079,7 +1087,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofRefs("Values", "Hello, world", null, "Goodbye."));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, expected);
     }
 
     @Test
@@ -1091,7 +1099,7 @@ public class CsvReaderTest {
                         Column.ofValues(
                                 "Values", Integer.MIN_VALUE + 1, Sentinels.NULL_INT, Integer.MAX_VALUE));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1102,7 +1110,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("A", 1, 4), Column.ofValues("Qux", 2, 5), Column.ofValues("C", 3, 6));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().headers(Arrays.asList("A", "B", "C")).putHeaderForIndex(1, "Qux")
                         .build(),
                 input,
@@ -1137,12 +1145,12 @@ public class CsvReaderTest {
 
     @Test
     public void languageExample() throws CsvReaderException {
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), LANGUAGE_EXAMPLE_INPUT, languageCreatorTypeTable());
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), LANGUAGE_EXAMPLE_INPUT, languageCreatorTypeTable());
     }
 
     @Test
     public void languageExampleTsv() throws CsvReaderException {
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().delimiter('\t').build(),
                 LANGUAGE_EXAMPLE_TSV,
                 languageCreatorTypeTable());
@@ -1150,7 +1158,7 @@ public class CsvReaderTest {
 
     @Test
     public void languageExampleHeaderless() throws CsvReaderException {
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false).build(),
                 LANGUAGE_EXAMPLE_HEADERLESS_INPUT,
                 languageCreatorTypeTableHeaderless());
@@ -1159,7 +1167,7 @@ public class CsvReaderTest {
     @Test
     public void languageExampleHeaderlessExplicit() throws CsvReaderException {
         final ColumnSet expected = languageCreatorTypeTable();
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false)
                         .headers(Arrays.asList("Language", "Creator", "Type")).build(),
                 LANGUAGE_EXAMPLE_HEADERLESS_INPUT,
@@ -1217,7 +1225,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), WHITESPACE_NO_QUOTES, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), WHITESPACE_NO_QUOTES, expected);
     }
 
     @Test
@@ -1229,7 +1237,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().ignoreSurroundingSpaces(false).build(), WHITESPACE_NO_QUOTES, expected);
     }
 
@@ -1251,7 +1259,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('|').build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('|').build(), input, expected);
     }
 
     // Use vertical bars instead of quotation marks to make things more readable for the humans
@@ -1271,7 +1279,7 @@ public class CsvReaderTest {
                         Column.ofRefs("Type", " Dividend", "Dividend ", " Dividend "),
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('|').build(), WHITESPACE_INSIDE, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('|').build(), WHITESPACE_INSIDE, expected);
     }
 
     @Test
@@ -1283,7 +1291,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('|').trim(true).build(), WHITESPACE_INSIDE,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('|').trim(true).build(), WHITESPACE_INSIDE,
                 expected);
     }
 
@@ -1303,7 +1311,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().quote('|').build(), WHITESPACE_INSIDE_AND_OUTSIDE,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('|').build(), WHITESPACE_INSIDE_AND_OUTSIDE,
                 expected);
     }
 
@@ -1316,7 +1324,7 @@ public class CsvReaderTest {
                         Column.ofValues("Price", 0.25, 0.15, 0.18),
                         Column.ofValues("SecurityId", 200, 300, 500));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().quote('|').trim(true).build(),
                 WHITESPACE_INSIDE_AND_OUTSIDE,
                 expected);
@@ -1331,7 +1339,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofArray("Values1", new short[0], 0), Column.ofArray("Values2", new short[0], 0));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().nullParser(Parsers.SHORT).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().nullParser(Parsers.SHORT).build(), input, expected);
     }
 
     @Test
@@ -1344,7 +1352,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeInts", -3, 4, -5),
                         Column.ofRefs("SomeStrings", "foo", "bar", "baz"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1360,7 +1368,7 @@ public class CsvReaderTest {
                         Column.ofValues("D", (byte) 0, (byte) 1, Sentinels.NULL_BOOLEAN_AS_BYTE)
                                 .reinterpret(boolean.class));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1376,7 +1384,7 @@ public class CsvReaderTest {
                         Column.ofValues("D", (byte) 0, (byte) 1, Sentinels.NULL_BOOLEAN_AS_BYTE)
                                 .reinterpret(boolean.class));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1385,7 +1393,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(
+                        () -> CsvTestUtil.invokeTests(
                                 CsvTestUtil.defaultCsvBuilder().allowMissingColumns(true)
                                         .nullValueLiterals(Collections.emptyList())
                                         .build(),
@@ -1400,7 +1408,8 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().allowMissingColumns(false).build(),
+                        () -> CsvTestUtil.invokeTests(
+                                CsvTestUtil.defaultCsvBuilder().allowMissingColumns(false).build(),
                                 input, ColumnSet.NONE))
                 .hasRootCauseMessage("Row 4 has too few columns (expected 4)");
     }
@@ -1410,7 +1419,7 @@ public class CsvReaderTest {
         final String input = "" + "SomeInts,SomeStrings\n" + "-3,foo\n" + "4,bar,quz\n" + "-5,baz\n";
 
         Assertions
-                .assertThatThrownBy(() -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
+                .assertThatThrownBy(() -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
                 .hasRootCauseMessage("Row 3 has too many columns (expected 2)");
     }
 
@@ -1423,7 +1432,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeInts", -3, 4, -5),
                         Column.ofRefs("SomeStrings", "foo", "bar", "baz"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().ignoreExcessColumns(true).build(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().ignoreExcessColumns(true).build(), input, expected);
     }
 
     private static final String SINGLE_COLUMN_EMPTY_ROW = ""
@@ -1439,7 +1448,8 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("SomeInts", 3, Sentinels.NULL_INT, 4, 5));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(false).build(), SINGLE_COLUMN_EMPTY_ROW,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(false).build(),
+                SINGLE_COLUMN_EMPTY_ROW,
                 expected);
     }
 
@@ -1449,7 +1459,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofValues("SomeInts", 3, 4, 5));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(true).build(), SINGLE_COLUMN_EMPTY_ROW,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(true).build(), SINGLE_COLUMN_EMPTY_ROW,
                 expected);
     }
 
@@ -1461,7 +1471,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("SomeInts", "3", "", "4", "5"));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(false).nullValueLiterals(Collections.emptyList())
                         .build(),
                 SINGLE_COLUMN_EMPTY_ROW,
@@ -1478,7 +1488,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(
+                        () -> CsvTestUtil.invokeTests(
                                 CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(false)
                                         .nullValueLiterals(Collections.emptyList())
                                         .parsers(Collections.singletonList(Parsers.INT)).build(),
@@ -1503,7 +1513,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(
+                        () -> CsvTestUtil.invokeTests(
                                 CsvTestUtil.defaultCsvBuilder().ignoreEmptyLines(false)
                                         .nullValueLiterals(Collections.emptyList())
                                         .parsers(Arrays.asList(Parsers.INT, Parsers.LONG)).build(),
@@ -1516,7 +1526,7 @@ public class CsvReaderTest {
     public void duplicateColumnName() {
         final String input = "" + "abc,xyz,abc\n" + "Hello,there,Deephaven\n";
         Assertions
-                .assertThatThrownBy(() -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
+                .assertThatThrownBy(() -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
                 .hasMessageContaining("Repeated headers: abc");
     }
 
@@ -1533,7 +1543,7 @@ public class CsvReaderTest {
                         Column.ofRefs("def", "there", "bar"),
                         Column.ofRefs("ghi", "Deephaven", "baz"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1544,7 +1554,7 @@ public class CsvReaderTest {
         final String input =
                 "" + "abc,def,ghi,\n" + "Hello,there,Deephaven,\n" + "foo,bar,baz,nonempty\n";
         Assertions
-                .assertThatThrownBy(() -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
+                .assertThatThrownBy(() -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, ColumnSet.NONE))
                 .hasRootCauseMessage("Column assumed empty but contains data");
     }
 
@@ -1559,7 +1569,7 @@ public class CsvReaderTest {
                                 "Values", 1632769200000000000L, Sentinels.NULL_LONG, 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1610,7 +1620,7 @@ public class CsvReaderTest {
                                 1632783898123456789L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     @Test
@@ -1626,7 +1636,7 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_SECONDS)).build(),
                 input,
                 expected);
@@ -1645,7 +1655,7 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_MILLIS)).build(),
                 input,
                 expected);
@@ -1664,7 +1674,7 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_MICROS)).build(),
                 input,
                 expected);
@@ -1683,7 +1693,7 @@ public class CsvReaderTest {
                                 1632772800000000000L)
                                 .reinterpret(Instant.class));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.TIMESTAMP_NANOS)).build(),
                 input,
                 expected);
@@ -1718,7 +1728,7 @@ public class CsvReaderTest {
                     return false;
                 };
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().customTimeZoneParser(myTimeZoneParser).build(), input,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().customTimeZoneParser(myTimeZoneParser).build(), input,
                 expected);
     }
 
@@ -1729,7 +1739,7 @@ public class CsvReaderTest {
         final String input = "" + "Values\n" + "hello\n" + "there\n";
 
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTest(
+                () -> CsvTestUtil.invokeTests(
                         CsvTestUtil.defaultCsvBuilder()
                                 .parsers(Arrays.asList(Parsers.INT, Parsers.LONG, Parsers.DATETIME)).build(),
                         input,
@@ -1741,7 +1751,7 @@ public class CsvReaderTest {
         final String input = "" + "Values\n" + "hello\n" + "there\n";
 
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().parsers(Collections.emptyList()).build(),
+                () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().parsers(Collections.emptyList()).build(),
                         input, ColumnSet.NONE))
                 .hasRootCauseMessage("No available parsers.");
     }
@@ -1751,7 +1761,7 @@ public class CsvReaderTest {
         final long nv = Sentinels.NULL_LONG;
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", nv, nv, nv, nv, nv));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.LONG).build(),
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.LONG).build(),
                 ALL_NULLS, expected);
     }
 
@@ -1760,14 +1770,14 @@ public class CsvReaderTest {
         final long nv = Sentinels.NULL_LONG;
         final ColumnSet expected = ColumnSet.of(Column.ofValues("Values", nv, nv, nv, nv, nv));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().nullParser(Parsers.LONG).build(), ALL_NULLS, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().nullParser(Parsers.LONG).build(), ALL_NULLS, expected);
     }
 
     @Test
     public void allNullsButNoParser() {
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().nullParser(null).build(),
+                        () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().nullParser(null).build(),
                                 ALL_NULLS, ColumnSet.NONE))
                 .hasRootCauseMessage(
                         "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
@@ -1778,7 +1788,7 @@ public class CsvReaderTest {
         final String input = "Values\n";
         final ColumnSet expected = ColumnSet.of(Column.ofArray("Values", new long[0], 0));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.LONG).build(), input,
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().putParserForName("Values", Parsers.LONG).build(), input,
                 expected);
     }
 
@@ -1791,7 +1801,7 @@ public class CsvReaderTest {
                 ColumnSet.of(
                         Column.ofRefs("Emojis", "Hello 💖", "Regular ASCII", "✨ Deephaven ✨", "🎆🎆🎆🎆🎆"));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     /**
@@ -1807,7 +1817,7 @@ public class CsvReaderTest {
         final ColumnSet expected =
                 ColumnSet.of(Column.ofValues("BMPChar", '1', '2', '3', 'X', '✈', '❎', '➉', '✈', '✨'));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     /** Large cells (10K characters or so), some with fancy Unicode, quotes, and escaped quotes. */
@@ -1855,7 +1865,7 @@ public class CsvReaderTest {
                                 largeCellChars,
                                 largeCellLiteral));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvSpecs(), input, expected);
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
     }
 
     /** Test the global null literal value. */
@@ -1875,7 +1885,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeInts", 3, Sentinels.NULL_INT, 2000000000),
                         Column.ofValues("SomeLongs", 4L, Sentinels.NULL_LONG, 4000000000L));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE)
                         .nullValueLiterals(Collections.singletonList("NULL"))
                         .build(),
@@ -1903,7 +1913,7 @@ public class CsvReaderTest {
                         Column.ofValues("SomeInts", 3, Sentinels.NULL_INT, 2000000000),
                         Column.ofValues("SomeLongs", 4L, Sentinels.NULL_LONG, 4000000000L));
 
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
                         .putNullValueLiteralsForIndex(0, Collections.singletonList("❌"))
@@ -1978,7 +1988,7 @@ public class CsvReaderTest {
                                 .reinterpret(Instant.class),
                         Column.ofArray("SomeTimestamps", timestampsAsLongs.toArray(), timestampsAsLongs.size())
                                 .reinterpret(Instant.class));
-        CsvTestUtil.invokeTest(
+        CsvTestUtil.invokeTests(
                 CsvTestUtil.defaultCsvBuilder()
                         .parsers(Parsers.COMPLETE)
                         .putParserForName("SomeTimestamps", Parsers.TIMESTAMP_NANOS)
@@ -2005,7 +2015,7 @@ public class CsvReaderTest {
             final BigDecimal[] arr = ((List<BigDecimal>) obj).toArray(new BigDecimal[0]);
             return Column.ofArray(name, arr, size);
         };
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().putParserForIndex(1, new MyBigDecimalParser()).build(),
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().putParserForIndex(1, new MyBigDecimalParser()).build(),
                 input, expected,
                 CsvTestUtil.makeMySinkFactory(), makeCustomColumn);
     }
@@ -2020,7 +2030,7 @@ public class CsvReaderTest {
 
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(Parsers.INT)).build();
         final SinkFactory sinkFactory = CsvTestUtil.makeBlackholeSinkFactory();
-        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, sinkFactory);
+        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8, sinkFactory);
     }
 
     /**
@@ -2030,10 +2040,10 @@ public class CsvReaderTest {
     public void colnumPassedThrough() throws CsvReaderException {
         final String input = "" + "Col1,Col2,Col3\n" + "1,2,3\n" + "4,5,6\n" + "7,8,9\n";
 
-        final InputStream inputStream = CsvTestUtil.toInputStream(input);
+        final InputStream inputStream = CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8);
         final CsvSpecs specs = CsvTestUtil.defaultCsvSpecs();
         final SinkFactory sinkFactory = CsvTestUtil.makeBlackholeSinkFactory();
-        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, sinkFactory);
+        final CsvReader.Result result = CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8, sinkFactory);
         final CsvReader.ResultColumn[] col = result.columns();
         final int bh0Num = (Integer) col[0].data();
         final int bh1Num = (Integer) col[1].data();
@@ -2070,7 +2080,7 @@ public class CsvReaderTest {
                         "kubernetes.io/metadata.name=argocd",
                         "kubernetes.io/metadata.name=beta"));
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2095,7 +2105,7 @@ public class CsvReaderTest {
         final CsvSpecs specs =
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2118,7 +2128,7 @@ public class CsvReaderTest {
 
         final CsvSpecs specs =
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true).build();
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2154,7 +2164,7 @@ public class CsvReaderTest {
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                         .ignoreSurroundingSpaces(ignoreSurroundingSpaces).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2181,7 +2191,7 @@ public class CsvReaderTest {
         final CsvSpecs specs =
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true).skipHeaderRows(2).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2208,7 +2218,7 @@ public class CsvReaderTest {
         final CsvSpecs specs =
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true).skipRows(1).numRows(2).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2237,9 +2247,9 @@ public class CsvReaderTest {
                 .allowMissingColumns(allowMissingColumns).build();
 
         if (allowMissingColumns) {
-            CsvTestUtil.invokeTest(specs, input, expected);
+            CsvTestUtil.invokeTests(specs, input, expected);
         } else {
-            Assertions.assertThatThrownBy(() -> CsvTestUtil.invokeTest(specs, input, expected))
+            Assertions.assertThatThrownBy(() -> CsvTestUtil.invokeTests(specs, input, expected))
                     .hasRootCauseMessage("Row 2 has too few columns (expected 4)");
         }
     }
@@ -2283,7 +2293,7 @@ public class CsvReaderTest {
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                 .ignoreEmptyLines(ignoreEmptyLines).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2310,10 +2320,10 @@ public class CsvReaderTest {
 
         if (specifyColumnWidths) {
             final CsvSpecs specs = specsBase.fixedColumnWidths(Arrays.asList(6, 9, 8, 3)).build();
-            CsvTestUtil.invokeTest(specs, input, expected);
+            CsvTestUtil.invokeTests(specs, input, expected);
         } else {
             final CsvSpecs specs = specsBase.build();
-            Assertions.assertThatThrownBy(() -> CsvTestUtil.invokeTest(specs, input, expected))
+            Assertions.assertThatThrownBy(() -> CsvTestUtil.invokeTests(specs, input, expected))
                     .hasMessage("Can't proceed because hasHeaderRow is false but fixedColumnWidths is unspecified");
         }
     }
@@ -2342,7 +2352,7 @@ public class CsvReaderTest {
                 CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true).hasHeaderRow(false);
 
         final CsvSpecs specs = specsBase.fixedColumnWidths(Arrays.asList(6, 9, 8, finalEntry)).build();
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2422,7 +2432,7 @@ public class CsvReaderTest {
             specsBuilder = specsBuilder.headers(Arrays.asList(expectedColumnNames));
         }
 
-        CsvTestUtil.invokeTest(specsBuilder.build(), input, expected);
+        CsvTestUtil.invokeTests(specsBuilder.build(), input, expected);
     }
 
     /**
@@ -2449,7 +2459,7 @@ public class CsvReaderTest {
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                 .useUtf32CountingConvention(useUtf32CountingConvention).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2482,7 +2492,7 @@ public class CsvReaderTest {
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                 .useUtf32CountingConvention(useUtf32CountingConvention).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2522,7 +2532,7 @@ public class CsvReaderTest {
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                 .useUtf32CountingConvention(useUtf32CountingConvention).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2562,7 +2572,7 @@ public class CsvReaderTest {
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasFixedWidthColumns(true)
                 .ignoreSurroundingSpaces(false).useUtf32CountingConvention(useUtf32CountingConvention).build();
 
-        CsvTestUtil.invokeTest(specs, input, expected);
+        CsvTestUtil.invokeTests(specs, input, expected);
     }
 
     /**
@@ -2589,7 +2599,8 @@ public class CsvReaderTest {
         final CountDownLatch shutdownResponse = new CountDownLatch(1);
         final Duration fiveSeconds = Duration.ofSeconds(5);
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().build(), input, expected,
+                () -> CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder().build(), input, StandardCharsets.UTF_8,
+                        expected,
                         CsvTestUtil.makeCooperatingSinkFactories(fiveSeconds, shutdownRequest, shutdownResponse),
                         null))
                 .hasRootCauseMessage("synthetic error for testing");
@@ -2620,7 +2631,7 @@ public class CsvReaderTest {
         Assertions
                 .assertThatThrownBy(() -> CsvTestUtil.invokeTest(
                         CsvTestUtil.defaultCsvBuilder().threadShutdownTimeout(fiveSeconds).build(),
-                        input, expected,
+                        input, StandardCharsets.UTF_8, expected,
                         CsvTestUtil.makeCooperatingSinkFactories(oneThousandSeconds, shutdownRequest, shutdownResponse),
                         null))
                 .hasRootCauseMessage("synthetic error for testing")

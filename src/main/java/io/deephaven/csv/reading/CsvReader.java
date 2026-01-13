@@ -17,6 +17,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -51,19 +54,12 @@ public final class CsvReader {
     private CsvReader() {}
 
     /**
-     * Read the data. Note that the InputStream 'stream' is assumed to be encoded as UTF-8. (A stream of pure ASCII is
-     * also acceptable, because ASCII is a subset of UTF-8). If your stream is encoded in some other character set, e.g.
-     * ISO-8859-1, you will need to convert it to UTF-8 before passing it to this method. You can conveniently do this
-     * with the ReaderInputStream from Apache Commons:
-     * 
-     * <pre>
-     * InputStream sourceStream = new FileInputStream("input_iso-8859-1.txt");
-     * Reader reader = new InputStreamReader(sourceStream, StandardCharsets.ISO_8859_1);
-     * InputStream utf8Stream = new ReaderInputStream(reader, StandardCharsets.UTF_8);
-     * </pre>
+     * Read the data. Note that the InputStream {@code stream} is assumed to be encoded as UTF-8. (A stream of ASCII is
+     * also acceptable, because ASCII is a binary-compatible subset of UTF-8). If your stream is encoded in some other
+     * character set, e.g. ISO-8859-1, use {@link #read(CsvSpecs, InputStream, Charset, SinkFactory)}.
      * 
      * @param specs A {@link CsvSpecs} object providing options for the parse.
-     * @param stream The input data, encoded in UTF-8.
+     * @param stream The input data, encoded in UTF-8 or ASCII.
      * @param sinkFactory A factory that can provide Sink&lt;T&gt; of all appropriate types for the output data. Once
      *        the CsvReader determines what the column type is, it will use the {@link SinkFactory} to create an
      *        appropriate Sink&lt;T&gt; for the type. Note that the CsvReader might guess wrong, so it might create a
@@ -76,8 +72,44 @@ public final class CsvReader {
      */
     public static Result read(final CsvSpecs specs, final InputStream stream, final SinkFactory sinkFactory)
             throws CsvReaderException {
-        return specs.hasFixedWidthColumns() ? fixedReadLogic(specs, stream, sinkFactory)
-                : delimitedReadLogic(specs, stream, sinkFactory);
+        return read(specs, stream, StandardCharsets.UTF_8, sinkFactory);
+    }
+
+    /**
+     * Read the data.
+     *
+     * <p>
+     * Note: if {@code streamCharset} is not UTF-8 nor ASCII, the {@code stream} will be
+     * {@link java.nio.charset.CharsetDecoder#decode(ByteBuffer, CharBuffer, boolean) incrementally decoded} and
+     * {@link java.nio.charset.CharsetEncoder#encode(CharBuffer, ByteBuffer, boolean) incrementally encoded} into UTF-8.
+     *
+     * @param specs A {@link CsvSpecs} object providing options for the parse.
+     * @param stream The input data
+     * @param streamCharset The stream charset
+     * @param sinkFactory A factory that can provide Sink&lt;T&gt; of all appropriate types for the output data. Once
+     *        the CsvReader determines what the column type is, it will use the {@link SinkFactory} to create an
+     *        appropriate Sink&lt;T&gt; for the type. Note that the CsvReader might guess wrong, so it might create a
+     *        Sink, partially populate it, and then abandon it. The final set of fully-populated Sinks will be returned
+     *        in the CsvReader.Result. Thread safety: The {@link SinkFactory} may be invoked concurrently, therefore it
+     *        must be thread safe.
+     * @return A CsvReader.Result containing the column names, the number of columns, and the final set of
+     *         fully-populated Sinks.
+     * @throws CsvReaderException if an error occurred while reading the input
+     */
+    public static Result read(
+            final CsvSpecs specs,
+            final InputStream stream,
+            final Charset streamCharset,
+            final SinkFactory sinkFactory) throws CsvReaderException {
+        final InputStream utf8Stream = needsUtf8Encoding(streamCharset)
+                ? new ReEncodingInputStream(stream, streamCharset, StandardCharsets.UTF_8, 1024)
+                : stream;
+        return specs.hasFixedWidthColumns() ? fixedReadLogic(specs, utf8Stream, sinkFactory)
+                : delimitedReadLogic(specs, utf8Stream, sinkFactory);
+    }
+
+    private static boolean needsUtf8Encoding(final Charset charset) {
+        return !(StandardCharsets.UTF_8.equals(charset) || StandardCharsets.US_ASCII.equals(charset));
     }
 
     private static Result delimitedReadLogic(
