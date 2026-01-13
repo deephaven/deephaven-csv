@@ -64,7 +64,8 @@ public class CsvTestUtil {
         }
     }
 
-    public static void invokeTest(final CsvSpecs specs, final String input, final Charset charset, final ColumnSet expected, final SinkFactory sinkFactory, final MakeCustomColumn makeCustomColumn)
+    public static void invokeTest(final CsvSpecs specs, final String input, final Charset charset,
+            final ColumnSet expected, final SinkFactory sinkFactory, final MakeCustomColumn makeCustomColumn)
             throws CsvReaderException {
         final CsvReader.Result result = parse(specs, input, charset, sinkFactory);
         final ColumnSet actual = toColumnSet(result, makeCustomColumn);
