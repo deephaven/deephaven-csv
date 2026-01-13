@@ -82,7 +82,7 @@ public class CsvTestUtil {
      */
     public static CsvReader.Result parse(final CsvSpecs specs, final String input, final Charset charset)
             throws CsvReaderException {
-        return CsvReader.read(specs, toInputStream(input, charset), charset, makeBlackholeSinkFactory());
+        return CsvReader.read(specs, toInputStream(input, charset), charset, makeMySinkFactory());
     }
 
     /**
