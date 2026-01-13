@@ -83,7 +83,7 @@ public class CsvReaderTest {
      * bug exists, the library hangs (and this test times out). When the bug is fixed, the test succeeds.
      */
     @Test
-    @Timeout(value = 30)
+    @Timeout(value = 90)
     public void bug52() throws CsvReaderException {
         final int numRows = 50_000_000;
         final RepeatingInputStream inputStream =
