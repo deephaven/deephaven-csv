@@ -1,11 +1,6 @@
 package io.deephaven.csv;
 
-import gnu.trove.list.array.TByteArrayList;
-import gnu.trove.list.array.TCharArrayList;
-import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.list.array.TLongArrayList;
-import gnu.trove.list.array.TShortArrayList;
+import gnu.trove.list.array.*;
 import io.deephaven.csv.containers.ByteSlice;
 import io.deephaven.csv.densestorage.DenseStorageConstants;
 import io.deephaven.csv.parsers.Parser;
@@ -23,7 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.*;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -33,7 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 public class CsvReaderTest {
@@ -50,8 +46,7 @@ public class CsvReaderTest {
         final String expected2 = CsvTestUtil.repeat("b", bufferSize);
         sb.append(expected1).append('\r').append(expected2).append('\r');
         final String input = sb.toString();
-        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
-                CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), input, StandardCharsets.UTF_8);
         final String[] col = (String[]) result.columns()[0].data();
         final String row1 = col[0];
         final String row2 = col[1];
@@ -322,7 +317,7 @@ public class CsvReaderTest {
 
         Assertions
                 .assertThatThrownBy(
-                        () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
+                        () -> CsvTestUtil.invokeUtf8Test(CsvTestUtil.defaultCsvBuilder().concurrent(concurrent).build(),
                                 input,
                                 ColumnSet.NONE))
                 .hasRootCauseMessage("Cell did not have closing quote character");
@@ -354,8 +349,7 @@ public class CsvReaderTest {
     @Test
     public void countsAreCorrect() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3\n";
-        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
-                CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), input, StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -363,9 +357,7 @@ public class CsvReaderTest {
     @Test
     public void countsAreCorrectNoTrailingNewline() throws CsvReaderException {
         final String input = "" + "Values\n" + "1\n" + "\n" + "3";
-        final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(),
-                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        final CsvReader.Result result = CsvTestUtil.parse(CsvTestUtil.defaultCsvSpecs(), input, StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -373,11 +365,9 @@ public class CsvReaderTest {
     @Test
     public void countsAreCorrectHeaderless() throws CsvReaderException {
         final String input = "" + "1\n" + "\n" + "3\n";
-        final CsvReader.Result result =
-                CsvTestUtil.parse(
-                        CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false).headers(Collections.singletonList("Value"))
-                                .build(),
-                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        final CsvReader.Result result = CsvTestUtil.parse(
+                CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false).headers(Collections.singletonList("Value")).build(),
+                input, StandardCharsets.UTF_8);
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(3);
     }
@@ -391,8 +381,7 @@ public class CsvReaderTest {
                         + "4,bar,true,2.0\n"
                         + "-5,baz,false,3.0\n";
         final CsvReader.Result result =
-                CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(),
-                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+                CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(), input, StandardCharsets.UTF_8);
         final ColumnSet cs = CsvTestUtil.toColumnSet(result, null);
         Assertions.assertThat(cs.getColumns()[0].name()).isEqualTo("Some\nInts");
         Assertions.assertThat(cs.getColumns()[1].name()).isEqualTo("Some\rStrings");
@@ -410,8 +399,8 @@ public class CsvReaderTest {
                         + "4,bar,true,2.0,quz\n"
                         + "-5,baz,false,3.0\n";
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(),
-                        CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8), StandardCharsets.UTF_8))
+                () -> CsvTestUtil.parse(CsvTestUtil.defaultCsvBuilder().quote('|').build(), input,
+                        StandardCharsets.UTF_8))
                 .hasRootCauseMessage("Row 8 has too many columns (expected 4)");
     }
 
@@ -950,10 +939,9 @@ public class CsvReaderTest {
                     final Class<?> expectedType =
                             SimpleInferrer.infer(expectedTypes[kk], inferredIJ, oneCharIJK);
                     final String input = "Values\n" + allInputs[ii] + allInputs[jj] + allInputs[kk];
-                    final InputStream inputStream = CsvTestUtil.toInputStream(input, StandardCharsets.UTF_8);
                     final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Parsers.COMPLETE).build();
                     final ColumnSet columnSet = CsvTestUtil
-                            .toColumnSet(CsvTestUtil.parse(specs, inputStream, StandardCharsets.UTF_8), null);
+                            .toColumnSet(CsvTestUtil.parse(specs, input, StandardCharsets.UTF_8), null);
                     final Class<?> actualType = columnSet.getColumns()[0].reinterpretedType();
                     Assertions.assertThat(actualType)
                             .withFailMessage(

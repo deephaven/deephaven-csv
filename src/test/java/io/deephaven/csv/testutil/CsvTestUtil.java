@@ -11,6 +11,7 @@ import org.assertj.core.api.Assertions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
@@ -40,6 +41,11 @@ public class CsvTestUtil {
 
     public static CsvSpecs.Builder defaultCsvBuilder() {
         return CsvSpecs.builder().ignoreSurroundingSpaces(true).allowMissingColumns(true);
+    }
+
+    public static void invokeUtf8Test(final CsvSpecs specs, final String input, final ColumnSet expected)
+            throws CsvReaderException {
+        invokeTest(specs, input, StandardCharsets.UTF_8, expected, makeMySinkFactory(), null);
     }
 
     public static void invokeTests(final CsvSpecs specs, final String input, final ColumnSet expected)
@@ -81,15 +87,15 @@ public class CsvTestUtil {
     }
 
     /**
-     * Parses {@code inputStream} according to the specifications of {@code csvReader}.
+     * Parses {@code input} according to the specifications of {@code csvReader}.
      *
-     * @param inputStream the input stream.
+     * @param input the input.
      * @return The parsed data
      * @throws CsvReaderException If any sort of failure occurs.
      */
-    public static CsvReader.Result parse(final CsvSpecs specs, final InputStream inputStream, final Charset charset)
+    public static CsvReader.Result parse(final CsvSpecs specs, final String input, final Charset encodingCharset)
             throws CsvReaderException {
-        return parse(specs, inputStream, charset, makeMySinkFactory());
+        return parse(specs, toInputStream(input, encodingCharset), encodingCharset, makeBlackholeSinkFactory());
     }
 
     /**
