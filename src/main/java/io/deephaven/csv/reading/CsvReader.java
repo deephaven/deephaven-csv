@@ -79,7 +79,7 @@ public final class CsvReader {
      * Read the data.
      *
      * <p>
-     * Note: if {@code streamCharset} is not UTF-8 nor ASCII, the {@code stream} will be
+     * Note: if {@code streamCharset} is neither UTF-8 nor ASCII, the {@code stream} will be
      * {@link java.nio.charset.CharsetDecoder#decode(ByteBuffer, CharBuffer, boolean) incrementally decoded} and
      * {@link java.nio.charset.CharsetEncoder#encode(CharBuffer, ByteBuffer, boolean) incrementally encoded} into UTF-8.
      *

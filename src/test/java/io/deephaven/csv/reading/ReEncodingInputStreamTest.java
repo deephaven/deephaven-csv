@@ -16,6 +16,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,16 +25,12 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ReEncodingInputStreamTest {
-    private static final List<Charset> STANDARD_CHARSETS = Collections.unmodifiableList(Arrays.asList(
-            StandardCharsets.US_ASCII,
-            StandardCharsets.ISO_8859_1,
-            StandardCharsets.UTF_8,
-            StandardCharsets.UTF_16,
-            StandardCharsets.UTF_16BE,
-            StandardCharsets.UTF_16LE));
-
+    // Note: take care when editing this list, as certain strings may not render properly in your editor.
     private static final List<String> TEST_STRINGS = Collections.unmodifiableList(Arrays.asList(
             "",
+            "a",
+            "ab",
+            "abc",
             "Hello, world",
             "Hello 👋 World 🌍 Test 🎉",
             "Hello, 世界",
@@ -55,9 +52,24 @@ class ReEncodingInputStreamTest {
             "–—",
             "\uD835\uDD73\uD835\uDD8A\uD835\uDD91\uD835\uDD91\uD835\uDD94"));
 
-    static List<String> testStrings() {
-        final List<String> out = new ArrayList<>();
-        out.addAll(TEST_STRINGS);
+    private static Collection<Charset> charsetsUnderTest() {
+        // A wider set of charsets can be tested if desired; note though, it will take a while (at least 200,000 tests
+        // on my system before I had to stop it).
+        // return Charset.availableCharsets().values().stream().filter(Charset::canEncode).collect(Collectors.toList());
+        return Arrays.asList(
+                StandardCharsets.US_ASCII,
+                StandardCharsets.ISO_8859_1,
+                StandardCharsets.UTF_8,
+                StandardCharsets.UTF_16,
+                StandardCharsets.UTF_16BE,
+                StandardCharsets.UTF_16LE);
+    }
+
+    /**
+     * This is all of {@link #TEST_STRINGS}, plus a final string with a lot of {@link #TEST_STRINGS} added together.
+     */
+    private static List<String> testStrings() {
+        final List<String> out = new ArrayList<>(TEST_STRINGS);
         final StringBuilder sb = new StringBuilder();
         int i = 0;
         while (sb.length() < 4000) {
@@ -68,10 +80,10 @@ class ReEncodingInputStreamTest {
         return out;
     }
 
-    static Stream<Arguments> testCases() {
+    private static Stream<Arguments> testCases() {
         List<Arguments> out = new ArrayList<>();
         for (final String testString : testStrings()) {
-            final List<Charset> applicableCharsets = STANDARD_CHARSETS.stream()
+            final List<Charset> applicableCharsets = charsetsUnderTest().stream()
                     .filter(x -> x.newEncoder().canEncode(testString))
                     .collect(Collectors.toList());
             for (final Charset srcCharset : applicableCharsets) {
@@ -144,12 +156,19 @@ class ReEncodingInputStreamTest {
         for (int i = ReEncodingInputStream.MIN_BUFFER_SIZE; i < Math.min(numChars, 128); ++i) {
             doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, i);
         }
-        // If the input string is big, only start testing powers of 2
+        // If the input string is big, only start testing powers of 2 (and neighbors)
         for (int i = 128; i < numChars; i *= 2) {
+            doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, i - 1);
             doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, i);
+            doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, i + 1);
         }
-        // Also test exactly numChars
-        doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, Math.max(numChars, 2));
+        // Also test exactly numChars (and neighbors)
+        doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, numChars - 1);
+        doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, numChars);
+        doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, numChars + 1);
+
+        // Test a bigger size as well
+        doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, 2 * numChars + 43);
     }
 
     private static void doTest(
@@ -158,6 +177,10 @@ class ReEncodingInputStreamTest {
             final ByteBuffer expectedOut,
             final Charset dstCharset,
             final int bufferSize) {
+        if (bufferSize < ReEncodingInputStream.MIN_BUFFER_SIZE) {
+            // Cover some edge cases without needing all of the callers to be precise
+            return;
+        }
         assertThat(new ReEncodingInputStream(toInputStream(srcBuffer), srcCharset, dstCharset, bufferSize))
                 .hasSameContentAs(toInputStream(expectedOut));
     }

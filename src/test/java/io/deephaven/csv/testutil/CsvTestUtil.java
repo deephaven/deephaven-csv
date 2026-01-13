@@ -10,9 +10,7 @@ import org.assertj.core.api.Assertions;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.io.UncheckedIOException;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
@@ -20,21 +18,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class CsvTestUtil {
-
-    private static final List<Charset> STANDARD_CHARSETS = Collections.unmodifiableList(Arrays.asList(
-            StandardCharsets.US_ASCII,
-            StandardCharsets.ISO_8859_1,
-            StandardCharsets.UTF_8,
-            StandardCharsets.UTF_16,
-            StandardCharsets.UTF_16BE,
-            StandardCharsets.UTF_16LE));
 
     public static CsvSpecs defaultCsvSpecs() {
         return defaultCsvBuilder().build();
@@ -44,23 +33,48 @@ public class CsvTestUtil {
         return CsvSpecs.builder().ignoreSurroundingSpaces(true).allowMissingColumns(true);
     }
 
+    private static Collection<Charset> charsetsUnderTest() {
+        // A wider set of charsets can be tested if desired; note though, it will take a while (at least 200,000 tests
+        // on my system before I had to stop it).
+        // return Charset.availableCharsets().values().stream().filter(Charset::canEncode).collect(Collectors.toList());
+        return Arrays.asList(
+                StandardCharsets.US_ASCII,
+                StandardCharsets.ISO_8859_1,
+                StandardCharsets.UTF_8,
+                StandardCharsets.UTF_16,
+                StandardCharsets.UTF_16BE,
+                StandardCharsets.UTF_16LE);
+    }
+
+    private static boolean canEncode(final String input, final Charset charset) {
+        if (charset.newEncoder().canEncode(input)) {
+            return true;
+        }
+        // The input should be representable in every charset we know about, except possibly
+        // US_ASCII and ISO_8859_1.
+        if (StandardCharsets.US_ASCII.equals(charset) || StandardCharsets.ISO_8859_1.equals(charset)) {
+            return false;
+        }
+        throw new RuntimeException("Expected " + charset.name() + " to be able to encode the input");
+    }
+
     public static void invokeTests(final CsvSpecs specs, final String input, final ColumnSet expected)
             throws CsvReaderException {
-        for (final Charset charset : STANDARD_CHARSETS) {
-            // Ensure we are always testing wrt UTF_8
-            if (StandardCharsets.UTF_8.equals(charset) || charset.newEncoder().canEncode(input)) {
-                invokeTest(specs, input, charset, expected, makeMySinkFactory(), null);
+        for (final Charset charset : charsetsUnderTest()) {
+            if (!canEncode(input, charset)) {
+                continue;
             }
+            invokeTest(specs, input, charset, expected, makeMySinkFactory(), null);
         }
     }
 
     public static void invokeTests(CsvSpecs specs, String input, ColumnSet expected, SinkFactory sinkFactory,
             MakeCustomColumn makeCustomColumn) throws CsvReaderException {
-        for (final Charset charset : STANDARD_CHARSETS) {
-            // Ensure we are always testing wrt UTF_8
-            if (StandardCharsets.UTF_8.equals(charset) || charset.newEncoder().canEncode(input)) {
-                invokeTest(specs, input, charset, expected, sinkFactory, makeCustomColumn);
+        for (final Charset charset : charsetsUnderTest()) {
+            if (!canEncode(input, charset)) {
+                continue;
             }
+            invokeTest(specs, input, charset, expected, sinkFactory, makeCustomColumn);
         }
     }
 

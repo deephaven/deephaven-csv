@@ -25,6 +25,7 @@ final class ReEncodingInputStream extends InputStream {
     private final ByteBuffer input;
     private final CharBuffer buffer;
     private final ByteBuffer output;
+    private final byte[] read1;
 
     private boolean eof = false;
     private boolean fullyFlushed = false;
@@ -47,17 +48,17 @@ final class ReEncodingInputStream extends InputStream {
                 .onMalformedInput(CodingErrorAction.REPORT)
                 .onUnmappableCharacter(CodingErrorAction.REPORT);
         input = ByteBuffer.allocate((int) Math.ceil(bufferSize * sourceCharset.newEncoder().maxBytesPerChar()));
+        input.flip();
         buffer = CharBuffer.allocate(bufferSize);
         output = ByteBuffer.allocate((int) Math.ceil(bufferSize * encoder.maxBytesPerChar()));
-        input.flip();
         output.flip();
+        read1 = new byte[1];
     }
 
     @Override
     public int read() throws IOException {
-        final byte[] b = new byte[1];
-        final int result = read(b, 0, 1);
-        return result < 0 ? result : (b[0] & 0xFF);
+        final int result = read(read1, 0, 1);
+        return result < 0 ? result : (read1[0] & 0xFF);
     }
 
     @Override
