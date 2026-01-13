@@ -93,25 +93,34 @@ public class ParserFidelityTest {
 
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(parser)).build();
         final InputStream stream = CsvTestUtil.toInputStream(source);
-        CsvReader.Result result;
+        CsvReader.Result result = null;
+        boolean failed = false; // optimistically assume success
         try {
             result = CsvReader.read(specs, stream, CsvTestUtil.makeMySinkFactory());
         } catch (CsvReaderException e) {
-            Assertions.assertThat(fidelity).isEqualTo(ParseFidelity.PARSE_FAIL);
+            failed = true;
+        }
+
+        if (fidelity == ParseFidelity.PARSE_FAIL) {
+            Assertions.assertThat(failed);
             return;
         }
+
+        Assertions.assertThat(!failed);
+        assert result != null; // make linter happy
 
         Assertions.assertThat(result.numCols()).isEqualTo(1);
         Assertions.assertThat(result.numRows()).isEqualTo(1);
 
         final Object array = result.columns()[0].data();
         final Object element0 = Array.get(array, 0);
-        boolean isSame = element0.equals(expectedValue);
 
-        if (isSame) {
-            Assertions.assertThat(fidelity).isEqualTo(ParseFidelity.SAME);
+        if (fidelity == ParseFidelity.SAME) {
+            Assertions.assertThat(element0).isEqualTo(expectedValue);
+        } else if (fidelity == ParseFidelity.DIFFERENT) {
+            Assertions.assertThat(element0).isNotEqualTo(expectedValue);
         } else {
-            Assertions.assertThat(fidelity).isEqualTo(ParseFidelity.DIFFERENT);
+            throw new IllegalStateException();
         }
     }
 }
