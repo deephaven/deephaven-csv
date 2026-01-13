@@ -31,7 +31,7 @@ public class ParserFidelityTest {
         /**
          * The CSV Parser throws an exception
          */
-        PARSE_FAIL,
+        PARSE_FAIL
     }
 
     private static Stream<Arguments> provideTuplesForTestFidelity() {
