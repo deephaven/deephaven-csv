@@ -162,7 +162,9 @@ public class ParseInputToDenseStorage {
         /**
          * @param writeToConsumer If true, write the data to the sink. If false, just consume the data but don't write
          *        anything. This is used to implement the "skip rows" functionality.
-         * @return true if a row was consumed, false otherwise.
+         * @return {@link RowResult#PROCESSED_ROW} if a row was processed, {@link RowResult#IGNORED_EMPTY_ROW} if an
+         *         empty row was skipped (and CsvSpecs allows for the skipping of empty lines), and
+         *         {@link RowResult#END_OF_INPUT} if the end of input was reached.
          */
         public RowResult processNextRow(final boolean writeToConsumer) throws CsvReaderException {
             if (optionalFirstDataRow != null) {

@@ -4,6 +4,7 @@ import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.densestorage.DenseStorageReader;
 import io.deephaven.csv.densestorage.DenseStorageWriter;
 import io.deephaven.csv.parsers.DataType;
+import io.deephaven.csv.parsers.IteratorHolder;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.reading.cells.CellGrabber;
 import io.deephaven.csv.reading.cells.DelimitedCellGrabber;
@@ -165,42 +166,46 @@ public final class CsvReader {
 
         final String[] headersToUse = canonicalizeHeaders(specs, headersBeforeLegalization);
 
-        // Create a DenseStorageWriter for each column. The arrays are sized to "numInputCols" but only populated up to
-        // "numOutputCols". The remaining (numInputCols - numOutputCols) are set to null. The code in
-        // parseInputToDenseStorge knows that having a null DenseStorageWriter means that the column is all-empty and
-        // (once the data is confirmed to be empty) just drops the data. "While we're here" we also make the List
-        // (not array, because Java generics) of DenseStorageReaders. This list is of size numOutputCols and is used
-        // down below to hand to each parseDenseStorageToColumn reader in a separate thread.
-        final DenseStorageWriter[] dsws = new DenseStorageWriter[numInputCols];
-        final List<Moveable<DenseStorageReader>> dsrs = new ArrayList<>();
-        for (int ii = 0; ii < numOutputCols; ++ii) {
-            final Pair<DenseStorageWriter, DenseStorageReader> pair = DenseStorageWriter.create(specs.concurrent());
-            dsws[ii] = pair.first;
-            dsrs.add(new Moveable<>(pair.second));
-        }
 
-        // Create a lambda for the writer
-        final Callable<Long> writerLambda = () -> ParseInputToDenseStorage.doit(headersToUse,
-                optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
-
-        // Create lambdas for the readers, taking care to not hold a reference to the DenseStorageReader.
-        // This is important in the concurrent case so the garbage collector can clean up queue blocks that no
-        // reader is looking at anymore.
         final ArrayList<Callable<ParseDenseStorageToColumn.Result>> readerLambdas = new ArrayList<>();
-        for (int ii = 0; ii < numOutputCols; ++ii) {
-            final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersBeforeLegalization[ii], ii);
+        final Callable<Long> writerLambda;
+        {
+            // Create a DenseStorageWriter for each column. The array is sized to "numInputCols" but only populated up
+            // to "numOutputCols". The remaining (numInputCols - numOutputCols) are set to null. The code in
+            // parseInputToDenseStorge knows that having a null DenseStorageWriter means that the column is all-empty
+            // and (once the input data is confirmed to be empty) just drops the data. Meanwhile, we make an array of
+            // DenseStorageReaders, but unlike the above, this is only sized to "numOutpuCols". This is used to hand to
+            // each parseDenseStorageToColumn reader in a separate thread.
+            final DenseStorageWriter[] dsws = new DenseStorageWriter[numInputCols];
+            final DenseStorageReader[] dsrs = new DenseStorageReader[numOutputCols];
+            for (int ii = 0; ii < numOutputCols; ++ii) {
+                final Pair<DenseStorageWriter, DenseStorageReader> pair = DenseStorageWriter.create(specs.concurrent());
+                dsws[ii] = pair.first;
+                dsrs[ii] = pair.second;
+            }
 
-            final int iiCopy = ii;
-            final Moveable<DenseStorageReader> movedDsr = dsrs.get(ii).move();
-            final String[] nvls = nullValueLiteralsToUse[ii];
+            // Create a lambda for the writer
+            writerLambda = () -> ParseInputToDenseStorage.doit(headersToUse,
+                    optionalFirstDataRow, grabber, specs, nullValueLiteralsToUse, dsws);
 
-            readerLambdas.add(() -> ParseDenseStorageToColumn.doit(
-                    iiCopy, // 0-based column numbers
-                    movedDsr,
-                    parsersToUse,
-                    specs,
-                    nvls,
-                    sinkFactory));
+            // Create lambdas for the readers, taking care to not hold a reference to the DenseStorageReader.
+            // This is important in the concurrent case so the garbage collector can clean up queue blocks that no
+            // reader is looking at anymore.
+            for (int ii = 0; ii < numOutputCols; ++ii) {
+                final List<Parser<?>> parsersToUse = calcParsersToUse(specs, headersBeforeLegalization[ii], ii);
+
+                final int iiCopy = ii;
+                final IteratorHolder ih = new IteratorHolder(dsrs[ii]);
+                final String[] nvls = nullValueLiteralsToUse[ii];
+
+                readerLambdas.add(() -> ParseDenseStorageToColumn.doit(
+                        iiCopy, // 0-based column numbers
+                        ih,
+                        parsersToUse,
+                        specs,
+                        nvls,
+                        sinkFactory));
+            }
         }
 
         try {

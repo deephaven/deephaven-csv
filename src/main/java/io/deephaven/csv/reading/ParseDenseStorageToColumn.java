@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 public final class ParseDenseStorageToColumn {
     /**
      * @param colNum The column number being parsed. Some custom sinks use this for their own information.
-     * @param dsr A reader for the input.
+     * @param ih A freshly-initialized IteratorHolder pointing to the input.
      * @param parsers The set of parsers to try. If null, then {@link Parsers#DEFAULT} will be used.
      * @param specs The CsvSpecs which control how the column is interpreted.
      * @param nullValueLiteralsToUse If a cell text is equal to any of the values in this array, the cell will be
@@ -31,7 +31,7 @@ public final class ParseDenseStorageToColumn {
      */
     public static Result doit(
             final int colNum,
-            final Moveable<DenseStorageReader> dsr,
+            final IteratorHolder ih,
             final List<Parser<?>> parsers,
             final CsvSpecs specs,
             final String[] nullValueLiteralsToUse,
@@ -44,10 +44,8 @@ public final class ParseDenseStorageToColumn {
         final Parser.GlobalContext gctx =
                 new Parser.GlobalContext(colNum, tokenizer, sinkFactory, nullValueLiteralsToUse);
 
-        // Make two IteratorHolders for (potentially) having two passes over the input. We take care to not hold these
-        // references longer than necessary, to give the GC a chance to collect the data in our linked list.
-        final Moveable<IteratorHolder> ihAlt = new Moveable<>(new IteratorHolder(dsr.get().copy()));
-        final Moveable<IteratorHolder> ih = new Moveable<>(new IteratorHolder(dsr.move().get()));
+        // Need another IteratorHolder for a second pass through the data.
+        final IteratorHolder ihAlt = ih.copyEnsureFresh();
 
         // Skip over leading null cells. There are four cases:
         // 1. The column is empty. In this case we run the "empty parser"
@@ -61,33 +59,33 @@ public final class ParseDenseStorageToColumn {
         final Parser<?> nullParserToUse =
                 parserSet.size() == 1 ? parserSet.iterator().next() : specs.nullParser();
 
-        if (!ih.get().tryMoveNext()) {
+        if (!ih.tryMoveNext()) {
             // Case 1: The column is empty
             if (nullParserToUse == null) {
                 throw new CsvReaderException(
                         "Column is empty, so can't infer type of column, and nullParser is not specified.");
             }
-            ih.reset();
-            ihAlt.reset();
+            ih.release();
+            ihAlt.release();
             return emptyParse(nullParserToUse, gctx);
         }
 
         if (parserSet.size() == 1) {
             // Case 2. There is only one available parser.
             final Parser<?> parserToUse = parserSet.iterator().next();
-            ih.reset();
+            ih.release();
             // Our invariant is that the iterator points to the first element.
-            ihAlt.get().mustMoveNext();
-            return OnePhaseParser.onePhaseParse(parserToUse, gctx, ihAlt.get());
+            ihAlt.mustMoveNext();
+            return OnePhaseParser.onePhaseParse(parserToUse, gctx, ihAlt);
         }
 
         boolean columnIsAllNulls = true;
         do {
-            if (!gctx.isNullCell(ih.get())) {
+            if (!gctx.isNullCell(ih)) {
                 columnIsAllNulls = false;
                 break;
             }
-        } while (ih.get().tryMoveNext());
+        } while (ih.tryMoveNext());
 
         if (columnIsAllNulls) {
             // case 3. The column is full of all nulls
@@ -95,10 +93,10 @@ public final class ParseDenseStorageToColumn {
                 throw new CsvReaderException(
                         "Column contains all null cells, so can't infer type of column, and nullParser is not specified.");
             }
-            ih.reset();
+            ih.release();
             // Our invariant is that the iterator points to the first element.
-            ihAlt.get().mustMoveNext();
-            return OnePhaseParser.onePhaseParse(nullParserToUse, gctx, ihAlt.get());
+            ihAlt.mustMoveNext();
+            return OnePhaseParser.onePhaseParse(nullParserToUse, gctx, ihAlt);
         }
 
         // The rest of this logic is for case 2: there is a non-null cell (so the type inference process can begin).
@@ -108,60 +106,60 @@ public final class ParseDenseStorageToColumn {
         // Numerics are special and they get their own fast path that uses Sources and Sinks rather than
         // reparsing the text input.
         final MutableDouble dummyDouble = new MutableDouble();
-        if (!cats.numericParsers.isEmpty() && tokenizer.tryParseDouble(ih.get().bs(), dummyDouble)) {
-            return parseNumerics(cats, gctx, ih.move(), ihAlt.move());
+        if (!cats.numericParsers.isEmpty() && tokenizer.tryParseDouble(ih.bs(), dummyDouble)) {
+            return parseNumerics(cats, gctx, ih, ihAlt);
         }
 
         Parser<?> otherParser = null;
         final MutableBoolean dummyBoolean = new MutableBoolean();
         final MutableLong dummyLong = new MutableLong();
-        if (cats.timestampParser != null && tokenizer.tryParseLong(ih.get().bs(), dummyLong)) {
+        if (cats.timestampParser != null && tokenizer.tryParseLong(ih.bs(), dummyLong)) {
             otherParser = cats.timestampParser;
-        } else if (cats.booleanParser != null && tokenizer.tryParseBoolean(ih.get().bs(), dummyBoolean)) {
+        } else if (cats.booleanParser != null && tokenizer.tryParseBoolean(ih.bs(), dummyBoolean)) {
             otherParser = cats.booleanParser;
-        } else if (cats.dateTimeParser != null && tokenizer.tryParseDateTime(ih.get().bs(), dummyLong)) {
+        } else if (cats.dateTimeParser != null && tokenizer.tryParseDateTime(ih.bs(), dummyLong)) {
             otherParser = cats.dateTimeParser;
         }
 
-        return AFewOtherParsers.parse(cats, otherParser, gctx, ih.move(), ihAlt.move());
+        return AFewOtherParsers.parse(cats, otherParser, gctx, ih, ihAlt);
     }
 
     @NotNull
     private static Result parseNumerics(CategorizedParsers cats, final Parser.GlobalContext gctx,
-            Moveable<IteratorHolder> ih, Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
+            IteratorHolder ih, IteratorHolder ihAlt) throws CsvReaderException {
         final List<ParserResultWrapper<?>> wrappers = new ArrayList<>();
         for (Parser<?> parser : cats.numericParsers) {
-            final ParserResultWrapper<?> prw = parseNumericsHelper(parser, gctx, ih.get());
+            final ParserResultWrapper<?> prw = parseNumericsHelper(parser, gctx, ih);
             wrappers.add(prw);
-            if (ih.get().isExhausted()) {
+            if (ih.isExhausted()) {
                 break;
             }
         }
 
-        if (!ih.get().isExhausted()) {
+        if (!ih.isExhausted()) {
             if (cats.customParsers.isEmpty() && cats.charParser == null && cats.stringParser == null) {
                 final String message = String.format(
                         "Consumed %d numeric items, then encountered a non-numeric item but there are no custom or char/string parsers available.",
-                        ih.get().numConsumed() - 1);
+                        ih.numConsumed() - 1);
                 throw new CsvReaderException(message);
             }
             // Tried all numeric parsers but couldn't consume all input. Fall back to the char parsers, custom parsers,
             // and string parsers.
             wrappers.clear();
-            return AFewOtherParsers.parse(cats, null, gctx, ih.move(), ihAlt.move());
+            return AFewOtherParsers.parse(cats, null, gctx, ih, ihAlt);
         }
 
-        ih.reset();
+        ih.release();
 
         // If all the wrappers implement the Source interface (except possibly the last, which doesn't need to),
         // we can read the data back and cast it to the right numeric type.
         if (canUnify(wrappers)) {
-            ihAlt.reset();
+            ihAlt.release();
             return unifyNumericResults(gctx, wrappers);
         }
         // Otherwise (if some wrappers do not implement the Source interface), we have to do a reparse.
         final ParserResultWrapper<?> last = wrappers.get(wrappers.size() - 1);
-        return TwoPhaseParser.finishSecondParsePhase(gctx, last, ihAlt.get());
+        return TwoPhaseParser.finishSecondParsePhase(gctx, last, ihAlt);
     }
 
     private static boolean canUnify(final List<ParserResultWrapper<?>> items) {
@@ -189,8 +187,8 @@ public final class ParseDenseStorageToColumn {
                 CategorizedParsers cats,
                 final Parser<?> optionalParser,
                 final Parser.GlobalContext gctx,
-                Moveable<IteratorHolder> ih,
-                Moveable<IteratorHolder> ihAlt) throws CsvReaderException {
+                IteratorHolder ih,
+                IteratorHolder ihAlt) throws CsvReaderException {
             List<Parser<?>> inferencingParsers = new ArrayList<>();
             List<Parser<?>> nonInferencingParsers = new ArrayList<>();
             if (optionalParser != null) {
@@ -216,7 +214,7 @@ public final class ParseDenseStorageToColumn {
 
             for (Parser<?> parser : inferencingParsers) {
                 final ParserResultWrapper<?> resultWrapper = TwoPhaseParser.tryAdvanceFirstPhase(
-                        parser, gctx, ih.get());
+                        parser, gctx, ih);
 
                 if (resultWrapper == null) {
                     continue;
@@ -232,21 +230,22 @@ public final class ParseDenseStorageToColumn {
                 // By the assumptions of our algorithm (later parsers accept all inputs of prior parsers),
                 // this parse cannot fail.
 
+                ih.release();
                 // Our invariant is that the iterator points to the first element.
-                ihAlt.get().mustMoveNext();
-                return TwoPhaseParser.finishSecondParsePhase(gctx, resultWrapper, ihAlt.get());
+                ihAlt.mustMoveNext();
+                return TwoPhaseParser.finishSecondParsePhase(gctx, resultWrapper, ihAlt);
             }
 
             // The remaining parsers all work on the input from the beginning. We can let go of the
             // first iterator, because we won't use it again.
-            ih.reset();
+            ih.release();
 
             // Custom parsers do not participate in the two-phase parse algorithm because we know
             // nothing about their structure. So, we give them the entirety of the input.
             for (Parser<?> parser : nonInferencingParsers) {
-                final IteratorHolder tempFullIterator = new IteratorHolder(ihAlt.get().dsr().copy());
+                final IteratorHolder tempFullIterator = ihAlt.copyEnsureFresh();
                 // Our invariant is that the iterator points to the first element.
-                tempFullIterator.mustMoveNext();
+                tempFullIterator.mustMoveNext(); // Input is not empty, so we know this will succeed.
                 final Result result = OnePhaseParser.tryOnePhaseParse(parser, gctx, tempFullIterator);
                 if (result != null) {
                     return result;
@@ -257,8 +256,8 @@ public final class ParseDenseStorageToColumn {
             // a simple one phase parse. If this does not succeed, the whole operation fails.
 
             // Our invariant is that the iterator points to the first element.
-            ihAlt.get().mustMoveNext();
-            return OnePhaseParser.onePhaseParse(lastParser, gctx, ihAlt.get());
+            ihAlt.mustMoveNext();
+            return OnePhaseParser.onePhaseParse(lastParser, gctx, ihAlt);
         }
     }
 
