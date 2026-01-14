@@ -1,9 +1,9 @@
-package io.deephaven.csv.testutil;
+package io.deephaven.csv;
 
-import io.deephaven.csv.CsvSpecs;
 import io.deephaven.csv.parsers.Parser;
 import io.deephaven.csv.parsers.Parsers;
 import io.deephaven.csv.reading.CsvReader;
+import io.deephaven.csv.testutil.CsvTestUtil;
 import io.deephaven.csv.util.CsvReaderException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;

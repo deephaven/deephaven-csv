@@ -1026,11 +1026,12 @@ public class CsvReaderTest {
         final String input =
                 ""
                         + "Values\n"
+                        // the empty string, which is configured below to give us NULL
                         + "##\n"
-                        + // the empty string, which is configured below to give us NULL
-                        "####\n"
-                        + // #
-                        "######\n"; // ##
+                        // #
+                        + "####\n"
+                        // ##
+                        + "######\n";
 
         final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", null, "#", "##"));
 
