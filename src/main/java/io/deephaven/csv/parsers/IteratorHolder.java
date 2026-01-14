@@ -13,8 +13,7 @@ public final class IteratorHolder {
     /** The {@link DenseStorageReader} for the input text. */
     private DenseStorageReader dsr;
     /**
-     * Storage for our reusable byte slice. Data inside it is valid after a call to tryMoveNext() returns true, in the
-     * case where hasBytes has been set to true.
+     * Storage for our reusable byte slice. Data inside it is valid after a call to tryMoveNext() returns true.
      */
     private ByteSlice bs = new ByteSlice();
     /** Number of successful calls so far to tryMoveNext (i.e. those that returned true). */
@@ -37,7 +36,7 @@ public final class IteratorHolder {
      * 
      * @return The new {@link IteratorHolder}.
      */
-    public IteratorHolder copyMustBeFresh() {
+    public IteratorHolder copyEnsureFresh() {
         if (isExhausted || numConsumed != 0) {
             throw new RuntimeException("Can't copy IteratorHolder that is not in its initial state");
         }
@@ -102,14 +101,5 @@ public final class IteratorHolder {
      */
     public boolean isExhausted() {
         return isExhausted;
-    }
-
-    /**
-     * The underlying DenseStorageReader
-     *
-     * @return The underlying DenseStorageReader
-     */
-    public DenseStorageReader dsr() {
-        return dsr;
     }
 }

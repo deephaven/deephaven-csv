@@ -45,7 +45,7 @@ public final class ParseDenseStorageToColumn {
                 new Parser.GlobalContext(colNum, tokenizer, sinkFactory, nullValueLiteralsToUse);
 
         // Need another IteratorHolder for a second pass through the data.
-        final IteratorHolder ihAlt = ih.copyMustBeFresh();
+        final IteratorHolder ihAlt = ih.copyEnsureFresh();
 
         // Skip over leading null cells. There are four cases:
         // 1. The column is empty. In this case we run the "empty parser"
@@ -243,7 +243,7 @@ public final class ParseDenseStorageToColumn {
             // Custom parsers do not participate in the two-phase parse algorithm because we know
             // nothing about their structure. So, we give them the entirety of the input.
             for (Parser<?> parser : nonInferencingParsers) {
-                final IteratorHolder tempFullIterator = ihAlt.copyMustBeFresh();
+                final IteratorHolder tempFullIterator = ihAlt.copyEnsureFresh();
                 // Our invariant is that the iterator points to the first element.
                 tempFullIterator.mustMoveNext(); // Input is not empty, so we know this will succeed.
                 final Result result = OnePhaseParser.tryOnePhaseParse(parser, gctx, tempFullIterator);
