@@ -36,7 +36,7 @@ public class PerColumnParsersTest {
                         Column.ofValues("Col2", (int) 0, (int) 10, (int) 5000),
                         Column.ofValues("Col3", (double) 0, (double) 10, (double) 5000));
 
-        CsvTestUtil.invokeTest(CsvTestUtil.defaultCsvBuilder()
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder()
                 .putParsersForIndex(0, col0Parsers)
                 .putParsersForIndex(1, col1Parsers)
                 .putParsersForIndex(2, col2Parsers)

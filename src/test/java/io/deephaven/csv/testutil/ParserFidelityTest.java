@@ -12,6 +12,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.InputStream;
 import java.lang.reflect.Array;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.stream.Stream;
 
@@ -92,11 +94,13 @@ public class ParserFidelityTest {
         final String source = "Values\n" + input + "\n";
 
         final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().parsers(Collections.singletonList(parser)).build();
-        final InputStream stream = CsvTestUtil.toInputStream(source);
+        // float parsing is all ASCII
+        final Charset charset = StandardCharsets.US_ASCII;
+        final InputStream stream = CsvTestUtil.toInputStream(source, charset);
         CsvReader.Result result = null;
         boolean failed = false; // optimistically assume success
         try {
-            result = CsvReader.read(specs, stream, CsvTestUtil.makeMySinkFactory());
+            result = CsvReader.read(specs, stream, charset, CsvTestUtil.makeMySinkFactory());
         } catch (CsvReaderException e) {
             failed = true;
         }
