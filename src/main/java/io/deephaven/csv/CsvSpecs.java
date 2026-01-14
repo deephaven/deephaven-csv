@@ -57,10 +57,11 @@ public abstract class CsvSpecs {
          * The parsers that the user wants to participate in type inference. Note that the order that the parsers in
          * this list matters only for custom parsers. In particular:
          * <ol>
-         * <li>Standard system parsers (singletons from the {@link Parsers} class) will run in their standard precedence
-         * order, regardless of the order they appear here.</li>
+         * <li>Standard system parsers (singletons from the {@link Parsers} class) aside from {@link Parsers#STRING}
+         * will run in their standard precedence order, regardless of the order they appear here.</li>
          * <li>All specified system parsers will be run before any specified custom parsers.</li>
          * <li>Custom parsers will be run in the order they are specified here.</li>
+         * <li>The {@link Parsers#STRING} parser, if specified, will run last.</li>
          * </ol>
          * 
          * @param elements The parsers

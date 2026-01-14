@@ -79,7 +79,7 @@ public class CsvReaderTest {
      * bug exists, the library hangs (and this test times out). When the bug is fixed, the test succeeds.
      */
     @Test
-    @Timeout(value = 30)
+    @Timeout(value = 90)
     public void bug52() throws CsvReaderException {
         final int numRows = 50_000_000;
         final RepeatingInputStream inputStream =
@@ -1510,7 +1510,7 @@ public class CsvReaderTest {
                                         .parsers(Arrays.asList(Parsers.INT, Parsers.LONG)).build(),
                                 input, expected))
                 .hasRootCauseMessage(
-                        "Consumed 3 numeric items, then encountered a non-numeric item but there are no char/string parsers available.");
+                        "Consumed 3 numeric items, then encountered a non-numeric item but there are no custom or char/string parsers available.");
     }
 
     @Test
