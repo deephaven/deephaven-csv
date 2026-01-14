@@ -40,6 +40,12 @@ final class ReEncodingInputStream extends InputStream {
                     String.format("Must have a buffer of at least %d characters to support potential surrogate pairs",
                             MIN_BUFFER_SIZE));
         }
+        // There's an argument that we _could_ catch this case, but there are some cases where the caller knows best;
+        // that is, the caller knows that source only contains a subset of sourceCharset that is known to encode
+        // in the targetCharset.
+        // if (!targetCharset.contains(sourceCharset)) {
+        // throw new IllegalArgumentException();
+        // }
         this.source = Objects.requireNonNull(source);
         decoder = sourceCharset.newDecoder()
                 .onMalformedInput(CodingErrorAction.REPORT)
@@ -92,16 +98,13 @@ final class ReEncodingInputStream extends InputStream {
     private void fillOutputBuffer() throws IOException {
         output.compact();
         while (output.position() == 0 && !fullyFlushed) {
-            if ((input.remaining() != input.capacity()) && !eof) {
-                // if (!input.hasRemaining() && !eof) {
+            if (!eof && (input.remaining() != input.capacity())) {
                 input.compact();
-                final int bytesRead = source.read(input.array(),
-                        input.position(),
-                        input.remaining());
-                if (bytesRead == -1) {
+                final int n = source.read(input.array(), input.position(), input.remaining());
+                if (n == -1) {
                     eof = true;
                 } else {
-                    input.position(input.position() + bytesRead);
+                    input.position(input.position() + n);
                 }
                 input.flip();
             }

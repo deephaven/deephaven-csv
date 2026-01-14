@@ -1,5 +1,6 @@
 package io.deephaven.csv.reading;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -13,16 +14,20 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnmappableCharacterException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
 
 class ReEncodingInputStreamTest {
     // Note: take care when editing this list, as certain strings may not render properly in your editor.
@@ -131,8 +136,66 @@ class ReEncodingInputStreamTest {
                         StandardCharsets.UTF_8, StandardCharsets.UTF_8, 128)) {
             final byte[] buffer = new byte[6];
             assertThat(in.read(buffer)).isEqualTo(5);
+            assertThat(in.read()).isEqualTo(-1);
             assertThat(buffer).containsExactly('H', 'e', 'l', 'l', 'o', 0);
         }
+    }
+
+    @Test
+    void testEarlyEof() throws IOException {
+        final byte[] bytes = "😀".getBytes(StandardCharsets.UTF_8);
+        // shave off the last byte
+        try (final ReEncodingInputStream in =
+                new ReEncodingInputStream(new ByteArrayInputStream(bytes, 0, bytes.length - 1), StandardCharsets.UTF_8,
+                        StandardCharsets.UTF_8, 128)) {
+            try {
+                in.read();
+                failBecauseExceptionWasNotThrown(MalformedInputException.class);
+            } catch (MalformedInputException e) {
+                assertThat(e).hasMessage("Input length = 3");
+            }
+        }
+    }
+
+    @Test
+    void testBadSourceCharset() throws IOException {
+        // lie about the source charset
+        try (final ReEncodingInputStream in =
+                new ReEncodingInputStream(toInputStream(toBuffer(StandardCharsets.UTF_8, "😀")),
+                        StandardCharsets.US_ASCII, StandardCharsets.UTF_8, 128)) {
+            try {
+                in.read();
+                failBecauseExceptionWasNotThrown(MalformedInputException.class);
+            } catch (MalformedInputException e) {
+                assertThat(e).hasMessage("Input length = 1");
+            }
+        }
+    }
+
+    @Test
+    void testBadTargetCharset() throws IOException {
+        try (final ReEncodingInputStream in =
+                new ReEncodingInputStream(toInputStream(toBuffer(StandardCharsets.UTF_8, "😀")),
+                        StandardCharsets.UTF_8, StandardCharsets.US_ASCII, 128)) {
+            try {
+                in.read();
+                failBecauseExceptionWasNotThrown(MalformedInputException.class);
+            } catch (UnmappableCharacterException e) {
+                assertThat(e).hasMessage("Input length = 2");
+            }
+        }
+    }
+
+    @Test
+    void testTargetCharsetThatIsNotSubsetOfSource() throws IOException {
+        // £ is in both UTF_8 and ISO_8559_1, but encodes differently
+        final ByteBuffer iso85591Variant = toBuffer(StandardCharsets.ISO_8859_1, "£");
+        final ByteBuffer utf8Variant = toBuffer(StandardCharsets.UTF_8, "£");
+        assertThat(StandardCharsets.ISO_8859_1.contains(StandardCharsets.UTF_8)).isFalse();
+        assertThat(iso85591Variant).isNotEqualByComparingTo(utf8Variant);
+        // While in general we can't re-encode safely from UTF_8 to ISO_8859_1, in this case we can
+        assertThat(new ReEncodingInputStream(toInputStream(utf8Variant), StandardCharsets.UTF_8,
+                StandardCharsets.ISO_8859_1, 128)).hasSameContentAs(toInputStream(iso85591Variant));
     }
 
     /**
@@ -143,14 +206,8 @@ class ReEncodingInputStreamTest {
      */
     private static void test(final String input, final Charset srcCharset, final Charset dstCharset)
             throws CharacterCodingException {
-        final ByteBuffer srcBuffer = srcCharset.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .encode(CharBuffer.wrap(input));
-        final ByteBuffer dstBuffer = dstCharset.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .encode(CharBuffer.wrap(input));
+        final ByteBuffer srcBuffer = toBuffer(srcCharset, input);
+        final ByteBuffer dstBuffer = toBuffer(dstCharset, input);
         final int numChars = input.length();
         // Test a variety of buffer sizes.
         for (int i = ReEncodingInputStream.MIN_BUFFER_SIZE; i < Math.min(numChars, 128); ++i) {
@@ -171,6 +228,13 @@ class ReEncodingInputStreamTest {
         doTest(srcBuffer, srcCharset, dstBuffer, dstCharset, 2 * numChars + 43);
     }
 
+    private static ByteBuffer toBuffer(Charset charset, String input) throws CharacterCodingException {
+        return charset.newEncoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .encode(CharBuffer.wrap(input));
+    }
+
     private static void doTest(
             final ByteBuffer srcBuffer,
             final Charset srcCharset,
@@ -183,9 +247,40 @@ class ReEncodingInputStreamTest {
         }
         assertThat(new ReEncodingInputStream(toInputStream(srcBuffer), srcCharset, dstCharset, bufferSize))
                 .hasSameContentAs(toInputStream(expectedOut));
+        // stress the re-encoder in slightly different ways, ensuring the input stream's bulk read is limited
+        assertThat(new ReEncodingInputStream(new TrickleInputStream(toInputStream(srcBuffer), 7), srcCharset,
+                dstCharset, bufferSize))
+                .hasSameContentAs(toInputStream(expectedOut));
     }
 
     private static InputStream toInputStream(final ByteBuffer buffer) {
         return new ByteArrayInputStream(buffer.array(), buffer.position(), buffer.limit());
+    }
+
+    /**
+     * Returns a variable number of bytes per bulk read. [1, 2, ..., n, 1, 2, ..., n, 1, 2, ...]
+     */
+    private static class TrickleInputStream extends InputStream {
+        private final InputStream source;
+        private final int n;
+        private int ix;
+
+        TrickleInputStream(InputStream source, int n) {
+            this.source = Objects.requireNonNull(source);
+            this.n = n;
+            this.ix = 0;
+        }
+
+        @Override
+        public int read() throws IOException {
+            return source.read();
+        }
+
+        @Override
+        public int read(@NotNull byte[] b, int off, int len) throws IOException {
+            final int res = source.read(b, off, Math.min(len, ix + 1));
+            ix = (ix + 1) % n;
+            return res;
+        }
     }
 }
