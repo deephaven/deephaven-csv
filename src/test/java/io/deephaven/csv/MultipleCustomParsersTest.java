@@ -8,6 +8,7 @@ import io.deephaven.csv.util.CsvReaderException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -57,7 +58,7 @@ public class MultipleCustomParsersTest {
             return Column.ofArray(name, arr, size);
         };
 
-        CsvTestUtil.invokeTest(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
+        CsvTestUtil.invokeTests(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
                 makeCustomColumn);
     }
 
@@ -88,7 +89,7 @@ public class MultipleCustomParsersTest {
             return Column.ofArray(name, arr, size);
         };
 
-        CsvTestUtil.invokeTest(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
+        CsvTestUtil.invokeTests(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
                 makeCustomColumn);
     }
 
@@ -117,7 +118,7 @@ public class MultipleCustomParsersTest {
             return Column.ofArray(name, arr, size);
         };
 
-        CsvTestUtil.invokeTest(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
+        CsvTestUtil.invokeTests(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
                 makeCustomColumn);
     }
 
@@ -142,7 +143,7 @@ public class MultipleCustomParsersTest {
             return Column.ofArray(name, arr, size);
         };
 
-        CsvTestUtil.invokeTest(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
+        CsvTestUtil.invokeTests(csvSpecsWithHearts(), input, expected, CsvTestUtil.makeMySinkFactory(),
                 makeCustomColumn);
     }
 
