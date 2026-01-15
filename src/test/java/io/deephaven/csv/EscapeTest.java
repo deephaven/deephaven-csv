@@ -140,8 +140,8 @@ public class EscapeTest {
         final InputStream stream = CsvTestUtil.toInputStream(input, charset);
 
         Assertions.assertThatThrownBy(() -> {
-                    CsvReader.read(specs, stream, charset, CsvTestUtil.makeMySinkFactory());
-                }).hasMessageContaining(exceptionFragment);
+            CsvReader.read(specs, stream, charset, CsvTestUtil.makeMySinkFactory());
+        }).hasMessageContaining(exceptionFragment);
     }
 
     private static Stream<Arguments> provideTuplesForErroneousUseOfEscapeTest() {
@@ -153,7 +153,6 @@ public class EscapeTest {
                 // Cannot escape newline
                 Arguments.of("hello|\n", "Can't escape a carriage return or newline"),
                 // Cannot escape non-ASCII
-                Arguments.of("hello|❤", "Can't escape a non-ASCII character")
-        );
+                Arguments.of("hello|❤", "Can't escape a non-ASCII character"));
     }
 }
