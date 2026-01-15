@@ -23,7 +23,7 @@ public class FixedCellGrabber implements CellGrabber {
      */
     public static CellGrabber makeLineGrabber(InputStream stream) {
         final byte IllegalUtf8 = (byte) 0xff;
-        return new DelimitedCellGrabber(stream, IllegalUtf8, IllegalUtf8, true, false);
+        return new DelimitedCellGrabber(stream, IllegalUtf8, IllegalUtf8, IllegalUtf8, true, false);
     }
 
     private final CellGrabber lineGrabber;
