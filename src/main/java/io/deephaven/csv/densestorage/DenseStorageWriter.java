@@ -162,6 +162,7 @@ public final class DenseStorageWriter {
     private byte[][] largeArrayBuffer = new byte[DenseStorageConstants.LARGE_ARRAY_QUEUE_SIZE][];
     private int largeArrayBegin = 0;
     private int largeArrayCurrent = 0;
+    private int largeArrayContentLength = 0;
 
     private final ByteSlice controlWordByteSlice = new ByteSlice(new byte[4], 0, 4);
 
@@ -223,14 +224,19 @@ public final class DenseStorageWriter {
     }
 
     private void addLargeArray(byte[] largeArray) {
-        if (largeArrayCurrent == largeArrayBuffer.length) {
+        // The large array buffer will allocate a new buffer when it is full (of course), or when its content length
+        // exceeds a threshold. This should allow the garbage collector to collect old large array pieces sooner.
+        if (largeArrayCurrent == largeArrayBuffer.length
+                || largeArrayContentLength >= DenseStorageConstants.LARGE_ARRAY_CONTENT_LENGTH_FLUSH_THRESHOLD) {
             flush();
             largeArrayBuffer = new byte[DenseStorageConstants.LARGE_ARRAY_QUEUE_SIZE][];
             largeArrayBegin = 0;
             largeArrayCurrent = 0;
+            largeArrayContentLength = 0;
         }
         largeArrayBuffer[largeArrayCurrent] = largeArray;
         ++largeArrayCurrent;
+        largeArrayContentLength += largeArray.length;
     }
 
     private void flush() {

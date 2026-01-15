@@ -326,6 +326,39 @@ public class CsvReaderTest {
                 .hasRootCauseMessage("Cell did not have closing quote character");
     }
 
+    /**
+     * Alternates input between small strings and large strings, in order to exercise the large string queue and its
+     * early spill threshold.
+     */
+    @Test
+    public void exerciseLargeThreshold() throws CsvReaderException {
+        final String smallString = "ss";
+
+        final String largeString;
+        {
+            final int numCharsInBigCell = DenseStorageConstants.LARGE_THRESHOLD * 4 + 111;
+            final StringBuilder bcb = new StringBuilder();
+            for (int i = 0; i < numCharsInBigCell; ++i) {
+                bcb.append('L');
+            }
+            largeString = bcb.toString();
+        }
+
+        // Make a buffer that alternates small strings and large strings
+        List<String> expectedValues = new ArrayList<>();
+        for (int i = 0; i != DenseStorageConstants.LARGE_ARRAY_QUEUE_SIZE; ++i) {
+            expectedValues.add(smallString);
+            expectedValues.add(largeString);
+        }
+        final String input = "Values\n" + String.join("\n", expectedValues);
+
+        final ColumnSet expected =
+                ColumnSet.of(
+                        Column.ofRefs("Values", expectedValues.toArray(new String[0])));
+        CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvSpecs(), input, expected);
+    }
+
+
     @Test
     public void validates() {
         final String lengthyMessage = "CsvSpecs failed validation for the following reasons: "
