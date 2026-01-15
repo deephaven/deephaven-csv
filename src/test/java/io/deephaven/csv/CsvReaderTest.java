@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -1064,9 +1065,13 @@ public class CsvReaderTest {
                         // #
                         + "####\n"
                         // ##
-                        + "######\n";
+                        + "######\n"
+                        // hello
+                        + "#hello#\n"
+                        // hello
+                        + "#hello#\t\t  \t\t\n";
 
-        final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", null, "#", "##"));
+        final ColumnSet expected = ColumnSet.of(Column.ofRefs("Values", null, "#", "##", "hello", "hello"));
 
         CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input, expected);
     }
@@ -1081,14 +1086,22 @@ public class CsvReaderTest {
                 .hasRootCauseMessage("Cell did not have closing quote character");
     }
 
-    @Test
-    public void quotingExcessMaterial() {
-        final String input = "" + "Val1,Val2\n" + "#hello#junk,there\n"; // invalid
-
+    @ParameterizedTest
+    @ValueSource(strings = {
+            // trailing matter after closing quote (here the quote is the hashmark)
+            "#hello#junk,there\n",
+            // trailing matter after closing quote, but there's another quote at the end. still an error
+            "#hello#junk#,there\n"
+    })
+    public void quotingExcessNonwhitespaceMaterial(String input) {
         Assertions.assertThatThrownBy(
-                () -> CsvTestUtil.invokeTests(CsvTestUtil.defaultCsvBuilder().quote('#').build(), input,
-                        ColumnSet.NONE))
-                .hasRootCauseMessage("Logic error: final non-whitespace in field is not quoteChar");
+                () -> {
+                    final CsvSpecs specs = CsvTestUtil.defaultCsvBuilder().hasHeaderRow(false).quote('#').build();
+                    final Charset charset = StandardCharsets.UTF_8;
+                    final InputStream stream = CsvTestUtil.toInputStream(input, charset);
+                    CsvReader.read(specs, stream, charset, CsvTestUtil.makeMySinkFactory());
+                })
+                .hasMessage("Logic error: final non-whitespace in field is not quoteChar");
     }
 
     @Test

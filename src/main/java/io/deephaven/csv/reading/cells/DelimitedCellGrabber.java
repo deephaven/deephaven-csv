@@ -155,25 +155,35 @@ public final class DelimitedCellGrabber implements CellGrabber {
             ++offset;
             startOffset = offset;
         }
-        // We got out of the quoted string. Consume any trailing matter after the quote and before the
-        // field
-        // delimiter. Hopefully that trailing matter is just whitespace, but we shall see.
-        finishField(dest, lastInRow, endOfInput);
-
-        // From this point on, note that dest is a slice that may point to the underlying input buffer
-        // or the spill buffer. Take care from this point on to not disturb the input (e.g. by reading
-        // the next chunk) or the spill buffer.
 
         // The easiest way to make all the above logic run smoothly is to let the final quotation mark
-        // (which will unconditionally be there) and subsequent whitespace (if any) into the field.
-        // Then we can simply trim it back out now.
+        // (which will unconditionally be there) and subsequent matter (if any) into the field.
+        // Then we can simply trim it back out, making sure that what we are trimming is only whitespace.
+        // After trimming, we will see if the expected number of chars matches the actual number of chars.
+        // The -1 here is because the number of characters processed includes the closing quote already.
+        final int expectedSize = spillBuffer.size() + offset - startOffset - 1;
+        finishField(dest, lastInRow, endOfInput);
+
+        // Trim away any trailing whitespace
         while (dest.begin() != dest.end() && RangeTests.isSpaceOrTab(dest.back())) {
             dest.setEnd(dest.end() - 1);
         }
+
+        final String exceptionMessage = "Logic error: final non-whitespace in field is not quoteChar";
+
+        // Trim away the final quote char
         if (dest.begin() == dest.end() || dest.back() != quoteChar) {
-            throw new RuntimeException("Logic error: final non-whitespace in field is not quoteChar");
+            throw new RuntimeException(exceptionMessage);
         }
         dest.setEnd(dest.end() - 1);
+
+        // Ensure we have the expected number of chars. The above logic can get misled if there are multiple
+        // closing quotes, as in the input "hello there"junk".
+        // The quote at the end of 'there' is the real closing quote; the remainder of the text is trash and should
+        // be rejected.
+        if (dest.size() != expectedSize) {
+            throw new RuntimeException(exceptionMessage);
+        }
     }
 
     /**
