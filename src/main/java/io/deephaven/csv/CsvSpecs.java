@@ -339,9 +339,9 @@ public abstract class CsvSpecs {
 
         /**
          * The escape character (used when you want field or line delimiters to be interpreted as literal text, or you
-         * want to add C-style control characters like \b, \t, \n, \r, \f). Typically set to the backslash character
-         * ('\'). Must be 7-bit ASCII. The default is null, interpreted as unset. For example, with the escape character
-         * set to '\':
+         * want to add the Java-style escape sequences \b, \t, \n, \r, or \f. Typically set to the backslash character
+         * ('\'). Must be 7-bit ASCII. We do not decode Java octal or Unicode escape sequences 0xx or uxxxx. The default
+         * is null, interpreted as unset. For example, with the escape character set to '\':
          *
          * <pre>
          * 123,hello\, there\n,456

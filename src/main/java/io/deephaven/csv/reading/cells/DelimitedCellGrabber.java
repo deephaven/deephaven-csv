@@ -300,8 +300,7 @@ public final class DelimitedCellGrabber implements CellGrabber {
         // newline or tab.
         // However, it can't appear as the last character of the input.
         if (!tryEnsureMore()) {
-            throw new CsvReaderException(
-                    "The last character in the input was the escape character. This is not allowed. The escape character needs to be followed by another character.");
+            throw new CsvReaderException("The escape character cannot be the last character of the input");
         }
 
         // Consume the next char (the escaped character). Potentially transform it if it is one of the C escapes:
@@ -316,8 +315,23 @@ public final class DelimitedCellGrabber implements CellGrabber {
         startOffset = offset;
     }
 
-    private static byte transformEscapedChar(byte nextChar) {
-        // Feeling some "Reflections on Trusting Trust" realness.
+
+    /**
+     * Interpret the set of character escapes supported by Java. We do not currently interpet the octal 0xx or Unicode
+     * escape sequences uxxxx
+     * 
+     * @param nextChar The character following the escape character.
+     * @return If one of (b, t, n, r, f), that value transformed to (\b, \t, \n, \r, \f). Otherwise, the value is
+     *         returned unchanged.
+     * @throws CsvReaderException if passed a non-ASCII character, carriage return, or newline.
+     */
+    private static byte transformEscapedChar(byte nextChar) throws CsvReaderException {
+        if (nextChar < 0) {
+            throw new CsvReaderException("Can't escape a non-ASCII character");
+        }
+        if (nextChar == '\r' || nextChar == '\n') {
+            throw new CsvReaderException("Can't escape a carriage return or newline");
+        }
         switch (nextChar) {
             case 'b':
                 return '\b';
