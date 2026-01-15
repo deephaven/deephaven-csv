@@ -96,6 +96,7 @@ tasks.named('assemble').configure {
 
 tasks.withType(Test).configureEach {
     inputs.property('customDoubleParser', customDoubleParser)
+    maxHeapSize = "4G"
 }
 
 apply plugin: 'io.deephaven.csv.java-publishing-conventions'
