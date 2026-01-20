@@ -124,27 +124,41 @@ public final class DelimitedCellGrabber implements CellGrabber {
             final MutableBoolean endOfInput) throws CsvReaderException {
         startOffset = offset;
         boolean prevCharWasCarriageReturn = false;
-        while (true) {
-            if (offset == size) {
-                if (!tryEnsureMore()) {
-                    throw new CsvReaderException("Cell did not have closing quote character");
-                }
+        outer: while (true) {
+            if (!tryEnsureMore()) {
+                throw new CsvReaderException("Cell did not have closing quote character");
             }
-            final byte ch = buffer[offset++];
+
+            // Advance through buffer while the characters are not special.
+            // This tighter loop makes for more optimizer-friendly code.
+            byte ch = buffer[offset];
+            while (ch != '\n' && ch != '\r' && ch != escapeChar && ch != quoteChar) {
+                ++offset;
+                if (offset == size) {
+                    // Refill buffer or finish.
+                    continue outer;
+                }
+                ch = buffer[offset];
+            }
+
+            ++offset;
+
             // Maintain a correct row number. This is somewhat tricky.
             if (ch == '\r') {
                 ++physicalRowNum;
                 prevCharWasCarriageReturn = true;
-            } else {
-                if (ch == '\n' && !prevCharWasCarriageReturn) {
+                continue;
+            }
+
+            if (ch == '\n') {
+                if (!prevCharWasCarriageReturn) {
                     ++physicalRowNum;
                 }
                 prevCharWasCarriageReturn = false;
-            }
-            if (ch != quoteChar && ch != escapeChar) {
-                // Ordinary character. Note: in quoted mode we will gladly eat field and line separators.
                 continue;
             }
+
+            prevCharWasCarriageReturn = false;
 
             if (ch == escapeChar) {
                 processEscapeChar();
@@ -236,7 +250,7 @@ public final class DelimitedCellGrabber implements CellGrabber {
     private void finishField(final ByteSlice dest, final MutableBoolean lastInRow,
             final MutableBoolean endOfInput)
             throws CsvReaderException {
-        while (true) {
+        outer: while (true) {
             if (!tryEnsureMore()) {
                 finish(dest);
                 // End of input sets both flags.
@@ -244,7 +258,19 @@ public final class DelimitedCellGrabber implements CellGrabber {
                 endOfInput.setValue(true);
                 return;
             }
-            final byte ch = buffer[offset];
+
+            // Advance through buffer while the characters are not special.
+            // This tighter loop makes for more optimizer-friendly code.
+            byte ch = buffer[offset];
+            while (ch != fieldDelimiter && ch != '\n' && ch != '\r' && ch != escapeChar) {
+                ++offset;
+                if (offset == size) {
+                    // Refill buffer or finish.
+                    continue outer;
+                }
+                ch = buffer[offset];
+            }
+
             if (ch == fieldDelimiter) {
                 finish(dest);
                 ++offset; // ... and skip over the field delimiter.
@@ -280,13 +306,10 @@ public final class DelimitedCellGrabber implements CellGrabber {
                 ++physicalRowNum;
                 return;
             }
-            if (ch == escapeChar) {
-                ++offset;
-                processEscapeChar();
-                continue;
-            }
 
+            // ch is escapeChar
             ++offset;
+            processEscapeChar();
         }
     }
 
