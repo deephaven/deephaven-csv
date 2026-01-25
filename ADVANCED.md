@@ -209,15 +209,6 @@ private static final class MyIntSink implements Sink<int[]> {
         final int destEndAsInt = Math.toIntExact(destEnd);
         final int destSize = destEndAsInt - destBeginAsInt;
 
-        // *** This is the new null-handling code, which conveniently
-        // modifies the source data in place before processing it ***
-        for (int i = 0; i < size; ++i) {
-            if (isNull[i]) {
-                src[i] = Integer.MIN_VALUE;
-            }
-        }
-        // *** End new code ***
-        
         if (array.length < destEndAsInt) {
             final int highBit = Integer.highestOneBit(destEndAsInt);
             final int newCapacity =
@@ -227,11 +218,14 @@ private static final class MyIntSink implements Sink<int[]> {
             array = newArray;
         }
 
+        // *** This is the new null-handling code, which conveniently
+        // modifies the source data in place before processing it ***
         for (int i = 0; i < destSize; ++i) {
             if (isNull[i]) {
                 src[i] = Integer.MIN_VALUE;
             }
         }
+        // *** End new code ***
         
         // Write chunk to storage.
         System.arraycopy(src, 0, array, destBeginAsInt, destSize);
